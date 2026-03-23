@@ -44,11 +44,11 @@ export default function LoginPage() {
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-5xl flex-col items-center px-6 py-16">
         {/* Logo */}
-        <div className="mb-6">
+        <div className="mb-6 rounded-2xl bg-white/90 px-8 py-4 backdrop-blur-sm shadow-lg">
           <img
             src="/logo.png"
             alt="OfekTech - יזמות · חדשנות · טכנולוגיה"
-            className="mx-auto h-20 object-contain drop-shadow-[0_0_30px_rgba(34,197,94,0.15)]"
+            className="mx-auto h-16 object-contain"
           />
         </div>
 
