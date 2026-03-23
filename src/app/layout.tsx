@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+// All pages require auth/env vars at runtime — skip static prerendering
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "OfekTech Portal",
   description: "פורטל מאיץ עופקטק",
