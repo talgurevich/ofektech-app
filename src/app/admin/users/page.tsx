@@ -101,6 +101,14 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleCohortChange(userId: string, newCohortId: string) {
+    await supabase
+      .from("profiles")
+      .update({ cohort_id: newCohortId || null })
+      .eq("id", userId);
+    loadProfiles();
+  }
+
   const roleLabels: Record<UserRole, string> = {
     admin: "מנהל",
     candidate: "יזם/ית",
@@ -281,12 +289,24 @@ export default function AdminUsersPage() {
                         <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDelete(p.id, p.full_name)}
-                      className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={p.cohort_id || ""}
+                        onChange={(e) => handleCohortChange(p.id, e.target.value)}
+                        className="px-2 py-1 border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      >
+                        <option value="">ללא מחזור</option>
+                        {cohorts.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleDelete(p.id, p.full_name)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
