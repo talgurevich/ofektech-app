@@ -1,0 +1,72 @@
+export type UserRole = "admin" | "candidate" | "mentor";
+export type GoalStatus = "yes" | "partially" | "no";
+export type FeedbackRole = "candidate" | "mentor";
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  created_at: string;
+}
+
+export interface Lecture {
+  id: string;
+  title: string;
+  scheduled_date: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface MentorSession {
+  id: string;
+  candidate_id: string;
+  mentor_id: string;
+  session_date: string;
+  created_by: string;
+  created_at: string;
+  // joined fields
+  candidate?: Profile;
+  mentor?: Profile;
+}
+
+export interface LectureFeedback {
+  id: string;
+  lecture_id: string;
+  candidate_id: string;
+  content: string;
+  submitted_at: string;
+  // joined
+  lecture?: Lecture;
+  candidate?: Profile;
+}
+
+export interface SessionFeedback {
+  id: string;
+  session_id: string;
+  submitted_by: string;
+  role: FeedbackRole;
+  content: string;
+  submitted_at: string;
+  // joined
+  session?: MentorSession;
+}
+
+export interface WeeklyCheckin {
+  id: string;
+  candidate_id: string;
+  week_start: string;
+  hours_invested: number | null;
+  hours_mentoring: number | null;
+  mood: number | null;
+  progress_feeling: string | null;
+  key_accomplishment: string | null;
+  biggest_blocker: string | null;
+  hit_last_goal: GoalStatus | null;
+  goal_next_week: string | null;
+  lecture_usefulness: number | null;
+  mentor_usefulness: number | null;
+  submitted_at: string;
+  // joined
+  candidate?: Profile;
+}
