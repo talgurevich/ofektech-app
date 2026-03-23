@@ -256,14 +256,12 @@ async function CandidateDashboard({
                                     variant="secondary"
                                     className="text-[10px] gap-1"
                                   >
-                                    {lecture.location === "zoom" ? (
+                                    {lecture.location === "זום" ? (
                                       <Video className="size-3" />
                                     ) : (
                                       <MapPin className="size-3" />
                                     )}
-                                    {lecture.location === "zoom"
-                                      ? "זום"
-                                      : "פרונטלי"}
+                                    {lecture.location}
                                   </Badge>
                                 )}
                               </div>
