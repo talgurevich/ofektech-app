@@ -16,9 +16,10 @@ export default async function AdminDashboard() {
     .eq("role", "mentor");
 
   const { count: checkinsThisWeek } = await supabase
-    .from("weekly_checkins")
+    .from("checkins")
     .select("*", { count: "exact", head: true })
-    .eq("week_start", weekStart);
+    .eq("type", "weekly")
+    .eq("period_start", weekStart);
 
   const { count: totalLectures } = await supabase
     .from("lectures")

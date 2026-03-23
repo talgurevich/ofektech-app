@@ -5,11 +5,11 @@ export default async function AdminCheckinsPage() {
   const supabase = await createClient();
 
   const { data: checkins } = await supabase
-    .from("weekly_checkins")
+    .from("checkins")
     .select(
-      "*, candidate:profiles!weekly_checkins_candidate_id_fkey(full_name, email)"
+      "*, candidate:profiles!checkins_candidate_id_fkey(full_name, email)"
     )
-    .order("week_start", { ascending: false })
+    .order("period_start", { ascending: false })
     .order("submitted_at", { ascending: false });
 
   return (
@@ -32,7 +32,7 @@ export default async function AdminCheckinsPage() {
                     {candidate?.full_name || candidate?.email || "—"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    שבוע של {formatDate(c.week_start)}
+                    שבוע של {formatDate(c.period_start)}
                   </span>
                 </div>
 

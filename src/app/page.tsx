@@ -42,12 +42,13 @@ async function CandidateDashboard({
 }) {
   const supabase = await createClient();
 
-  // Get all lectures that have passed
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get all lectures
   const { data: lectures } = await supabase
     .from("lectures")
     .select("*")
-    .lte("scheduled_date", new Date().toISOString().split("T")[0])
-    .order("scheduled_date", { ascending: false });
+    .order("scheduled_date", { ascending: true });
 
   // Get user's lecture feedback
   const { data: lectureFeedback } = await supabase
@@ -78,16 +79,16 @@ async function CandidateDashboard({
 
   // Check weekly check-in
   const { data: checkin } = await supabase
-    .from("weekly_checkins")
+    .from("checkins")
     .select("id")
     .eq("candidate_id", userId)
-    .eq("week_start", weekStart)
+    .eq("type", "weekly")
+    .eq("period_start", weekStart)
     .single();
 
-  const pendingLectures =
-    lectures?.filter((l) => !submittedLectureIds.has(l.id)) || [];
-  const pendingSessions =
-    sessions?.filter((s) => !submittedSessionIds.has(s.id)) || [];
+  const pastLectureIds = new Set(
+    lectures?.filter((l) => l.scheduled_date <= today).map((l) => l.id) || []
+  );
 
   return (
     <main className="max-w-2xl mx-auto p-6 space-y-8">
@@ -113,32 +114,46 @@ async function CandidateDashboard({
         </div>
       </section>
 
-      {/* Pending Lecture Feedback */}
+      {/* Lectures */}
       <section className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-semibold mb-4">משוב על הרצאות</h2>
-        {pendingLectures.length === 0 ? (
-          <p className="text-gray-500 text-sm">אין משובים ממתינים</p>
+        <h2 className="text-lg font-semibold mb-4">הרצאות</h2>
+        {!lectures || lectures.length === 0 ? (
+          <p className="text-gray-500 text-sm">אין הרצאות</p>
         ) : (
           <ul className="space-y-3">
-            {pendingLectures.map((lecture) => (
-              <li
-                key={lecture.id}
-                className="flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium">{lecture.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(lecture.scheduled_date)}
-                  </p>
-                </div>
-                <Link
-                  href={`/lectures/${lecture.id}/feedback`}
-                  className="text-blue-600 text-sm hover:underline"
+            {lectures.map((lecture) => {
+              const isPast = pastLectureIds.has(lecture.id);
+              const hasSubmitted = submittedLectureIds.has(lecture.id);
+              return (
+                <li
+                  key={lecture.id}
+                  className={`flex items-center justify-between ${!isPast ? "opacity-60" : ""}`}
                 >
-                  מלא משוב
-                </Link>
-              </li>
-            ))}
+                  <div>
+                    <p className="font-medium">
+                      {lecture.lecture_number && `${lecture.lecture_number}. `}
+                      {lecture.title}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatDate(lecture.scheduled_date)}
+                      {lecture.lecturer && ` · ${lecture.lecturer}`}
+                    </p>
+                  </div>
+                  {hasSubmitted ? (
+                    <span className="text-sm text-green-600">הושלם ✓</span>
+                  ) : isPast ? (
+                    <Link
+                      href={`/lectures/${lecture.id}/feedback`}
+                      className="text-blue-600 text-sm hover:underline"
+                    >
+                      מלא משוב
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-gray-400">בקרוב</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

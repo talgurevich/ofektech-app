@@ -22,10 +22,11 @@ export default function CheckinPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error: err } = await supabase.from("weekly_checkins").upsert(
+    const { error: err } = await supabase.from("checkins").upsert(
       {
         candidate_id: user.id,
-        week_start: weekStart,
+        type: "weekly" as const,
+        period_start: weekStart,
         hours_invested: Number(form.get("hours_invested")) || null,
         hours_mentoring: Number(form.get("hours_mentoring")) || null,
         mood: Number(form.get("mood")) || null,
@@ -37,7 +38,7 @@ export default function CheckinPage() {
         lecture_usefulness: Number(form.get("lecture_usefulness")) || null,
         mentor_usefulness: Number(form.get("mentor_usefulness")) || null,
       },
-      { onConflict: "candidate_id,week_start" }
+      { onConflict: "candidate_id,type,period_start" }
     );
 
     if (err) {
