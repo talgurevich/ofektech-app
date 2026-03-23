@@ -125,9 +125,15 @@ export default function LoginPage() {
 
         {/* Screenshots showcase */}
         <div className="mb-12 w-full">
-          <h3 className="text-center text-lg font-semibold text-white mb-8">
+          <h3 className="text-center text-lg font-semibold text-white mb-3">
             הצצה לפורטל
           </h3>
+          <p className="text-center text-sm leading-relaxed text-gray-400 max-w-2xl mx-auto mb-8">
+            הפורטל מלווה את משתתפי תוכנית OfekTech — יזמים ומנטורים — לאורך כל המסע.
+            יזמים מדווחים על התקדמות שבועית, מדרגים הרצאות ומקבלים משוב ממנטורים.
+            מנטורים מתעדים פגישות, עוקבים אחרי ההתקדמות ונותנים משוב מובנה.
+            הכל במקום אחד, פשוט ונגיש.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Candidate dashboard */}
             <div className="group">
