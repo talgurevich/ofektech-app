@@ -50,6 +50,20 @@ export default function AdminUsersPage() {
     setLoading(false);
   }
 
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`למחוק את ${name || "המשתמש"}?`)) return;
+
+    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(`שגיאה: ${data.error}`);
+    } else {
+      setMessage("המשתמש נמחק");
+      loadProfiles();
+    }
+  }
+
   const roleLabels: Record<UserRole, string> = {
     admin: "מנהל",
     candidate: "מועמד/ת",
@@ -126,6 +140,9 @@ export default function AdminUsersPage() {
               <th className="text-right px-4 py-3 font-medium text-gray-700">
                 תפקיד
               </th>
+              <th className="text-right px-4 py-3 font-medium text-gray-700">
+                פעולות
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -136,6 +153,14 @@ export default function AdminUsersPage() {
                   {p.email}
                 </td>
                 <td className="px-4 py-3">{roleLabels[p.role]}</td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => handleDelete(p.id, p.full_name)}
+                    className="text-red-600 hover:text-red-800 text-sm hover:underline"
+                  >
+                    מחיקה
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
