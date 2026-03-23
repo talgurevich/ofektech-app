@@ -28,6 +28,8 @@ export default function AdminLecturesPage() {
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Lecture>>({});
+  const [showNew, setShowNew] = useState(false);
+  const [newForm, setNewForm] = useState<Partial<Lecture>>({ location: "זום" });
 
   useEffect(() => {
     loadLectures();
@@ -97,14 +99,167 @@ export default function AdminLecturesPage() {
     loadLectures();
   }
 
+  async function handleCreate() {
+    if (!newForm.title || !newForm.scheduled_date) {
+      setError("שם ותאריך הם שדות חובה");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error: err } = await supabase.from("lectures").insert({
+      lecture_number: newForm.lecture_number || null,
+      title: newForm.title,
+      description: newForm.description || null,
+      scheduled_date: newForm.scheduled_date,
+      start_time: newForm.start_time || null,
+      end_time: newForm.end_time || null,
+      location: newForm.location || "זום",
+      lecturer: newForm.lecturer || null,
+      created_by: user.id,
+    });
+
+    if (err) {
+      setError("שגיאה ביצירת הרצאה");
+      setLoading(false);
+      return;
+    }
+
+    setNewForm({ location: "זום" });
+    setShowNew(false);
+    setLoading(false);
+    loadLectures();
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#1a2744]">ניהול הרצאות</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-[#1a2744]">ניהול הרצאות</h1>
+        {!showNew && (
+          <button
+            onClick={() => setShowNew(true)}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
+          >
+            + הרצאה חדשה
+          </button>
+        )}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
+      )}
+
+      {showNew && (
+        <Card className="border-0 shadow-sm ring-2 ring-[#22c55e]/30">
+          <CardHeader>
+            <CardTitle className="text-base text-[#1a2744]">הרצאה חדשה</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">מספר</label>
+                <input
+                  type="number"
+                  value={newForm.lecture_number ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, lecture_number: Number(e.target.value) || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-500 mb-1">שם ההרצאה *</label>
+                <input
+                  type="text"
+                  value={newForm.title ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">תאריך *</label>
+                <input
+                  type="date"
+                  value={newForm.scheduled_date ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, scheduled_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">שעת התחלה</label>
+                <input
+                  type="time"
+                  value={newForm.start_time ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, start_time: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">שעת סיום</label>
+                <input
+                  type="time"
+                  value={newForm.end_time ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, end_time: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">מיקום</label>
+                <select
+                  value={newForm.location ?? "זום"}
+                  onChange={(e) => setNewForm({ ...newForm, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                >
+                  <option value="זום">זום</option>
+                  <option value="פרונטלי">פרונטלי</option>
+                  <option value="PWC">PWC</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">מרצה</label>
+                <input
+                  type="text"
+                  value={newForm.lecturer ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, lecturer: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">תיאור</label>
+                <textarea
+                  value={newForm.description ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => { setShowNew(false); setNewForm({ location: "זום" }); setError(""); }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <X className="size-4" />
+                ביטול
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={loading}
+                className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-white bg-[#22c55e] rounded-lg hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+              >
+                <Check className="size-4" />
+                צור הרצאה
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-3">
