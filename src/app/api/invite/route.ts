@@ -33,16 +33,33 @@ export async function POST(request: Request) {
 
   const adminClient = createAdminClient();
 
-  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(
+  // Create user (generates invite link automatically)
+  const { data, error } = await adminClient.auth.admin.createUser({
     email,
-    {
-      data: { full_name: full_name || "", role },
-    }
-  );
+    email_confirm: false,
+    user_metadata: { full_name: full_name || "", role },
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  // If trigger didn't create profile, insert manually
+  const { error: profileError } = await adminClient
+    .from("profiles")
+    .upsert({
+      id: data.user.id,
+      email,
+      full_name: full_name || "",
+      role,
+    }, { onConflict: "id" });
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 400 });
+  }
+
+  // Send invite email via Supabase
+  await adminClient.auth.admin.inviteUserByEmail(email);
 
   return NextResponse.json({ user: data.user });
 }
