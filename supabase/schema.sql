@@ -77,6 +77,11 @@ create table session_feedback (
   submitted_by uuid not null references profiles(id),
   role feedback_role not null,
   content text not null default '',
+  rating_focus int check (rating_focus between 1 and 5),
+  rating_progress int check (rating_progress between 1 and 5),
+  rating_preparedness int check (rating_preparedness between 1 and 5),
+  rating_initiative int check (rating_initiative between 1 and 5),
+  rating_followthrough int check (rating_followthrough between 1 and 5),
   submitted_at timestamptz not null default now(),
   unique (session_id, submitted_by)
 );
