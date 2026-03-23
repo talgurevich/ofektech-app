@@ -169,7 +169,7 @@ async function CandidateDashboard({
             + פגישה חדשה
           </Link>
         </div>
-        {pendingSessions.length === 0 && (!sessions || sessions.length === 0) ? (
+        {!sessions || sessions.length === 0 ? (
           <p className="text-gray-500 text-sm">אין פגישות</p>
         ) : (
           <ul className="space-y-3">
