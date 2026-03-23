@@ -2,6 +2,30 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getCurrentWeekStart, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  CheckCircle2,
+  Clock,
+  MessageSquare,
+  Mic2,
+  CalendarDays,
+  ClipboardCheck,
+  ArrowLeft,
+  MapPin,
+  Video,
+  Users,
+} from "lucide-react";
+import {
+  AnimatedContainer,
+  AnimatedItem,
+} from "@/components/dashboard-shell";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -27,18 +51,26 @@ export default async function Dashboard() {
   const weekStart = getCurrentWeekStart();
 
   if (profile.role === "candidate") {
-    return <CandidateDashboard userId={user.id} weekStart={weekStart} />;
+    return (
+      <CandidateDashboard
+        userId={user.id}
+        weekStart={weekStart}
+        fullName={profile.full_name}
+      />
+    );
   }
 
-  return <MentorDashboard userId={user.id} />;
+  return <MentorDashboard userId={user.id} fullName={profile.full_name} />;
 }
 
 async function CandidateDashboard({
   userId,
   weekStart,
+  fullName,
 }: {
   userId: string;
   weekStart: string;
+  fullName?: string;
 }) {
   const supabase = await createClient();
 
@@ -90,124 +122,314 @@ async function CandidateDashboard({
     lectures?.filter((l) => l.scheduled_date <= today).map((l) => l.id) || []
   );
 
+  // Stats
+  const completedCheckins = checkin ? 1 : 0;
+  const feedbackCount = submittedLectureIds.size + submittedSessionIds.size;
+  const upcomingLectures =
+    lectures?.filter((l) => l.scheduled_date > today).length || 0;
+
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">הפורטל שלי</h1>
-        <LogoutButton />
-      </div>
+    <main className="max-w-4xl mx-auto p-4 md:p-8">
+      <AnimatedContainer>
+        {/* Greeting */}
+        <AnimatedItem>
+          <div className="mb-2">
+            <h1 className="text-2xl font-bold text-[#1a2744]">
+              שלום{fullName ? `, ${fullName}` : ""}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              ברוכים הבאים לפורטל OfekTech
+            </p>
+          </div>
+        </AnimatedItem>
 
-      {/* Weekly Check-in */}
-      <section className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">צ׳ק-אין שבועי</h2>
-          {checkin ? (
-            <span className="text-sm text-green-600 font-medium">הושלם ✓</span>
-          ) : (
-            <Link
-              href="/checkin"
-              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              מלא עכשיו
-            </Link>
-          )}
-        </div>
-      </section>
+        {/* Stats row */}
+        <AnimatedItem>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <ClipboardCheck className="size-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {completedCheckins}
+                  </p>
+                  <p className="text-xs text-gray-500">צ׳ק-אין השבוע</p>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Lectures */}
-      <section className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-semibold mb-4">הרצאות</h2>
-        {!lectures || lectures.length === 0 ? (
-          <p className="text-gray-500 text-sm">אין הרצאות</p>
-        ) : (
-          <ul className="space-y-3">
-            {lectures.map((lecture) => {
-              const isPast = pastLectureIds.has(lecture.id);
-              const hasSubmitted = submittedLectureIds.has(lecture.id);
-              return (
-                <li
-                  key={lecture.id}
-                  className={`flex items-center justify-between ${!isPast ? "opacity-60" : ""}`}
-                >
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <MessageSquare className="size-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {feedbackCount}
+                  </p>
+                  <p className="text-xs text-gray-500">משובים שהוגשו</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <Mic2 className="size-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {upcomingLectures}
+                  </p>
+                  <p className="text-xs text-gray-500">הרצאות קרובות</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </AnimatedItem>
+
+        {/* Check-in CTA */}
+        {!checkin && (
+          <AnimatedItem>
+            <Card className="border-0 shadow-sm bg-gradient-to-l from-[#22c55e]/5 to-[#22c55e]/15 ring-1 ring-[#22c55e]/20">
+              <CardContent className="flex items-center justify-between pt-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/20">
+                    <ClipboardCheck className="size-5 text-[#22c55e]" />
+                  </div>
                   <div>
-                    <p className="font-medium">
-                      {lecture.lecture_number && `${lecture.lecture_number}. `}
-                      {lecture.title}
+                    <p className="font-semibold text-[#1a2744]">
+                      צ׳ק-אין שבועי
                     </p>
                     <p className="text-sm text-gray-500">
-                      {formatDate(lecture.scheduled_date)}
-                      {lecture.lecturer && ` · ${lecture.lecturer}`}
+                      עדיין לא מילאת השבוע
                     </p>
                   </div>
-                  {hasSubmitted ? (
-                    <span className="text-sm text-green-600">הושלם ✓</span>
-                  ) : isPast ? (
-                    <Link
-                      href={`/lectures/${lecture.id}/feedback`}
-                      className="text-blue-600 text-sm hover:underline"
-                    >
-                      מלא משוב
-                    </Link>
-                  ) : (
-                    <span className="text-sm text-gray-400">בקרוב</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                </div>
+                <Link
+                  href="/checkin"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#16a34a] transition-colors"
+                >
+                  מלא עכשיו
+                  <ArrowLeft className="size-4" />
+                </Link>
+              </CardContent>
+            </Card>
+          </AnimatedItem>
         )}
-      </section>
 
-      {/* Mentor Sessions */}
-      <section className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">פגישות מנטורינג</h2>
-          <Link
-            href="/sessions/new"
-            className="text-blue-600 text-sm hover:underline"
-          >
-            + פגישה חדשה
-          </Link>
-        </div>
-        {!sessions || sessions.length === 0 ? (
-          <p className="text-gray-500 text-sm">אין פגישות</p>
-        ) : (
-          <ul className="space-y-3">
-            {sessions?.map((session) => (
-              <li
-                key={session.id}
-                className="flex items-center justify-between"
-              >
+        {checkin && (
+          <AnimatedItem>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-3 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/10">
+                  <CheckCircle2 className="size-5 text-[#22c55e]" />
+                </div>
                 <div>
-                  <p className="font-medium">
-                    פגישה עם{" "}
-                    {(session.mentor as { full_name: string })?.full_name ||
-                      "מנטור"}
+                  <p className="font-semibold text-[#1a2744]">
+                    צ׳ק-אין שבועי
                   </p>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(session.session_date)}
+                  <p className="text-sm text-[#22c55e] font-medium">
+                    הושלם בהצלחה
                   </p>
                 </div>
-                {submittedSessionIds.has(session.id) ? (
-                  <span className="text-sm text-green-600">הושלם ✓</span>
-                ) : (
-                  <Link
-                    href={`/sessions/${session.id}/feedback`}
-                    className="text-blue-600 text-sm hover:underline"
-                  >
-                    מלא משוב
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
+              </CardContent>
+            </Card>
+          </AnimatedItem>
         )}
-      </section>
+
+        {/* Lectures */}
+        <AnimatedItem>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+                <Mic2 className="size-5" />
+                הרצאות
+              </CardTitle>
+              <CardDescription>לוח הרצאות התוכנית</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!lectures || lectures.length === 0 ? (
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין הרצאות כרגע
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {lectures.map((lecture) => {
+                    const isPast = pastLectureIds.has(lecture.id);
+                    const hasSubmitted = submittedLectureIds.has(lecture.id);
+                    const isUpcoming = !isPast;
+
+                    return (
+                      <div
+                        key={lecture.id}
+                        className={`flex items-start gap-4 rounded-lg p-3 transition-colors ${
+                          isUpcoming
+                            ? "bg-gray-50/50"
+                            : "bg-white hover:bg-gray-50/50"
+                        }`}
+                      >
+                        {/* Lecture number badge */}
+                        <div
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            hasSubmitted
+                              ? "bg-[#22c55e] text-white"
+                              : isPast
+                                ? "bg-[#1a2744] text-white"
+                                : "bg-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {lecture.lecture_number || "#"}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-[#1a2744]">
+                            {lecture.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">
+                              {formatDate(lecture.scheduled_date)}
+                            </span>
+                            {lecture.lecturer && (
+                              <span className="text-xs text-gray-400">
+                                {lecture.lecturer}
+                              </span>
+                            )}
+                            {lecture.location && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] gap-1"
+                              >
+                                {lecture.location === "zoom" ? (
+                                  <Video className="size-3" />
+                                ) : (
+                                  <MapPin className="size-3" />
+                                )}
+                                {lecture.location === "zoom"
+                                  ? "זום"
+                                  : "פרונטלי"}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status */}
+                        <div className="shrink-0">
+                          {hasSubmitted ? (
+                            <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
+                              <CheckCircle2 className="size-3 ml-1" />
+                              הושלם
+                            </Badge>
+                          ) : isPast ? (
+                            <Link
+                              href={`/lectures/${lecture.id}/feedback`}
+                              className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
+                            >
+                              מלא משוב
+                            </Link>
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className="text-gray-400"
+                            >
+                              <Clock className="size-3 ml-1" />
+                              בקרוב
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedItem>
+
+        {/* Mentor Sessions */}
+        <AnimatedItem>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+                  <CalendarDays className="size-5" />
+                  פגישות מנטורינג
+                </CardTitle>
+                <Link
+                  href="/sessions/new"
+                  className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
+                >
+                  + פגישה חדשה
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!sessions || sessions.length === 0 ? (
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין פגישות כרגע
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session) => {
+                    const hasSubmitted = submittedSessionIds.has(session.id);
+                    const mentorName =
+                      (session.mentor as { full_name: string })?.full_name ||
+                      "מנטור";
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
+                            <Users className="size-4 text-[#1a2744]" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-[#1a2744]">
+                              פגישה עם {mentorName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(session.session_date)}
+                            </p>
+                          </div>
+                        </div>
+                        {hasSubmitted ? (
+                          <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
+                            <CheckCircle2 className="size-3 ml-1" />
+                            הושלם
+                          </Badge>
+                        ) : (
+                          <Link
+                            href={`/sessions/${session.id}/feedback`}
+                            className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
+                          >
+                            מלא משוב
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedItem>
+      </AnimatedContainer>
     </main>
   );
 }
 
-async function MentorDashboard({ userId }: { userId: string }) {
+async function MentorDashboard({
+  userId,
+  fullName,
+}: {
+  userId: string;
+  fullName?: string;
+}) {
   const supabase = await createClient();
 
   // Get mentor sessions
@@ -229,70 +451,143 @@ async function MentorDashboard({ userId }: { userId: string }) {
     sessionFeedback?.map((f) => f.session_id) || []
   );
 
-  return (
-    <main className="max-w-2xl mx-auto p-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">הפורטל שלי</h1>
-        <LogoutButton />
-      </div>
+  // Stats
+  const totalSessions = sessions?.length || 0;
+  const completedFeedback = submittedSessionIds.size;
+  const pendingFeedback = totalSessions - completedFeedback;
 
-      <section className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">פגישות מנטורינג</h2>
-          <Link
-            href="/sessions/new"
-            className="text-blue-600 text-sm hover:underline"
-          >
-            + פגישה חדשה
-          </Link>
-        </div>
-        {!sessions || sessions.length === 0 ? (
-          <p className="text-gray-500 text-sm">אין פגישות</p>
-        ) : (
-          <ul className="space-y-3">
-            {sessions.map((session) => (
-              <li
-                key={session.id}
-                className="flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium">
-                    פגישה עם{" "}
-                    {(session.candidate as { full_name: string })?.full_name ||
-                      "מועמד/ת"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(session.session_date)}
-                  </p>
+  return (
+    <main className="max-w-4xl mx-auto p-4 md:p-8">
+      <AnimatedContainer>
+        {/* Greeting */}
+        <AnimatedItem>
+          <div className="mb-2">
+            <h1 className="text-2xl font-bold text-[#1a2744]">
+              שלום{fullName ? `, ${fullName}` : ""}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              ברוכים הבאים לפורטל המנטורים של OfekTech
+            </p>
+          </div>
+        </AnimatedItem>
+
+        {/* Stats row */}
+        <AnimatedItem>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <CalendarDays className="size-5 text-[#22c55e]" />
                 </div>
-                {submittedSessionIds.has(session.id) ? (
-                  <span className="text-sm text-green-600">הושלם ✓</span>
-                ) : (
-                  <Link
-                    href={`/sessions/${session.id}/feedback`}
-                    className="text-blue-600 text-sm hover:underline"
-                  >
-                    מלא משוב
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
-  );
-}
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {totalSessions}
+                  </p>
+                  <p className="text-xs text-gray-500">סה״כ פגישות</p>
+                </div>
+              </CardContent>
+            </Card>
 
-function LogoutButton() {
-  return (
-    <form action="/auth/logout" method="POST">
-      <button
-        type="submit"
-        className="text-sm text-gray-500 hover:text-gray-700"
-      >
-        התנתקות
-      </button>
-    </form>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <CheckCircle2 className="size-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {completedFeedback}
+                  </p>
+                  <p className="text-xs text-gray-500">משובים שהוגשו</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#1a2744]/10">
+                  <MessageSquare className="size-5 text-[#1a2744]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {pendingFeedback}
+                  </p>
+                  <p className="text-xs text-gray-500">ממתינים למשוב</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </AnimatedItem>
+
+        {/* Sessions */}
+        <AnimatedItem>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+                  <CalendarDays className="size-5" />
+                  פגישות מנטורינג
+                </CardTitle>
+                <Link
+                  href="/sessions/new"
+                  className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
+                >
+                  + פגישה חדשה
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!sessions || sessions.length === 0 ? (
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין פגישות כרגע
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session) => {
+                    const hasSubmitted = submittedSessionIds.has(session.id);
+                    const candidateName =
+                      (session.candidate as { full_name: string })
+                        ?.full_name || "מועמד/ת";
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
+                            <Users className="size-4 text-[#1a2744]" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-[#1a2744]">
+                              פגישה עם {candidateName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(session.session_date)}
+                            </p>
+                          </div>
+                        </div>
+                        {hasSubmitted ? (
+                          <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
+                            <CheckCircle2 className="size-3 ml-1" />
+                            הושלם
+                          </Badge>
+                        ) : (
+                          <Link
+                            href={`/sessions/${session.id}/feedback`}
+                            className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
+                          >
+                            מלא משוב
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedItem>
+      </AnimatedContainer>
+    </main>
   );
 }

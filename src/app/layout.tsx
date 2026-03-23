@@ -3,9 +3,9 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ProgressBar } from "@/components/progress-bar";
+import { SidebarWrapper } from "@/components/sidebar-wrapper";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 // All pages require auth/env vars at runtime — skip static prerendering
 export const dynamic = "force-dynamic";
@@ -22,9 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl" className={cn("font-sans", geist.variable)}>
-      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
+      <body className="min-h-screen bg-[#f4f6f9] text-gray-900 antialiased">
         <ProgressBar />
-        {children}
+        <SidebarWrapper>{children}</SidebarWrapper>
       </body>
     </html>
   );
