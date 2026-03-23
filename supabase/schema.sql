@@ -4,6 +4,7 @@
 -- Create role enum
 create type user_role as enum ('admin', 'candidate', 'mentor');
 create type goal_status as enum ('yes', 'partially', 'no');
+create type checkin_type as enum ('weekly', 'monthly', 'opening', 'ending');
 create type feedback_role as enum ('candidate', 'mentor');
 
 -- Profiles table (extends auth.users)
@@ -74,14 +75,17 @@ create table session_feedback (
   unique (session_id, submitted_by)
 );
 
--- Weekly check-ins table
-create table weekly_checkins (
+-- Check-ins table (weekly, monthly, opening, ending)
+create table checkins (
   id uuid primary key default gen_random_uuid(),
   candidate_id uuid not null references profiles(id),
-  week_start date not null,
+  type checkin_type not null,
+  period_start date not null,
+  -- shared fields
+  mood int check (mood between 1 and 5),
+  -- weekly fields
   hours_invested numeric,
   hours_mentoring numeric,
-  mood int check (mood between 1 and 5),
   progress_feeling text,
   key_accomplishment text,
   biggest_blocker text,
@@ -89,8 +93,22 @@ create table weekly_checkins (
   goal_next_week text,
   lecture_usefulness int check (lecture_usefulness between 1 and 5),
   mentor_usefulness int check (mentor_usefulness between 1 and 5),
+  -- monthly fields
+  overall_satisfaction int check (overall_satisfaction between 1 and 5),
+  monthly_highlights text,
+  areas_for_improvement text,
+  -- opening fields
+  expectations text,
+  program_goals text,
+  background text,
+  -- ending fields
+  overall_experience int check (overall_experience between 1 and 5),
+  key_takeaways text,
+  recommendations text,
+  would_recommend int check (would_recommend between 1 and 10),
+  --
   submitted_at timestamptz not null default now(),
-  unique (candidate_id, week_start)
+  unique (candidate_id, type, period_start)
 );
 
 -- ============================================
@@ -102,7 +120,7 @@ alter table lectures enable row level security;
 alter table mentor_sessions enable row level security;
 alter table lecture_feedback enable row level security;
 alter table session_feedback enable row level security;
-alter table weekly_checkins enable row level security;
+alter table checkins enable row level security;
 
 -- Helper: get current user's role
 create or replace function get_user_role()
@@ -183,18 +201,18 @@ create policy "Participants update own session feedback"
 
 -- Weekly check-ins: own + admin
 create policy "Candidates see own checkins"
-  on weekly_checkins for select using (
+  on checkins for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
   );
 
 create policy "Candidates submit own checkins"
-  on weekly_checkins for insert with check (
+  on checkins for insert with check (
     candidate_id = auth.uid()
     and get_user_role() = 'candidate'
   );
 
 create policy "Candidates update own checkins"
-  on weekly_checkins for update using (
+  on checkins for update using (
     candidate_id = auth.uid()
   );
