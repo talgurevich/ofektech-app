@@ -21,6 +21,8 @@ import {
   MapPin,
   Video,
   Users,
+  Phone,
+  Mail,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -418,6 +420,10 @@ async function CandidateDashboard({
             </CardContent>
           </Card>
         </AnimatedItem>
+        {/* Contact */}
+        <AnimatedItem>
+          <TeamContactCard />
+        </AnimatedItem>
       </AnimatedContainer>
     </main>
   );
@@ -587,7 +593,56 @@ async function MentorDashboard({
             </CardContent>
           </Card>
         </AnimatedItem>
+
+        {/* Contact */}
+        <AnimatedItem>
+          <TeamContactCard />
+        </AnimatedItem>
       </AnimatedContainer>
     </main>
+  );
+}
+
+function TeamContactCard() {
+  const contacts = [
+    { name: "טל גורביץ׳", phone: "050-442-5322" },
+    { name: "אתי אילן", phone: "050-735-4911" },
+    { name: "רותם שרון", phone: "050-405-1122" },
+  ];
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+          <Phone className="size-4" />
+          צוות OfekTech
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {contacts.map((c) => (
+          <div key={c.phone} className="flex items-center justify-between">
+            <span className="text-sm font-medium text-[#1a2744]">{c.name}</span>
+            <a
+              href={`tel:${c.phone.replace(/-/g, "")}`}
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#22c55e] transition-colors"
+              dir="ltr"
+            >
+              <Phone className="size-3.5" />
+              {c.phone}
+            </a>
+          </div>
+        ))}
+        <div className="border-t pt-3 mt-3">
+          <a
+            href="mailto:ofektech.innovation@gmail.com"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#22c55e] transition-colors"
+            dir="ltr"
+          >
+            <Mail className="size-3.5" />
+            ofektech.innovation@gmail.com
+          </a>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
