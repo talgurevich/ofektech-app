@@ -163,6 +163,9 @@ create policy "Anyone can read profiles"
 create policy "Users can update own profile"
   on profiles for update using (id = auth.uid());
 
+create policy "Admin can update any profile"
+  on profiles for update using (get_user_role() = 'admin');
+
 -- Lectures: everyone reads, admin creates/updates/deletes
 create policy "Anyone can read lectures"
   on lectures for select using (true);
