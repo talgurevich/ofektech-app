@@ -123,6 +123,65 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* Screenshots showcase */}
+        <div className="mb-12 w-full">
+          <h3 className="text-center text-lg font-semibold text-white mb-8">
+            הצצה לפורטל
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Candidate dashboard */}
+            <div className="group">
+              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+                <img
+                  src="/screenshot-candidate.png"
+                  alt="דשבורד יזמים"
+                  className="w-full object-cover object-top h-48"
+                />
+              </div>
+              <div className="mt-3 text-center">
+                <p className="text-sm font-medium text-white">דשבורד יזמים</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  לוח הרצאות, פגישות מנטורינג, סטטיסטיקות ומעקב התקדמות
+                </p>
+              </div>
+            </div>
+
+            {/* Check-in wizard */}
+            <div className="group">
+              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+                <img
+                  src="/screenshot-checkin.png"
+                  alt="צ׳ק-אין שבועי"
+                  className="w-full object-cover object-top h-48"
+                />
+              </div>
+              <div className="mt-3 text-center">
+                <p className="text-sm font-medium text-white">צ׳ק-אין שבועי</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  טופס שבועי קצר לדיווח על התקדמות, מצב רוח ויעדים
+                </p>
+              </div>
+            </div>
+
+            {/* Mentor dashboard */}
+            <div className="group">
+              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+                <img
+                  src="/screenshot-mentor.png"
+                  alt="דשבורד מנטורים"
+                  className="w-full object-cover object-top h-48"
+                />
+              </div>
+              <div className="mt-3 text-center">
+                <p className="text-sm font-medium text-white">דשבורד מנטורים</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  ניהול פגישות, מעקב אחרי יזמים ומתן משוב מובנה
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Login card */}
         <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
           <p className="mb-6 text-center text-sm text-gray-400">
