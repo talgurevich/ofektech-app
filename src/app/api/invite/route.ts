@@ -33,32 +33,35 @@ export async function POST(request: Request) {
 
   const adminClient = createAdminClient();
 
-  // Create user (generates invite link automatically)
+  // Create user — pass full_name only (not role) so the trigger
+  // can fire without failing on the enum cast
   const { data, error } = await adminClient.auth.admin.createUser({
     email,
     email_confirm: false,
-    user_metadata: { full_name: full_name || "", role },
+    user_metadata: { full_name: full_name || "" },
   });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // If trigger didn't create profile, insert manually
+  // Update the profile with the correct role (trigger creates it as 'candidate')
   const { error: profileError } = await adminClient
     .from("profiles")
-    .upsert({
+    .update({ role, full_name: full_name || "" })
+    .eq("id", data.user.id);
+
+  if (profileError) {
+    // If trigger didn't fire, insert manually
+    await adminClient.from("profiles").insert({
       id: data.user.id,
       email,
       full_name: full_name || "",
       role,
-    }, { onConflict: "id" });
-
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 400 });
+    });
   }
 
-  // Send invite email via Supabase
+  // Send invite email
   await adminClient.auth.admin.inviteUserByEmail(email);
 
   return NextResponse.json({ user: data.user });
