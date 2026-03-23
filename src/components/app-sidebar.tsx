@@ -91,7 +91,7 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
       >
         {/* Header with logo */}
         <SidebarHeader className="px-4 py-5">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center" dir="ltr">
             <img
               src="/logo.png"
               alt="OfekTech"
