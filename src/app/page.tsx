@@ -375,8 +375,9 @@ async function CandidateDashboard({
                           "מנטור";
 
                         return (
-                          <div
+                          <Link
                             key={session.id}
+                            href={`/sessions/${session.id}/feedback`}
                             className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
                           >
                             <div className="flex items-center gap-3">
@@ -398,14 +399,11 @@ async function CandidateDashboard({
                                 הושלם
                               </Badge>
                             ) : (
-                              <Link
-                                href={`/sessions/${session.id}/feedback`}
-                                className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
-                              >
+                              <span className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white">
                                 משוב
-                              </Link>
+                              </span>
                             )}
-                          </div>
+                          </Link>
                         );
                       })}
                     </div>
@@ -549,8 +547,9 @@ async function MentorDashboard({
                         ?.full_name || "מועמד/ת";
 
                     return (
-                      <div
+                      <Link
                         key={session.id}
+                        href={`/sessions/${session.id}/feedback`}
                         className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -572,14 +571,11 @@ async function MentorDashboard({
                             הושלם
                           </Badge>
                         ) : (
-                          <Link
-                            href={`/sessions/${session.id}/feedback`}
-                            className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
-                          >
+                          <span className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white">
                             מלא משוב
-                          </Link>
+                          </span>
                         )}
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
