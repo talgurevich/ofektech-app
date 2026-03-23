@@ -28,7 +28,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#0a1628]">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#1a2744]">
       {/* Background gradient effects */}
       <div className="absolute inset-0">
         <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[#22c55e]/10 blur-[120px]" />
