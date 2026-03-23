@@ -52,7 +52,7 @@ export default function CheckinPage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
+    <main className="max-w-3xl mx-auto p-4 md:p-8 w-full">
       <h1 className="text-2xl font-bold mb-6">צ׳ק-אין שבועי</h1>
 
       {error && (
