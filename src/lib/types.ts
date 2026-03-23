@@ -12,8 +12,14 @@ export interface Profile {
 
 export interface Lecture {
   id: string;
+  lecture_number: number | null;
   title: string;
+  description: string | null;
   scheduled_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  location: string;
+  lecturer: string | null;
   created_by: string;
   created_at: string;
 }

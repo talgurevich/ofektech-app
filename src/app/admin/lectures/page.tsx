@@ -4,14 +4,30 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import type { Lecture } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Mic2,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  MapPin,
+  Video,
+} from "lucide-react";
 
 export default function AdminLecturesPage() {
   const supabase = createClient();
   const [lectures, setLectures] = useState<Lecture[]>([]);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Lecture>>({});
 
   useEffect(() => {
     loadLectures();
@@ -21,115 +37,275 @@ export default function AdminLecturesPage() {
     const { data } = await supabase
       .from("lectures")
       .select("*")
-      .order("scheduled_date", { ascending: false });
+      .order("lecture_number", { ascending: true });
     if (data) setLectures(data);
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error: err } = await supabase.from("lectures").insert({
-      title,
-      scheduled_date: date,
-      created_by: user.id,
-    });
-
-    if (err) {
-      setError("שגיאה ביצירת הרצאה");
-      setLoading(false);
-      return;
-    }
-
-    setTitle("");
-    setDate("");
-    setLoading(false);
-    loadLectures();
-  }
-
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, title: string) {
+    if (!confirm(`למחוק את "${title}"?`)) return;
     await supabase.from("lectures").delete().eq("id", id);
     loadLectures();
   }
 
+  function startEdit(lecture: Lecture) {
+    setEditingId(lecture.id);
+    setEditForm({
+      lecture_number: lecture.lecture_number,
+      title: lecture.title,
+      description: lecture.description,
+      scheduled_date: lecture.scheduled_date,
+      start_time: lecture.start_time?.slice(0, 5) || "",
+      end_time: lecture.end_time?.slice(0, 5) || "",
+      location: lecture.location,
+      lecturer: lecture.lecturer,
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm({});
+    setError("");
+  }
+
+  async function saveEdit(id: string) {
+    setLoading(true);
+    setError("");
+
+    const { error: err } = await supabase
+      .from("lectures")
+      .update({
+        lecture_number: editForm.lecture_number || null,
+        title: editForm.title,
+        description: editForm.description || null,
+        scheduled_date: editForm.scheduled_date,
+        start_time: editForm.start_time || null,
+        end_time: editForm.end_time || null,
+        location: editForm.location || "zoom",
+        lecturer: editForm.lecturer || null,
+      })
+      .eq("id", id);
+
+    if (err) {
+      setError("שגיאה בעדכון");
+      setLoading(false);
+      return;
+    }
+
+    setEditingId(null);
+    setEditForm({});
+    setLoading(false);
+    loadLectures();
+  }
+
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">ניהול הרצאות</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-[#1a2744]">ניהול הרצאות</h1>
 
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="font-semibold mb-4">הרצאה חדשה</h2>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleCreate} className="flex flex-wrap gap-3">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="שם ההרצאה"
-            required
-            className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dir="ltr"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? "יוצר..." : "צור הרצאה"}
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-right px-4 py-3 font-medium text-gray-700">
-                שם
-              </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-700">
-                תאריך
-              </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-700">
-                פעולות
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {lectures.map((l) => (
-              <tr key={l.id} className="border-b last:border-0">
-                <td className="px-4 py-3">{l.title}</td>
-                <td className="px-4 py-3">{formatDate(l.scheduled_date)}</td>
-                <td className="px-4 py-3">
+      <div className="space-y-3">
+        {lectures.map((l) =>
+          editingId === l.id ? (
+            <Card key={l.id} className="border-0 shadow-sm ring-2 ring-[#22c55e]/30">
+              <CardContent className="pt-0 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      מספר
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.lecture_number ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, lecture_number: Number(e.target.value) || null })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      שם ההרצאה
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.title ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, title: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      תאריך
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.scheduled_date ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, scheduled_date: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      שעת התחלה
+                    </label>
+                    <input
+                      type="time"
+                      value={editForm.start_time ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, start_time: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      שעת סיום
+                    </label>
+                    <input
+                      type="time"
+                      value={editForm.end_time ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, end_time: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      מיקום
+                    </label>
+                    <select
+                      value={editForm.location ?? "zoom"}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, location: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    >
+                      <option value="זום">זום</option>
+                      <option value="פרונטלי">פרונטלי</option>
+                      <option value="PWC">PWC</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      מרצה
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.lecturer ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, lecturer: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      תיאור
+                    </label>
+                    <textarea
+                      value={editForm.description ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, description: e.target.value })
+                      }
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 justify-end">
                   <button
-                    onClick={() => handleDelete(l.id)}
-                    className="text-red-600 hover:underline text-sm"
+                    onClick={cancelEdit}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
                   >
-                    מחק
+                    <X className="size-4" />
+                    ביטול
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <button
+                    onClick={() => saveEdit(l.id)}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-white bg-[#22c55e] rounded-lg hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                  >
+                    <Check className="size-4" />
+                    שמור
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card key={l.id} className="border-0 shadow-sm">
+              <CardContent className="flex items-start gap-4 pt-0">
+                {/* Number badge */}
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1a2744] text-white text-sm font-bold">
+                  {l.lecture_number || "#"}
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-[#1a2744]">{l.title}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-xs text-gray-500">
+                      {formatDate(l.scheduled_date)}
+                    </span>
+                    {l.start_time && l.end_time && (
+                      <span className="text-xs text-gray-400" dir="ltr">
+                        {l.start_time.slice(0, 5)} - {l.end_time.slice(0, 5)}
+                      </span>
+                    )}
+                    {l.lecturer && (
+                      <span className="text-xs text-gray-400">
+                        {l.lecturer}
+                      </span>
+                    )}
+                    {l.location && (
+                      <Badge variant="secondary" className="text-[10px] gap-1">
+                        {l.location === "זום" ? (
+                          <Video className="size-3" />
+                        ) : (
+                          <MapPin className="size-3" />
+                        )}
+                        {l.location}
+                      </Badge>
+                    )}
+                  </div>
+                  {l.description && (
+                    <p className="text-xs text-gray-400 mt-1 whitespace-pre-line line-clamp-2">
+                      {l.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => startEdit(l)}
+                    className="p-2 text-gray-400 hover:text-[#1a2744] transition-colors rounded-lg hover:bg-gray-100"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(l.id, l.title)}
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        )}
       </div>
     </div>
   );
