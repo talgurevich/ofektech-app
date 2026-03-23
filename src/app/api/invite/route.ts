@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { email, full_name, role } = await request.json();
+  const { email, full_name, role, cohort_id } = await request.json();
 
   if (!email || !role) {
     return NextResponse.json(
@@ -44,10 +44,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Update the profile with the correct role
+  // Update the profile with the correct role and cohort
+  const profileData: Record<string, unknown> = {
+    role,
+    full_name: full_name || "",
+  };
+  if (cohort_id) profileData.cohort_id = cohort_id;
+
   const { error: profileError } = await adminClient
     .from("profiles")
-    .update({ role, full_name: full_name || "" })
+    .update(profileData)
     .eq("id", data.user.id);
 
   if (profileError) {
@@ -56,6 +62,7 @@ export async function POST(request: Request) {
       email,
       full_name: full_name || "",
       role,
+      ...(cohort_id ? { cohort_id } : {}),
     });
   }
 

@@ -7,12 +7,21 @@ create type goal_status as enum ('yes', 'partially', 'no');
 create type checkin_type as enum ('weekly', 'monthly', 'opening', 'ending');
 create type feedback_role as enum ('candidate', 'mentor');
 
+-- Cohorts table
+create table cohorts (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 -- Profiles table (extends auth.users)
 create table profiles (
   id uuid primary key references auth.users on delete cascade,
   email text not null,
   full_name text not null default '',
   role user_role not null default 'candidate',
+  cohort_id uuid references cohorts(id),
   created_at timestamptz not null default now()
 );
 
@@ -126,6 +135,7 @@ create table checkins (
 -- Row Level Security
 -- ============================================
 
+alter table cohorts enable row level security;
 alter table profiles enable row level security;
 alter table lectures enable row level security;
 alter table mentor_sessions enable row level security;
@@ -140,6 +150,13 @@ returns user_role as $$
 $$ language sql security definer stable;
 
 -- Profiles: everyone can read, only admin can update role
+-- Cohorts: everyone reads, admin manages
+create policy "Anyone can read cohorts"
+  on cohorts for select using (true);
+
+create policy "Admin can manage cohorts"
+  on cohorts for all using (get_user_role() = 'admin');
+
 create policy "Anyone can read profiles"
   on profiles for select using (true);
 

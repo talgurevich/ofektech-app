@@ -2,12 +2,21 @@ export type UserRole = "admin" | "candidate" | "mentor";
 export type GoalStatus = "yes" | "partially" | "no";
 export type FeedbackRole = "candidate" | "mentor";
 
+export interface Cohort {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   email: string;
   full_name: string;
   role: UserRole;
+  cohort_id: string | null;
   created_at: string;
+  cohort?: Cohort | null;
 }
 
 export interface Lecture {
