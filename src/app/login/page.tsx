@@ -29,8 +29,14 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#1a2744]">
-      {/* Background gradient effects */}
+      {/* Background photo + overlay */}
       <div className="absolute inset-0">
+        <img
+          src="/login-bg.jpg"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover blur-sm scale-105"
+        />
+        <div className="absolute inset-0 bg-[#1a2744]/80" />
         <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[#22c55e]/10 blur-[120px]" />
         <div className="absolute bottom-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-[#22c55e]/5 blur-[100px]" />
       </div>
