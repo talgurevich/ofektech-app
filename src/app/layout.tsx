@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ProgressBar } from "@/components/progress-bar";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className={cn("font-sans", geist.variable)}>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
+        <ProgressBar />
         {children}
       </body>
     </html>
