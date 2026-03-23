@@ -38,8 +38,14 @@ create trigger on_auth_user_created
 -- Lectures table
 create table lectures (
   id uuid primary key default gen_random_uuid(),
+  lecture_number int not null,
   title text not null,
+  description text,
   scheduled_date date not null,
+  start_time time not null,
+  end_time time not null,
+  location text not null default 'zoom',
+  lecturer text,
   created_by uuid not null references profiles(id),
   created_at timestamptz not null default now()
 );
