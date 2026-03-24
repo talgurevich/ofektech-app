@@ -3,10 +3,12 @@
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -137,13 +139,13 @@ export default function LoginPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Candidate dashboard */}
             <div className="group">
-              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+              <button onClick={() => setLightbox("/screenshot-candidate.png")} className="w-full overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02] cursor-zoom-in">
                 <img
                   src="/screenshot-candidate.png"
                   alt="דשבורד יזמים"
                   className="w-full object-cover object-top h-48"
                 />
-              </div>
+              </button>
               <div className="mt-3 text-center">
                 <p className="text-sm font-medium text-white">דשבורד יזמים</p>
                 <p className="text-xs text-gray-400 mt-1">
@@ -154,13 +156,13 @@ export default function LoginPage() {
 
             {/* Check-in wizard */}
             <div className="group">
-              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+              <button onClick={() => setLightbox("/screenshot-checkin.png")} className="w-full overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02] cursor-zoom-in">
                 <img
                   src="/screenshot-checkin.png"
                   alt="צ׳ק-אין שבועי"
                   className="w-full object-cover object-top h-48"
                 />
-              </div>
+              </button>
               <div className="mt-3 text-center">
                 <p className="text-sm font-medium text-white">צ׳ק-אין שבועי</p>
                 <p className="text-xs text-gray-400 mt-1">
@@ -171,13 +173,13 @@ export default function LoginPage() {
 
             {/* Mentor dashboard */}
             <div className="group">
-              <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]">
+              <button onClick={() => setLightbox("/screenshot-mentor.png")} className="w-full overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02] cursor-zoom-in">
                 <img
                   src="/screenshot-mentor.png"
                   alt="דשבורד מנטורים"
                   className="w-full object-cover object-top h-48"
                 />
-              </div>
+              </button>
               <div className="mt-3 text-center">
                 <p className="text-sm font-medium text-white">דשבורד מנטורים</p>
                 <p className="text-xs text-gray-400 mt-1">
@@ -232,6 +234,26 @@ export default function LoginPage() {
           פורטל פנימי למשתתפי תוכנית OfekTech
         </p>
       </div>
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 left-4 p-2 text-white/70 hover:text-white transition-colors"
+          >
+            <X className="size-6" />
+          </button>
+          <img
+            src={lightbox}
+            alt=""
+            className="max-h-[90vh] max-w-[90vw] rounded-xl shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </main>
   );
 }
