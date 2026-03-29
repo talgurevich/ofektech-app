@@ -29,6 +29,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { Footer } from "@/components/footer";
 
 type UserRole = "candidate" | "mentor" | "admin";
 
@@ -158,7 +159,7 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="flex flex-col min-h-screen">
         {/* Mobile header with trigger */}
         <header className="flex items-center gap-2 border-b px-4 py-3 md:hidden">
           <SidebarTrigger>
@@ -166,7 +167,8 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
           </SidebarTrigger>
           <img src="/logo.png" alt="OfekTech" className="h-7 w-auto" />
         </header>
-        {children}
+        <div className="flex-1">{children}</div>
+        <Footer />
       </SidebarInset>
     </SidebarProvider>
   );

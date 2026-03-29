@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { LoginFooter } from "@/components/footer";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -229,11 +230,9 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Footer */}
-        <p className="mt-10 text-xs text-gray-500">
-          פורטל פנימי למשתתפי תוכנית OfekTech
-        </p>
       </div>
+
+      <LoginFooter />
       {/* Lightbox */}
       {lightbox && (
         <div
