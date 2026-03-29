@@ -55,6 +55,8 @@ create table lectures (
   end_time time not null,
   location text not null default 'zoom',
   lecturer text,
+  recording_url text,
+  presentation_url text,
   created_by uuid not null references profiles(id),
   created_at timestamptz not null default now()
 );

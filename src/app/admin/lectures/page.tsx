@@ -18,7 +18,9 @@ import {
   X,
   Check,
   MapPin,
-  Video,
+  Video as VideoIcon,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 
 export default function AdminLecturesPage() {
@@ -60,6 +62,8 @@ export default function AdminLecturesPage() {
       end_time: lecture.end_time?.slice(0, 5) || "",
       location: lecture.location,
       lecturer: lecture.lecturer,
+      recording_url: lecture.recording_url || "",
+      presentation_url: lecture.presentation_url || "",
     });
   }
 
@@ -84,6 +88,8 @@ export default function AdminLecturesPage() {
         end_time: editForm.end_time || null,
         location: editForm.location || "zoom",
         lecturer: editForm.lecturer || null,
+        recording_url: editForm.recording_url || null,
+        presentation_url: editForm.presentation_url || null,
       })
       .eq("id", id);
 
@@ -119,6 +125,8 @@ export default function AdminLecturesPage() {
       end_time: newForm.end_time || null,
       location: newForm.location || "זום",
       lecturer: newForm.lecturer || null,
+      recording_url: newForm.recording_url || null,
+      presentation_url: newForm.presentation_url || null,
       created_by: user.id,
     });
 
@@ -238,6 +246,28 @@ export default function AdminLecturesPage() {
                   onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="block text-xs font-medium text-gray-500 mb-1">קישור להקלטה</label>
+                <input
+                  type="url"
+                  value={newForm.recording_url ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, recording_url: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">קישור למצגת</label>
+                <input
+                  type="url"
+                  value={newForm.presentation_url ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, presentation_url: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                  dir="ltr"
+                  placeholder="https://..."
                 />
               </div>
             </div>
@@ -379,6 +409,36 @@ export default function AdminLecturesPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
                     />
                   </div>
+                  <div className="lg:col-span-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      קישור להקלטה
+                    </label>
+                    <input
+                      type="url"
+                      value={editForm.recording_url ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, recording_url: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      קישור למצגת
+                    </label>
+                    <input
+                      type="url"
+                      value={editForm.presentation_url ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, presentation_url: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                      dir="ltr"
+                      placeholder="https://..."
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 justify-end">
                   <button
@@ -427,7 +487,7 @@ export default function AdminLecturesPage() {
                     {l.location && (
                       <Badge variant="secondary" className="text-[10px] gap-1">
                         {l.location === "זום" ? (
-                          <Video className="size-3" />
+                          <VideoIcon className="size-3" />
                         ) : (
                           <MapPin className="size-3" />
                         )}
@@ -439,6 +499,34 @@ export default function AdminLecturesPage() {
                     <p className="text-xs text-gray-400 mt-1 whitespace-pre-line line-clamp-2">
                       {l.description}
                     </p>
+                  )}
+                  {(l.recording_url || l.presentation_url) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {l.recording_url && (
+                        <a
+                          href={l.recording_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                        >
+                          <VideoIcon className="size-3" />
+                          הקלטה
+                          <ExternalLink className="size-3" />
+                        </a>
+                      )}
+                      {l.presentation_url && (
+                        <a
+                          href={l.presentation_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                        >
+                          <FileText className="size-3" />
+                          מצגת
+                          <ExternalLink className="size-3" />
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
 

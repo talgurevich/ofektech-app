@@ -29,6 +29,8 @@ export interface Lecture {
   end_time: string | null;
   location: string;
   lecturer: string | null;
+  recording_url: string | null;
+  presentation_url: string | null;
   created_by: string;
   created_at: string;
 }

@@ -23,6 +23,8 @@ import {
   Users,
   Phone,
   Mail,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -263,6 +265,30 @@ async function CandidateDashboard({
                                     )}
                                     {lecture.location}
                                   </Badge>
+                                )}
+                                {isPast && lecture.recording_url && (
+                                  <a
+                                    href={lecture.recording_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                                  >
+                                    <Video className="size-3" />
+                                    הקלטה
+                                    <ExternalLink className="size-2.5" />
+                                  </a>
+                                )}
+                                {isPast && lecture.presentation_url && (
+                                  <a
+                                    href={lecture.presentation_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                                  >
+                                    <FileText className="size-3" />
+                                    מצגת
+                                    <ExternalLink className="size-2.5" />
+                                  </a>
                                 )}
                               </div>
                             </div>
