@@ -52,6 +52,11 @@ export default async function Dashboard() {
     redirect("/admin");
   }
 
+  // Onboarding for new users
+  if (!profile.onboarding_completed) {
+    redirect("/onboarding");
+  }
+
   const weekStart = getCurrentWeekStart();
 
   if (profile.role === "candidate") {

@@ -22,6 +22,7 @@ create table profiles (
   full_name text not null default '',
   role user_role not null default 'candidate',
   cohort_id uuid references cohorts(id),
+  onboarding_completed boolean not null default false,
   created_at timestamptz not null default now()
 );
 

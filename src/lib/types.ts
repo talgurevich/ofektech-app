@@ -15,6 +15,7 @@ export interface Profile {
   full_name: string;
   role: UserRole;
   cohort_id: string | null;
+  onboarding_completed: boolean;
   created_at: string;
   cohort?: Cohort | null;
 }
