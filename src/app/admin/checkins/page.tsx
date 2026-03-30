@@ -59,12 +59,66 @@ export default async function AdminCheckinsPage() {
                         {candidate?.full_name || candidate?.email || "—"}
                       </span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {formatDate(c.period_start)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-xs border-0 ${c.type === "opening" ? "bg-[#1a2744]/10 text-[#1a2744]" : "bg-[#22c55e]/10 text-[#22c55e]"}`}>
+                        {c.type === "opening" ? "פתיחה" : c.type === "weekly" ? "שבועי" : c.type}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {formatDate(c.period_start)}
+                      </Badge>
+                    </div>
                   </div>
 
-                  {/* Ratings row */}
+                  {/* Opening check-in fields */}
+                  {c.type === "opening" && (
+                    <div className="space-y-2">
+                      {c.venture_name && (
+                        <div className="bg-[#22c55e]/5 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">שם המיזם</p>
+                          <p className="text-sm text-gray-700 font-medium">{c.venture_name}</p>
+                        </div>
+                      )}
+                      {c.venture_stage && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">שלב המיזם</p>
+                          <p className="text-sm text-gray-700">{c.venture_stage}</p>
+                        </div>
+                      )}
+                      {c.expectations && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">ציפיות מהתוכנית</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.expectations}</p>
+                        </div>
+                      )}
+                      {c.most_important_outcome && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">הכי חשוב לצאת עם</p>
+                          <p className="text-sm text-gray-700">{c.most_important_outcome}</p>
+                        </div>
+                      )}
+                      {c.main_goal_3m && (
+                        <div className="bg-blue-50/50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">יעד ל-3 חודשים</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.main_goal_3m}</p>
+                        </div>
+                      )}
+                      {c.concerns && (
+                        <div className="bg-red-50/50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">חששות</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.concerns}</p>
+                        </div>
+                      )}
+                      {c.team_notes && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-gray-500 mb-0.5">הערות לצוות</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.team_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Weekly ratings row */}
+                  {c.type === "weekly" && <>
                   <div className="flex flex-wrap gap-3">
                     {c.mood != null && (
                       <div className="text-center">
@@ -139,6 +193,19 @@ export default async function AdminCheckinsPage() {
                           <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.goal_next_week}</p>
                         </div>
                       )}
+                    </div>
+                  )}
+                  </>}
+
+                  {/* Mood (shared) */}
+                  {c.type === "opening" && c.mood != null && (
+                    <div className="flex flex-wrap gap-3">
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">מצב רוח לקראת התוכנית</p>
+                        <Badge className={`${MOOD_COLORS[c.mood]} border-0 text-xs`}>
+                          {moodLabel(c.mood)}
+                        </Badge>
+                      </div>
                     </div>
                   )}
                 </CardContent>

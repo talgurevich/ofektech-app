@@ -121,7 +121,13 @@ create table checkins (
   monthly_highlights text,
   areas_for_improvement text,
   -- opening fields
+  venture_name text,
+  venture_stage text,
   expectations text,
+  most_important_outcome text,
+  main_goal_3m text,
+  concerns text,
+  team_notes text,
   program_goals text,
   background text,
   -- ending fields
