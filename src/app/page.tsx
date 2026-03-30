@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getCurrentWeekStart, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   Card,
@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Mic2,
   CalendarDays,
-  ClipboardCheck,
   ArrowLeft,
   MapPin,
   Video,
@@ -26,6 +25,7 @@ import {
   FileText,
   ExternalLink,
   Sparkles,
+  ListTodo,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -58,8 +58,6 @@ export default async function Dashboard() {
     redirect("/onboarding");
   }
 
-  const weekStart = getCurrentWeekStart();
-
   if (profile.role === "visitor") {
     return (
       <VisitorDashboard userId={user.id} fullName={profile.full_name} />
@@ -70,7 +68,6 @@ export default async function Dashboard() {
     return (
       <CandidateDashboard
         userId={user.id}
-        weekStart={weekStart}
         fullName={profile.full_name}
       />
     );
@@ -233,11 +230,9 @@ async function VisitorDashboard({
 
 async function CandidateDashboard({
   userId,
-  weekStart,
   fullName,
 }: {
   userId: string;
-  weekStart: string;
   fullName?: string;
 }) {
   const supabase = await createClient();
@@ -267,25 +262,6 @@ async function CandidateDashboard({
     .eq("candidate_id", userId)
     .order("session_date", { ascending: false });
 
-  // Get session feedback by this user
-  const { data: sessionFeedback } = await supabase
-    .from("session_feedback")
-    .select("session_id")
-    .eq("submitted_by", userId);
-
-  const submittedSessionIds = new Set(
-    sessionFeedback?.map((f) => f.session_id) || []
-  );
-
-  // Check weekly check-in
-  const { data: checkin } = await supabase
-    .from("checkins")
-    .select("id")
-    .eq("candidate_id", userId)
-    .eq("type", "weekly")
-    .eq("period_start", weekStart)
-    .single();
-
   // Check opening check-in
   const { data: openingCheckin } = await supabase
     .from("checkins")
@@ -295,13 +271,28 @@ async function CandidateDashboard({
     .limit(1)
     .single();
 
+  // Get open tasks
+  const { data: openTasks } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("candidate_id", userId)
+    .eq("completed", false)
+    .order("deadline", { ascending: true, nullsFirst: false })
+    .limit(5);
+
+  // Count all open tasks
+  const { count: openTaskCount } = await supabase
+    .from("tasks")
+    .select("*", { count: "exact", head: true })
+    .eq("candidate_id", userId)
+    .eq("completed", false);
+
   const pastLectureIds = new Set(
     lectures?.filter((l) => l.scheduled_date <= today).map((l) => l.id) || []
   );
 
   // Stats
-  const completedCheckins = checkin ? 1 : 0;
-  const feedbackCount = submittedLectureIds.size + submittedSessionIds.size;
+  const feedbackCount = submittedLectureIds.size;
   const upcomingLectures =
     lectures?.filter((l) => l.scheduled_date > today).length || 0;
 
@@ -326,13 +317,13 @@ async function CandidateDashboard({
             <Card className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-4 pt-0">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <ClipboardCheck className="size-5 text-[#22c55e]" />
+                  <ListTodo className="size-5 text-[#22c55e]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#1a2744]">
-                    {completedCheckins}
+                    {openTaskCount || 0}
                   </p>
-                  <p className="text-xs text-gray-500">צ׳ק-אין השבוע</p>
+                  <p className="text-xs text-gray-500">משימות פתוחות</p>
                 </div>
               </CardContent>
             </Card>
@@ -498,7 +489,7 @@ async function CandidateDashboard({
               </Card>
             </div>
 
-            {/* Left column — Check-in, Sessions, Contact */}
+            {/* Left column — Check-in, Tasks, Sessions, Contact */}
             <div className="lg:col-span-2 space-y-6">
               {/* Opening check-in CTA */}
               {!openingCheckin && (
@@ -528,49 +519,72 @@ async function CandidateDashboard({
                 </Card>
               )}
 
-              {/* Weekly check-in CTA */}
-              {!checkin ? (
-                <Card className="border-0 shadow-sm bg-gradient-to-l from-[#22c55e]/5 to-[#22c55e]/15 ring-1 ring-[#22c55e]/20">
-                  <CardContent className="flex flex-col items-start gap-3 pt-0">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/20">
-                        <ClipboardCheck className="size-5 text-[#22c55e]" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[#1a2744]">
-                          צ׳ק-אין שבועי
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          עדיין לא מילאת השבוע
-                        </p>
-                      </div>
-                    </div>
+              {/* Tasks summary */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between w-full">
+                    <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                      <ListTodo className="size-5" />
+                      משימות
+                    </CardTitle>
                     <Link
-                      href="/checkin"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#16a34a] transition-colors"
+                      href="/tasks"
+                      className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
                     >
-                      מלא עכשיו
-                      <ArrowLeft className="size-4" />
+                      + משימה חדשה
                     </Link>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="flex items-center gap-3 pt-0">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/10">
-                      <CheckCircle2 className="size-5 text-[#22c55e]" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!openTasks || openTasks.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-4 text-center">
+                      אין משימות פתוחות
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {openTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-start gap-3 rounded-lg p-3 bg-gray-50/50"
+                        >
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#1a2744]/10 mt-0.5">
+                            <ListTodo className="size-3.5 text-[#1a2744]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#1a2744] line-clamp-2">
+                              {task.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {task.deadline && (
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(task.deadline)}
+                                </span>
+                              )}
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px]"
+                              >
+                                {task.owner === "self"
+                                  ? "אני"
+                                  : task.owner === "mentor"
+                                    ? "מנטור"
+                                    : "צוות"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <p className="font-semibold text-[#1a2744]">
-                        צ׳ק-אין שבועי
-                      </p>
-                      <p className="text-sm text-[#22c55e] font-medium">
-                        הושלם בהצלחה
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                  <Link
+                    href="/tasks"
+                    className="inline-flex items-center gap-1 text-sm text-[#22c55e] hover:underline mt-4"
+                  >
+                    צפייה בכל המשימות
+                    <ArrowLeft className="size-3.5" />
+                  </Link>
+                </CardContent>
+              </Card>
 
               {/* Mentor Sessions */}
               <Card className="border-0 shadow-sm">
@@ -596,41 +610,27 @@ async function CandidateDashboard({
                   ) : (
                     <div className="space-y-3">
                       {sessions.map((session) => {
-                        const hasSubmitted = submittedSessionIds.has(session.id);
                         const mentorName =
                           (session.mentor as { full_name: string })?.full_name ||
                           "מנטור";
 
                         return (
-                          <Link
+                          <div
                             key={session.id}
-                            href={`/sessions/${session.id}/feedback`}
-                            className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
+                            className="flex items-center gap-3 rounded-lg p-3 bg-gray-50/50"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
-                                <Users className="size-4 text-[#1a2744]" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-[#1a2744] text-sm">
-                                  {mentorName}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {formatDate(session.session_date)}
-                                </p>
-                              </div>
+                            <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
+                              <Users className="size-4 text-[#1a2744]" />
                             </div>
-                            {hasSubmitted ? (
-                              <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
-                                <CheckCircle2 className="size-3 ml-1" />
-                                הושלם
-                              </Badge>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white">
-                                משוב
-                              </span>
-                            )}
-                          </Link>
+                            <div>
+                              <p className="font-medium text-[#1a2744] text-sm">
+                                {mentorName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatDate(session.session_date)}
+                              </p>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>

@@ -98,6 +98,18 @@ create table session_feedback (
   unique (session_id, submitted_by)
 );
 
+-- Tasks table
+create table tasks (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null references profiles(id),
+  description text not null,
+  owner text not null default 'self',
+  deadline date,
+  completed boolean not null default false,
+  created_at timestamptz not null default now(),
+  created_by uuid not null references profiles(id)
+);
+
 -- Check-ins table (weekly, monthly, opening, ending)
 create table checkins (
   id uuid primary key default gen_random_uuid(),
@@ -238,6 +250,24 @@ create policy "Participants update own session feedback"
   on session_feedback for update using (
     submitted_by = auth.uid()
   );
+
+-- Tasks: own + admin + mentor
+alter table tasks enable row level security;
+
+create policy "Candidates see own tasks"
+  on tasks for select using (
+    candidate_id = auth.uid()
+    or get_user_role() = 'admin'
+    or get_user_role() = 'mentor'
+  );
+
+create policy "Candidates manage own tasks"
+  on tasks for all using (
+    candidate_id = auth.uid()
+  );
+
+create policy "Admin can manage all tasks"
+  on tasks for all using (get_user_role() = 'admin');
 
 -- Weekly check-ins: own + admin
 create policy "Candidates see own checkins"

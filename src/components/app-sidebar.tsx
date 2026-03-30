@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardCheck,
+  ListTodo,
   Users,
   Mic2,
   MessageSquare,
@@ -41,7 +42,7 @@ interface AppSidebarProps {
 
 const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
-  { href: "/checkin", label: "צ׳ק-אין שבועי", icon: ClipboardCheck },
+  { href: "/tasks", label: "משימות", icon: ListTodo },
 ];
 
 const mentorLinks = [

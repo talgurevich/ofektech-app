@@ -70,6 +70,17 @@ export interface SessionFeedback {
   session?: MentorSession;
 }
 
+export interface Task {
+  id: string;
+  candidate_id: string;
+  description: string;
+  owner: string;
+  deadline: string | null;
+  completed: boolean;
+  created_at: string;
+  created_by: string;
+}
+
 export interface WeeklyCheckin {
   id: string;
   candidate_id: string;
