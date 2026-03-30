@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { Profile, UserRole, Cohort } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Trash2, X, Check } from "lucide-react";
+import { Users, Plus, Trash2, X, Check, Upload, FileSpreadsheet } from "lucide-react";
 
 export default function AdminUsersPage() {
   const supabase = createClient();
@@ -19,6 +19,10 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState("");
   const [newCohortName, setNewCohortName] = useState("");
   const [showNewCohort, setShowNewCohort] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkCohortId, setBulkCohortId] = useState<string>("");
+  const [bulkResults, setBulkResults] = useState<{ name: string; email: string; ok: boolean; error?: string }[]>([]);
 
   useEffect(() => {
     loadProfiles();
@@ -99,6 +103,70 @@ export default function AdminUsersPage() {
       setMessage("המשתמש נמחק");
       loadProfiles();
     }
+  }
+
+  function parseBulkLines() {
+    return bulkText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        // Support: name, role, email  OR  name, email (defaults to candidate)
+        const parts = line.split(/[,\t]/).map((p) => p.trim());
+        if (parts.length >= 3) {
+          return { full_name: parts[0], role: parts[1], email: parts[2] };
+        } else if (parts.length === 2) {
+          // Check if second part is email
+          if (parts[1].includes("@")) {
+            return { full_name: parts[0], role: "candidate", email: parts[1] };
+          }
+          return { full_name: parts[0], role: parts[1], email: "" };
+        }
+        return { full_name: "", role: "candidate", email: parts[0] };
+      });
+  }
+
+  async function handleBulkInvite() {
+    const lines = parseBulkLines();
+    if (lines.length === 0) return;
+
+    setLoading(true);
+    setBulkResults([]);
+    const results: typeof bulkResults = [];
+
+    for (const line of lines) {
+      if (!line.email || !line.email.includes("@")) {
+        results.push({ name: line.full_name || line.email, email: line.email, ok: false, error: "אימייל לא תקין" });
+        continue;
+      }
+
+      const body: Record<string, string> = {
+        email: line.email,
+        full_name: line.full_name,
+        role: line.role,
+      };
+      if (line.role === "candidate" && bulkCohortId) {
+        body.cohort_id = bulkCohortId;
+      }
+
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      results.push({
+        name: line.full_name || line.email,
+        email: line.email,
+        ok: res.ok,
+        error: res.ok ? undefined : data.error,
+      });
+    }
+
+    setBulkResults(results);
+    setLoading(false);
+    loadProfiles();
   }
 
   async function handleCohortChange(userId: string, newCohortId: string) {
@@ -267,6 +335,120 @@ export default function AdminUsersPage() {
             </div>
           </form>
         </CardContent>
+      </Card>
+
+      {/* Bulk invite */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2 text-base text-[#1a2744]">
+              <FileSpreadsheet className="size-4" />
+              הוספה מרובה
+            </CardTitle>
+            {!showBulk && (
+              <button
+                onClick={() => setShowBulk(true)}
+                className="inline-flex items-center gap-1 text-sm text-[#22c55e] hover:underline"
+              >
+                <Upload className="size-4" />
+                הוספת רשימה
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        {showBulk && (
+          <CardContent className="space-y-4">
+            <p className="text-xs text-gray-500">
+              הדביקו רשימה — כל שורה בפורמט: <span className="font-mono" dir="ltr">שם, תפקיד, אימייל</span>
+              <br />
+              תפקידים: candidate / mentor / visitor
+              <br />
+              אם לא מציינים תפקיד: <span className="font-mono" dir="ltr">שם, אימייל</span> (ברירת מחדל: candidate)
+            </p>
+            <textarea
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+              dir="ltr"
+              placeholder={`דוד כהן, candidate, david@example.com\nשרה לוי, mentor, sarah@example.com\nמשה ישראלי, moshe@example.com`}
+            />
+            {cohorts.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">מחזור ליזמים:</span>
+                <select
+                  value={bulkCohortId}
+                  onChange={(e) => setBulkCohortId(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                >
+                  <option value="">ללא</option>
+                  {cohorts.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Preview */}
+            {bulkText.trim() && (
+              <div>
+                <p className="text-xs text-gray-500 mb-2">
+                  תצוגה מקדימה ({parseBulkLines().length} משתמשים):
+                </p>
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+                  {parseBulkLines().map((line, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                      <span className="text-[#1a2744] font-medium">{line.full_name || "—"}</span>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {line.role === "mentor" ? "מנטור" : line.role === "visitor" ? "מאזין" : "יזם"}
+                        </Badge>
+                        <span className="text-gray-500" dir="ltr">{line.email || "חסר"}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Results */}
+            {bulkResults.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-500 mb-2">תוצאות:</p>
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+                  {bulkResults.map((r, i) => (
+                    <div key={i} className={`flex items-center justify-between px-3 py-1.5 text-xs ${r.ok ? "bg-green-50/50" : "bg-red-50/50"}`}>
+                      <span className={r.ok ? "text-green-700" : "text-red-700"}>
+                        {r.ok ? "✓" : "✗"} {r.name}
+                      </span>
+                      <span className={`${r.ok ? "text-green-600" : "text-red-600"}`} dir="ltr">
+                        {r.ok ? r.email : r.error}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => { setShowBulk(false); setBulkText(""); setBulkResults([]); }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <X className="size-4" />
+                ביטול
+              </button>
+              <button
+                onClick={handleBulkInvite}
+                disabled={loading || !bulkText.trim()}
+                className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-white bg-[#22c55e] rounded-lg hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+              >
+                <Upload className="size-4" />
+                {loading ? "מוסיף..." : `הוסף ${parseBulkLines().length} משתמשים`}
+              </button>
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {/* Candidates by cohort */}
