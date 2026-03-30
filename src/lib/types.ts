@@ -97,6 +97,15 @@ export interface Task {
   created_by: string;
 }
 
+export interface MentorAssignment {
+  id: string;
+  mentor_id: string;
+  candidate_id: string;
+  assigned_at: string;
+  candidate?: Profile;
+  mentor?: Profile;
+}
+
 export interface WeeklyCheckin {
   id: string;
   candidate_id: string;

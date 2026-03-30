@@ -646,32 +646,87 @@ async function MentorDashboard({
 }) {
   const supabase = await createClient();
 
-  // Get mentor sessions
-  const { data: sessions } = await supabase
-    .from("mentor_sessions")
+  // Get assigned mentees
+  const { data: assignments } = await supabase
+    .from("mentor_assignments")
     .select(
-      "*, candidate:profiles!mentor_sessions_candidate_id_fkey(full_name)"
+      "*, candidate:profiles!mentor_assignments_candidate_id_fkey(id, full_name, email)"
     )
-    .eq("mentor_id", userId)
-    .order("session_date", { ascending: false });
+    .eq("mentor_id", userId);
 
-  // Get session feedback by this mentor
-  const { data: sessionFeedback } = await supabase
+  const menteeIds = assignments?.map((a) => (a.candidate as { id: string }).id) || [];
+
+  // Get total sessions count
+  const { count: totalSessions } = await supabase
+    .from("mentor_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("mentor_id", userId);
+
+  // Get total feedback given count
+  const { count: totalFeedback } = await supabase
     .from("session_feedback")
-    .select("session_id")
+    .select("*", { count: "exact", head: true })
     .eq("submitted_by", userId);
 
-  const submittedSessionIds = new Set(
-    sessionFeedback?.map((f) => f.session_id) || []
+  // For each mentee, get their stats
+  const menteeStats = await Promise.all(
+    (assignments || []).map(async (assignment) => {
+      const candidate = assignment.candidate as {
+        id: string;
+        full_name: string;
+        email: string;
+      };
+
+      const [
+        { count: openTasks },
+        { count: completedTasks },
+        { count: filledChapters },
+        { data: latestSession },
+      ] = await Promise.all([
+        supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .eq("candidate_id", candidate.id)
+          .eq("completed", false),
+        supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .eq("candidate_id", candidate.id)
+          .eq("completed", true),
+        supabase
+          .from("candidate_chapter_entries")
+          .select("*", { count: "exact", head: true })
+          .eq("candidate_id", candidate.id)
+          .neq("content", ""),
+        supabase
+          .from("mentor_sessions")
+          .select("session_date")
+          .eq("candidate_id", candidate.id)
+          .eq("mentor_id", userId)
+          .order("session_date", { ascending: false })
+          .limit(1),
+      ]);
+
+      return {
+        id: candidate.id,
+        name: candidate.full_name || candidate.email,
+        openTasks: openTasks || 0,
+        completedTasks: completedTasks || 0,
+        filledChapters: filledChapters || 0,
+        lastSessionDate: latestSession?.[0]?.session_date || null,
+      };
+    })
   );
 
-  // Stats
-  const totalSessions = sessions?.length || 0;
-  const completedFeedback = submittedSessionIds.size;
-  const pendingFeedback = totalSessions - completedFeedback;
+  // Get total guide chapters
+  const { count: totalChapters } = await supabase
+    .from("guide_chapters")
+    .select("*", { count: "exact", head: true });
+
+  const guideTotal = totalChapters || 13;
 
   return (
-    <main className="max-w-4xl mx-auto p-4 md:p-8">
+    <main className="max-w-5xl mx-auto p-4 md:p-8">
       <AnimatedContainer>
         {/* Greeting */}
         <AnimatedItem>
@@ -691,11 +746,25 @@ async function MentorDashboard({
             <Card className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-4 pt-0">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                  <Users className="size-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#1a2744]">
+                    {menteeIds.length}
+                  </p>
+                  <p className="text-xs text-gray-500">חניכים</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-4 pt-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
                   <CalendarDays className="size-5 text-[#22c55e]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#1a2744]">
-                    {totalSessions}
+                    {totalSessions || 0}
                   </p>
                   <p className="text-xs text-gray-500">סה״כ פגישות</p>
                 </div>
@@ -705,100 +774,107 @@ async function MentorDashboard({
             <Card className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-4 pt-0">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <CheckCircle2 className="size-5 text-[#22c55e]" />
+                  <MessageSquare className="size-5 text-[#22c55e]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#1a2744]">
-                    {completedFeedback}
+                    {totalFeedback || 0}
                   </p>
-                  <p className="text-xs text-gray-500">משובים שהוגשו</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-4 pt-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#1a2744]/10">
-                  <MessageSquare className="size-5 text-[#1a2744]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">
-                    {pendingFeedback}
-                  </p>
-                  <p className="text-xs text-gray-500">ממתינים למשוב</p>
+                  <p className="text-xs text-gray-500">משובים שניתנו</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         </AnimatedItem>
 
-        {/* Sessions */}
-        <AnimatedItem>
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between w-full">
-                <CardTitle className="flex items-center gap-2 text-[#1a2744]">
-                  <CalendarDays className="size-5" />
-                  פגישות מנטורינג
-                </CardTitle>
-                <Link
-                  href="/sessions/new"
-                  className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
-                >
-                  + פגישה חדשה
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!sessions || sessions.length === 0 ? (
-                <p className="text-gray-400 text-sm py-4 text-center">
-                  אין פגישות כרגע
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {sessions.map((session) => {
-                    const hasSubmitted = submittedSessionIds.has(session.id);
-                    const candidateName =
-                      (session.candidate as { full_name: string })
-                        ?.full_name || "מועמד/ת";
+        {/* Mentee cards */}
+        {menteeStats.length > 0 ? (
+          <AnimatedItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {menteeStats.map((mentee) => {
+                const guidePercent = guideTotal
+                  ? Math.round((mentee.filledChapters / guideTotal) * 100)
+                  : 0;
 
-                    return (
-                      <Link
-                        key={session.id}
-                        href={`/sessions/${session.id}/feedback`}
-                        className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
-                            <Users className="size-4 text-[#1a2744]" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-[#1a2744]">
-                              פגישה עם {candidateName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatDate(session.session_date)}
-                            </p>
-                          </div>
+                return (
+                  <Card key={mentee.id} className="border-0 shadow-sm">
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Name */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/10">
+                          <Users className="size-4 text-[#1a2744]" />
                         </div>
-                        {hasSubmitted ? (
-                          <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
-                            <CheckCircle2 className="size-3 ml-1" />
-                            הושלם
-                          </Badge>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-[#1a2744] px-3 py-1.5 text-xs font-medium text-white">
-                            מלא משוב
+                        <p className="text-lg font-semibold text-[#1a2744]">
+                          {mentee.name}
+                        </p>
+                      </div>
+
+                      {/* Tasks */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <ListTodo className="size-4 text-gray-400" />
+                        <span className="text-gray-600">
+                          {mentee.openTasks} פתוחות, {mentee.completedTasks}{" "}
+                          הושלמו
+                        </span>
+                      </div>
+
+                      {/* Guide progress */}
+                      <div>
+                        <div className="flex items-center gap-2 text-sm mb-1.5">
+                          <BookOpen className="size-4 text-gray-400" />
+                          <span className="text-gray-600">
+                            {mentee.filledChapters}/{guideTotal} פרקים
                           </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedItem>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[#22c55e] transition-all duration-500"
+                            style={{ width: `${guidePercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Last session */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarDays className="size-4 text-gray-400" />
+                        <span className="text-gray-600">
+                          {mentee.lastSessionDate
+                            ? `פגישה אחרונה: ${formatDate(mentee.lastSessionDate)}`
+                            : "אין פגישות"}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-1">
+                        <Link
+                          href={`/mentees/${mentee.id}`}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1a2744] px-4 py-2 text-sm font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
+                        >
+                          צפייה בפרטים
+                        </Link>
+                        <Link
+                          href={`/sessions/new?candidate=${mentee.id}`}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
+                        >
+                          הוסף משוב
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </AnimatedItem>
+        ) : (
+          <AnimatedItem>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="py-12 text-center">
+                <Users className="size-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-400 text-sm">אין חניכים משובצים</p>
+              </CardContent>
+            </Card>
+          </AnimatedItem>
+        )}
 
         {/* Contact */}
         <AnimatedItem>

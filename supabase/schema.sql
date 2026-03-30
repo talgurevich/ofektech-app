@@ -129,6 +129,15 @@ create table tasks (
   created_by uuid not null references profiles(id)
 );
 
+-- Mentor assignments table
+create table mentor_assignments (
+  id uuid primary key default gen_random_uuid(),
+  mentor_id uuid not null references profiles(id),
+  candidate_id uuid not null references profiles(id),
+  assigned_at timestamptz not null default now(),
+  unique (mentor_id, candidate_id)
+);
+
 -- Check-ins table (weekly, monthly, opening, ending)
 create table checkins (
   id uuid primary key default gen_random_uuid(),
@@ -280,10 +289,15 @@ create policy "Anyone can read guide chapters"
 create policy "Admin can manage guide chapters"
   on guide_chapters for all using (get_user_role() = 'admin');
 
-create policy "Candidates see own entries"
+create policy "Candidates and assigned mentors see entries"
   on candidate_chapter_entries for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
+    or exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.candidate_id = candidate_chapter_entries.candidate_id
+    )
   );
 
 create policy "Candidates manage own entries"
@@ -292,14 +306,30 @@ create policy "Candidates manage own entries"
 create policy "Admin can manage all entries"
   on candidate_chapter_entries for all using (get_user_role() = 'admin');
 
--- Tasks: own + admin + mentor
+-- Mentor assignments: mentor sees own, admin manages
+alter table mentor_assignments enable row level security;
+
+create policy "Mentors see own assignments"
+  on mentor_assignments for select using (
+    mentor_id = auth.uid()
+    or get_user_role() = 'admin'
+  );
+
+create policy "Admin can manage assignments"
+  on mentor_assignments for all using (get_user_role() = 'admin');
+
+-- Tasks: own + admin + assigned mentor
 alter table tasks enable row level security;
 
-create policy "Candidates see own tasks"
+create policy "Candidates and assigned mentors see tasks"
   on tasks for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
-    or get_user_role() = 'mentor'
+    or exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.candidate_id = tasks.candidate_id
+    )
   );
 
 create policy "Candidates manage own tasks"

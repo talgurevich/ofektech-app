@@ -14,6 +14,7 @@ import {
   CalendarDays,
   LogOut,
   Menu,
+  UserCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,8 +49,7 @@ const candidateLinks = [
 ];
 
 const mentorLinks = [
-  { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
-  { href: "/sessions/new", label: "פגישות", icon: CalendarDays },
+  { href: "/", label: "החניכים שלי", icon: Users },
 ];
 
 const visitorLinks = [
@@ -59,6 +59,7 @@ const visitorLinks = [
 const adminLinks = [
   { href: "/admin", label: "סקירה", icon: BarChart3 },
   { href: "/admin/users", label: "משתמשים", icon: Users },
+  { href: "/admin/assignments", label: "שיבוצים", icon: UserCheck },
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
   { href: "/admin/checkins", label: "צ׳ק-אין", icon: ClipboardCheck },
