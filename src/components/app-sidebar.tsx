@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
 
-type UserRole = "candidate" | "mentor" | "admin";
+type UserRole = "candidate" | "mentor" | "admin" | "visitor";
 
 interface AppSidebarProps {
   role: UserRole;
@@ -49,6 +49,10 @@ const mentorLinks = [
   { href: "/sessions/new", label: "פגישות", icon: CalendarDays },
 ];
 
+const visitorLinks = [
+  { href: "/", label: "הרצאות", icon: Mic2 },
+];
+
 const adminLinks = [
   { href: "/admin", label: "סקירה", icon: BarChart3 },
   { href: "/admin/users", label: "משתמשים", icon: Users },
@@ -63,6 +67,8 @@ function getLinks(role: UserRole) {
       return candidateLinks;
     case "mentor":
       return mentorLinks;
+    case "visitor":
+      return visitorLinks;
     case "admin":
       return adminLinks;
   }
@@ -74,6 +80,8 @@ function getRoleLabel(role: UserRole) {
       return "יזם/ת";
     case "mentor":
       return "מנטור/ית";
+    case "visitor":
+      return "מאזין/ת";
     case "admin":
       return "מנהל/ת";
   }

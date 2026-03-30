@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "candidate" | "mentor";
+export type UserRole = "admin" | "candidate" | "mentor" | "visitor";
 export type GoalStatus = "yes" | "partially" | "no";
 export type FeedbackRole = "candidate" | "mentor";
 

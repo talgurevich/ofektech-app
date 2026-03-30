@@ -70,6 +70,28 @@ const CANDIDATE_STEPS: Step[] = [
   },
 ];
 
+const VISITOR_STEPS: Step[] = [
+  {
+    title: "!ברוכים הבאים ל-OfekTech",
+    description:
+      "הוזמנת לצפות בתוכן ההרצאות של התוכנית.",
+    icon: <Rocket className="size-8 text-[#22c55e]" />,
+    image: "/logo.png",
+  },
+  {
+    title: "הרצאות ותוכן",
+    description:
+      "כאן תמצאו את כל ההרצאות, קישורים להקלטות ומצגות.",
+    icon: <Mic2 className="size-8 text-[#22c55e]" />,
+    image: "/screenshot-candidate.png",
+    bullets: [
+      "לוח הרצאות מלא עם תאריכים ומרצים",
+      "קישורים להקלטות זום אחרי כל הרצאה",
+      "קישורים למצגות",
+    ],
+  },
+];
+
 const MENTOR_STEPS: Step[] = [
   {
     title: "!תודה שהצטרפת כמנטור/ית",
@@ -108,7 +130,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
   const [step, setStep] = useState(0);
-  const [role, setRole] = useState<"candidate" | "mentor">("candidate");
+  const [role, setRole] = useState<"candidate" | "mentor" | "visitor">("candidate");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -137,7 +159,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      setRole(profile.role as "candidate" | "mentor");
+      setRole(profile.role as "candidate" | "mentor" | "visitor");
       setLoading(false);
     }
     load();
@@ -166,7 +188,7 @@ export default function OnboardingPage() {
     );
   }
 
-  const steps = role === "mentor" ? MENTOR_STEPS : CANDIDATE_STEPS;
+  const steps = role === "mentor" ? MENTOR_STEPS : role === "visitor" ? VISITOR_STEPS : CANDIDATE_STEPS;
   const current = steps[step];
   const isLast = step === steps.length - 1;
   const isLogoStep = current.image === "/logo.png";

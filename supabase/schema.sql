@@ -2,7 +2,7 @@
 -- Run this in Supabase SQL Editor
 
 -- Create role enum
-create type user_role as enum ('admin', 'candidate', 'mentor');
+create type user_role as enum ('admin', 'candidate', 'mentor', 'visitor');
 create type goal_status as enum ('yes', 'partially', 'no');
 create type checkin_type as enum ('weekly', 'monthly', 'opening', 'ending');
 create type feedback_role as enum ('candidate', 'mentor');

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentWeekStart } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Check, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,17 @@ const STEPS = [
 export default function CheckinPage() {
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      if (data?.role === "visitor") router.push("/");
+    }
+    checkRole();
+  }, [supabase, router]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(0);

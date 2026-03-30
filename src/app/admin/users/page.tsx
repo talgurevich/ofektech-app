@@ -113,10 +113,12 @@ export default function AdminUsersPage() {
     admin: "מנהל",
     candidate: "יזם/ית",
     mentor: "מנטור/ית",
+    visitor: "מאזין/ת",
   };
 
   const candidates = profiles.filter((p) => p.role === "candidate");
   const mentors = profiles.filter((p) => p.role === "mentor");
+  const visitors = profiles.filter((p) => p.role === "visitor");
   const admins = profiles.filter((p) => p.role === "admin");
 
   // Group candidates by cohort
@@ -238,6 +240,7 @@ export default function AdminUsersPage() {
               >
                 <option value="candidate">יזם/ית</option>
                 <option value="mentor">מנטור/ית</option>
+                <option value="visitor">מאזין/ת</option>
                 <option value="admin">מנהל/ת</option>
               </select>
               {role === "candidate" && cohorts.length > 0 && (
@@ -349,6 +352,41 @@ export default function AdminUsersPage() {
           ))}
           {mentors.length === 0 && (
             <p className="text-sm text-gray-400">אין מנטורים עדיין</p>
+          )}
+        </div>
+      </section>
+
+      {/* Visitors */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="size-5 text-[#1a2744]" />
+          <h2 className="text-lg font-semibold text-[#1a2744]">מאזינים</h2>
+          <Badge variant="secondary">{visitors.length}</Badge>
+        </div>
+        <div className="space-y-2">
+          {visitors.map((p) => (
+            <Card key={p.id} className="border-0 shadow-sm">
+              <CardContent className="flex items-center justify-between pt-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a2744]/10">
+                    <Users className="size-3.5 text-[#1a2744]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
+                    <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDelete(p.id, p.full_name)}
+                  className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </CardContent>
+            </Card>
+          ))}
+          {visitors.length === 0 && (
+            <p className="text-sm text-gray-400">אין מאזינים עדיין</p>
           )}
         </div>
       </section>

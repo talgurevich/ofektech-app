@@ -59,6 +59,12 @@ export default async function Dashboard() {
 
   const weekStart = getCurrentWeekStart();
 
+  if (profile.role === "visitor") {
+    return (
+      <VisitorDashboard userId={user.id} fullName={profile.full_name} />
+    );
+  }
+
   if (profile.role === "candidate") {
     return (
       <CandidateDashboard
@@ -70,6 +76,158 @@ export default async function Dashboard() {
   }
 
   return <MentorDashboard userId={user.id} fullName={profile.full_name} />;
+}
+
+async function VisitorDashboard({
+  userId,
+  fullName,
+}: {
+  userId: string;
+  fullName?: string;
+}) {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get all lectures
+  const { data: lectures } = await supabase
+    .from("lectures")
+    .select("*")
+    .order("scheduled_date", { ascending: true });
+
+  return (
+    <main className="max-w-4xl mx-auto p-4 md:p-8">
+      <AnimatedContainer>
+        {/* Greeting */}
+        <AnimatedItem>
+          <div className="mb-2">
+            <h1 className="text-2xl font-bold text-[#1a2744]">
+              שלום{fullName ? `, ${fullName}` : ""}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              ברוכים הבאים לפורטל OfekTech
+            </p>
+          </div>
+        </AnimatedItem>
+
+        {/* Lectures */}
+        <AnimatedItem>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+                <Mic2 className="size-5" />
+                הרצאות
+              </CardTitle>
+              <CardDescription>לוח הרצאות התוכנית</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!lectures || lectures.length === 0 ? (
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין הרצאות כרגע
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {lectures.map((lecture) => {
+                    const isPast = lecture.scheduled_date <= today;
+
+                    return (
+                      <div
+                        key={lecture.id}
+                        className={`flex items-start gap-4 rounded-lg p-3 transition-colors ${
+                          !isPast
+                            ? "bg-gray-50/50"
+                            : "bg-white hover:bg-gray-50/50"
+                        }`}
+                      >
+                        <div
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            isPast
+                              ? "bg-[#1a2744] text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {lecture.lecture_number || "#"}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-[#1a2744]">
+                            {lecture.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">
+                              {formatDate(lecture.scheduled_date)}
+                            </span>
+                            {lecture.lecturer && (
+                              <span className="text-xs text-gray-400">
+                                {lecture.lecturer}
+                              </span>
+                            )}
+                            {lecture.location && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] gap-1"
+                              >
+                                {lecture.location === "זום" ? (
+                                  <Video className="size-3" />
+                                ) : (
+                                  <MapPin className="size-3" />
+                                )}
+                                {lecture.location}
+                              </Badge>
+                            )}
+                            {isPast && lecture.recording_url && (
+                              <a
+                                href={lecture.recording_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                              >
+                                <Video className="size-3" />
+                                הקלטה
+                                <ExternalLink className="size-2.5" />
+                              </a>
+                            )}
+                            {isPast && lecture.presentation_url && (
+                              <a
+                                href={lecture.presentation_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
+                              >
+                                <FileText className="size-3" />
+                                מצגת
+                                <ExternalLink className="size-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="shrink-0">
+                          {!isPast && (
+                            <Badge
+                              variant="secondary"
+                              className="text-gray-400"
+                            >
+                              <Clock className="size-3 ml-1" />
+                              בקרוב
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedItem>
+
+        {/* Contact */}
+        <AnimatedItem>
+          <TeamContactCard />
+        </AnimatedItem>
+      </AnimatedContainer>
+    </main>
+  );
 }
 
 async function CandidateDashboard({

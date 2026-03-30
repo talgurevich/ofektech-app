@@ -61,8 +61,8 @@ export default function LoginPage() {
           <span className="text-white font-medium"> מתחיל כאן.</span>
         </p>
 
-        {/* Two-column info cards */}
-        <div className="mb-12 grid w-full grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Three-column info cards */}
+        <div className="mb-12 grid w-full grid-cols-1 gap-6 md:grid-cols-3">
           {/* Founders column */}
           <div className="rounded-2xl border border-[#22c55e]/20 bg-white/5 p-8 backdrop-blur-sm">
             <div className="mb-4 flex items-center justify-center gap-3">
@@ -121,6 +121,34 @@ export default function LoginPage() {
               <li className="flex items-start gap-2">
                 <span className="mt-1 text-[#22c55e]">✦</span>
                 <span>לצפות בלוח הזמנים של התוכנית</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Visitors column */}
+          <div className="rounded-2xl border border-[#22c55e]/20 bg-white/5 p-8 backdrop-blur-sm">
+            <div className="mb-4 flex items-center justify-center gap-3">
+              <svg className="h-8 w-8 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <h2 className="text-xl font-bold text-white">מאזינים</h2>
+            </div>
+            <p className="mb-3 text-sm leading-relaxed text-gray-300">
+              גישה לתוכן ההרצאות של התוכנית:
+            </p>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-[#22c55e]">✦</span>
+                <span>צפייה בלוח ההרצאות המלא</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-[#22c55e]">✦</span>
+                <span>גישה להקלטות הזום של ההרצאות</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-[#22c55e]">✦</span>
+                <span>גישה למצגות ולחומרי הלימוד</span>
               </li>
             </ul>
           </div>
