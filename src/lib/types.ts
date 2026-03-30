@@ -70,6 +70,22 @@ export interface SessionFeedback {
   session?: MentorSession;
 }
 
+export interface GuideChapter {
+  id: string;
+  chapter_number: number;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+export interface CandidateChapterEntry {
+  id: string;
+  candidate_id: string;
+  chapter_id: string;
+  content: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   candidate_id: string;

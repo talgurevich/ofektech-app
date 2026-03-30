@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardCheck,
+  BookOpen,
   ListTodo,
   Users,
   Mic2,
@@ -42,6 +43,7 @@ interface AppSidebarProps {
 
 const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
+  { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
   { href: "/tasks", label: "משימות", icon: ListTodo },
 ];
 

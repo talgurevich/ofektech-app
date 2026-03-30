@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Sparkles,
   ListTodo,
+  BookOpen,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -279,6 +280,17 @@ async function CandidateDashboard({
     .select("*", { count: "exact", head: true })
     .eq("candidate_id", userId)
     .eq("completed", false);
+
+  // Guide progress
+  const { count: guideChapterCount } = await supabase
+    .from("guide_chapters")
+    .select("*", { count: "exact", head: true });
+
+  const { count: guideFilledCount } = await supabase
+    .from("candidate_chapter_entries")
+    .select("*", { count: "exact", head: true })
+    .eq("candidate_id", userId)
+    .neq("content", "");
 
   const pastLectureIds = new Set(
     lectures?.filter((l) => l.scheduled_date <= today).map((l) => l.id) || []
@@ -578,6 +590,42 @@ async function CandidateDashboard({
                   </Link>
                 </CardContent>
               </Card>
+
+              {/* Guide progress */}
+              {(guideChapterCount ?? 0) > 0 && (
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="pt-0">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex size-9 items-center justify-center rounded-lg bg-[#22c55e]/10">
+                        <BookOpen className="size-5 text-[#22c55e]" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[#1a2744] text-sm">
+                          מדריך התוכנית
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {guideFilledCount || 0} מתוך {guideChapterCount} פרקים הושלמו
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden mb-3">
+                      <div
+                        className="h-full rounded-full bg-[#22c55e] transition-all duration-500"
+                        style={{
+                          width: `${guideChapterCount ? ((guideFilledCount || 0) / guideChapterCount) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <Link
+                      href="/guide"
+                      className="inline-flex items-center gap-1 text-sm text-[#22c55e] hover:underline"
+                    >
+                      המשך למדריך
+                      <ArrowLeft className="size-3.5" />
+                    </Link>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Contact */}
               <TeamContactCard />

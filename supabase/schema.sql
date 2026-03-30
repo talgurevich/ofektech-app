@@ -98,6 +98,25 @@ create table session_feedback (
   unique (session_id, submitted_by)
 );
 
+-- Guide chapters table
+create table guide_chapters (
+  id uuid primary key default gen_random_uuid(),
+  chapter_number int not null,
+  title text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Candidate chapter entries (their written content per chapter)
+create table candidate_chapter_entries (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null references profiles(id),
+  chapter_id uuid not null references guide_chapters(id),
+  content text not null default '',
+  updated_at timestamptz not null default now(),
+  unique (candidate_id, chapter_id)
+);
+
 -- Tasks table
 create table tasks (
   id uuid primary key default gen_random_uuid(),
@@ -250,6 +269,28 @@ create policy "Participants update own session feedback"
   on session_feedback for update using (
     submitted_by = auth.uid()
   );
+
+-- Guide chapters: anyone reads, admin manages
+alter table guide_chapters enable row level security;
+alter table candidate_chapter_entries enable row level security;
+
+create policy "Anyone can read guide chapters"
+  on guide_chapters for select using (true);
+
+create policy "Admin can manage guide chapters"
+  on guide_chapters for all using (get_user_role() = 'admin');
+
+create policy "Candidates see own entries"
+  on candidate_chapter_entries for select using (
+    candidate_id = auth.uid()
+    or get_user_role() = 'admin'
+  );
+
+create policy "Candidates manage own entries"
+  on candidate_chapter_entries for all using (candidate_id = auth.uid());
+
+create policy "Admin can manage all entries"
+  on candidate_chapter_entries for all using (get_user_role() = 'admin');
 
 -- Tasks: own + admin + mentor
 alter table tasks enable row level security;
