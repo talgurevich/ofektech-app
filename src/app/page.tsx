@@ -256,6 +256,17 @@ async function CandidateDashboard({
     lectureFeedback?.map((f) => f.lecture_id) || []
   );
 
+  // Get assigned mentor
+  const { data: mentorAssignments } = await supabase
+    .from("mentor_assignments")
+    .select("mentor_id, profiles!mentor_assignments_mentor_id_fkey(full_name)")
+    .eq("candidate_id", userId)
+    .limit(1);
+
+  const mentorName = mentorAssignments?.[0]
+    ? (mentorAssignments[0] as unknown as { profiles: { full_name: string } }).profiles?.full_name
+    : null;
+
   // Check opening check-in
   const { data: openingCheckin } = await supabase
     .from("checkins")
@@ -628,7 +639,7 @@ async function CandidateDashboard({
               )}
 
               {/* Contact */}
-              <TeamContactCard />
+              <TeamContactCard mentorName={mentorName} />
             </div>
           </div>
         </AnimatedItem>
@@ -885,7 +896,7 @@ async function MentorDashboard({
   );
 }
 
-function TeamContactCard() {
+function TeamContactCard({ mentorName }: { mentorName?: string | null }) {
   const contacts = [
     { name: "טל גורביץ׳", phone: "050-442-5322" },
     { name: "אתי אילן", phone: "050-735-4911" },
@@ -901,6 +912,15 @@ function TeamContactCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {mentorName && (
+          <div className="flex items-center gap-2 bg-[#22c55e]/5 rounded-lg px-3 py-2 mb-1">
+            <Users className="size-4 text-[#22c55e]" />
+            <div>
+              <p className="text-[10px] text-gray-500">המנטור/ית שלך</p>
+              <p className="text-sm font-semibold text-[#1a2744]">{mentorName}</p>
+            </div>
+          </div>
+        )}
         {contacts.map((c) => (
           <div key={c.phone} className="flex items-center justify-between">
             <span className="text-sm font-medium text-[#1a2744]">{c.name}</span>
