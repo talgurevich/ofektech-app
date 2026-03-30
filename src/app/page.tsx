@@ -259,13 +259,19 @@ async function CandidateDashboard({
   // Get assigned mentor
   const { data: mentorAssignments } = await supabase
     .from("mentor_assignments")
-    .select("mentor_id, profiles!mentor_assignments_mentor_id_fkey(full_name)")
+    .select("mentor_id")
     .eq("candidate_id", userId)
     .limit(1);
 
-  const mentorName = mentorAssignments?.[0]
-    ? (mentorAssignments[0] as unknown as { profiles: { full_name: string } }).profiles?.full_name
-    : null;
+  let mentorName: string | null = null;
+  if (mentorAssignments?.[0]?.mentor_id) {
+    const { data: mentorProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", mentorAssignments[0].mentor_id)
+      .single();
+    mentorName = mentorProfile?.full_name || null;
+  }
 
   // Check opening check-in
   const { data: openingCheckin } = await supabase
