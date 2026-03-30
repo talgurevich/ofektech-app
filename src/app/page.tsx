@@ -255,13 +255,6 @@ async function CandidateDashboard({
     lectureFeedback?.map((f) => f.lecture_id) || []
   );
 
-  // Get mentor sessions for this candidate
-  const { data: sessions } = await supabase
-    .from("mentor_sessions")
-    .select("*, mentor:profiles!mentor_sessions_mentor_id_fkey(full_name)")
-    .eq("candidate_id", userId)
-    .order("session_date", { ascending: false });
-
   // Check opening check-in
   const { data: openingCheckin } = await supabase
     .from("checkins")
@@ -583,58 +576,6 @@ async function CandidateDashboard({
                     צפייה בכל המשימות
                     <ArrowLeft className="size-3.5" />
                   </Link>
-                </CardContent>
-              </Card>
-
-              {/* Mentor Sessions */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between w-full">
-                    <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
-                      <CalendarDays className="size-5" />
-                      פגישות מנטורינג
-                    </CardTitle>
-                    <Link
-                      href="/sessions/new"
-                      className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
-                    >
-                      + חדשה
-                    </Link>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {!sessions || sessions.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-4 text-center">
-                      אין פגישות כרגע
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {sessions.map((session) => {
-                        const mentorName =
-                          (session.mentor as { full_name: string })?.full_name ||
-                          "מנטור";
-
-                        return (
-                          <div
-                            key={session.id}
-                            className="flex items-center gap-3 rounded-lg p-3 bg-gray-50/50"
-                          >
-                            <div className="flex size-9 items-center justify-center rounded-full bg-[#1a2744]/10">
-                              <Users className="size-4 text-[#1a2744]" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-[#1a2744] text-sm">
-                                {mentorName}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(session.session_date)}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 
