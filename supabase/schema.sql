@@ -312,6 +312,7 @@ alter table mentor_assignments enable row level security;
 create policy "Mentors see own assignments"
   on mentor_assignments for select using (
     mentor_id = auth.uid()
+    or candidate_id = auth.uid()
     or get_user_role() = 'admin'
   );
 
