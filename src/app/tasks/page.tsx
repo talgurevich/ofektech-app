@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
+  List,
+  GitCommitHorizontal,
 } from "lucide-react";
 import type { Task } from "@/lib/types";
 
@@ -38,6 +40,7 @@ export default function TasksPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [view, setView] = useState<"list" | "timeline">("list");
 
   // Form state
   const [description, setDescription] = useState("");
@@ -127,6 +130,32 @@ export default function TasksPage() {
         </button>
       </div>
 
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setView("list")}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            view === "list"
+              ? "bg-white text-[#1a2744] shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <List className="size-4" />
+          רשימה
+        </button>
+        <button
+          onClick={() => setView("timeline")}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            view === "timeline"
+              ? "bg-white text-[#1a2744] shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <GitCommitHorizontal className="size-4" />
+          ציר זמן
+        </button>
+      </div>
+
       {/* New task form */}
       {showForm && (
         <Card className="border-0 shadow-sm ring-1 ring-[#22c55e]/20">
@@ -205,64 +234,74 @@ export default function TasksPage() {
         </Card>
       )}
 
-      {/* Open tasks */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
-            <Circle className="size-4" />
-            משימות פתוחות
-            {openTasks.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {openTasks.length}
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {openTasks.length === 0 ? (
-            <p className="text-gray-400 text-sm py-4 text-center">
-              אין משימות פתוחות
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {openTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={toggleComplete}
-                  onDelete={deleteTask}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {view === "list" ? (
+        <>
+          {/* Open tasks */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                <Circle className="size-4" />
+                משימות פתוחות
+                {openTasks.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {openTasks.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {openTasks.length === 0 ? (
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין משימות פתוחות
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {openTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={toggleComplete}
+                      onDelete={deleteTask}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Completed tasks */}
-      {completedTasks.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-400 text-base">
-              <CheckCircle2 className="size-4" />
-              הושלמו
-              <Badge variant="secondary" className="text-xs">
-                {completedTasks.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {completedTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={toggleComplete}
-                  onDelete={deleteTask}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          {/* Completed tasks */}
+          {completedTasks.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-400 text-base">
+                  <CheckCircle2 className="size-4" />
+                  הושלמו
+                  <Badge variant="secondary" className="text-xs">
+                    {completedTasks.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {completedTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={toggleComplete}
+                      onDelete={deleteTask}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <TaskTimeline
+          tasks={tasks}
+          onToggle={toggleComplete}
+          onDelete={deleteTask}
+        />
       )}
     </main>
   );
@@ -334,6 +373,141 @@ function TaskRow({
       >
         <Trash2 className="size-4" />
       </button>
+    </div>
+  );
+}
+
+function TaskTimeline({
+  tasks,
+  onToggle,
+  onDelete,
+}: {
+  tasks: Task[];
+  onToggle: (task: Task) => void;
+  onDelete: (id: string) => void;
+}) {
+  // Group tasks by deadline date (or "ללא תאריך" if no deadline)
+  const today = new Date().toISOString().split("T")[0];
+
+  // Sort: overdue first, then by deadline, then no deadline
+  const sorted = [...tasks].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    const aDate = a.deadline || "9999-12-31";
+    const bDate = b.deadline || "9999-12-31";
+    return aDate.localeCompare(bDate);
+  });
+
+  // Group by date
+  const groups = new Map<string, Task[]>();
+  sorted.forEach((task) => {
+    const key = task.deadline || "no-date";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(task);
+  });
+
+  if (tasks.length === 0) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="pt-0">
+          <p className="text-gray-400 text-sm py-8 text-center">
+            אין משימות עדיין
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Timeline line */}
+      <div className="absolute right-[19px] top-0 bottom-0 w-0.5 bg-gray-200" />
+
+      <div className="space-y-6">
+        {Array.from(groups.entries()).map(([dateKey, groupTasks]) => {
+          const isOverdue = dateKey !== "no-date" && dateKey < today && groupTasks.some((t) => !t.completed);
+          const isPast = dateKey !== "no-date" && dateKey <= today;
+          const noDate = dateKey === "no-date";
+
+          return (
+            <div key={dateKey} className="relative">
+              {/* Date marker */}
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={`relative z-10 flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    isOverdue
+                      ? "bg-red-500 text-white"
+                      : noDate
+                        ? "bg-gray-300 text-white"
+                        : isPast
+                          ? "bg-[#1a2744] text-white"
+                          : "bg-[#22c55e] text-white"
+                  }`}
+                >
+                  {noDate ? (
+                    <CalendarDays className="size-4" />
+                  ) : (
+                    new Date(dateKey).getDate()
+                  )}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${isOverdue ? "text-red-600" : "text-[#1a2744]"}`}>
+                    {noDate
+                      ? "ללא תאריך יעד"
+                      : formatDate(dateKey)}
+                  </p>
+                  {isOverdue && (
+                    <p className="text-xs text-red-500">באיחור</p>
+                  )}
+                </div>
+                <Badge variant="secondary" className="text-[10px]">
+                  {groupTasks.length}
+                </Badge>
+              </div>
+
+              {/* Tasks for this date */}
+              <div className="mr-[19px] pr-8 space-y-2">
+                {groupTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
+                      task.completed ? "bg-gray-50/50 opacity-60" : "bg-white shadow-sm border border-gray-100"
+                    }`}
+                  >
+                    <button
+                      onClick={() => onToggle(task)}
+                      className="mt-0.5 shrink-0 focus:outline-none"
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="size-5 text-[#22c55e]" />
+                      ) : (
+                        <Circle className="size-5 text-gray-300 hover:text-[#22c55e] transition-colors" />
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${
+                          task.completed ? "text-gray-400 line-through" : "text-[#1a2744]"
+                        }`}
+                      >
+                        {task.description}
+                      </p>
+                      <Badge variant="secondary" className="text-[10px] mt-1">
+                        {ownerLabel(task.owner)}
+                      </Badge>
+                    </div>
+                    <button
+                      onClick={() => onDelete(task.id)}
+                      className="shrink-0 mt-0.5 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors focus:outline-none"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
