@@ -103,6 +103,34 @@ export default function AdminLecturesPage() {
     setEditForm({});
     setLoading(false);
     loadLectures();
+
+    // Notify candidates + visitors about the lecture update
+    await fetch("/api/notifications/broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roles: ["candidate", "visitor"],
+        type: "lecture",
+        title: "הרצאה עודכנה",
+        body: editForm.title,
+        link: "/",
+      }),
+    });
+
+    // If recording or presentation was added, send additional notification
+    if (editForm.recording_url || editForm.presentation_url) {
+      await fetch("/api/notifications/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roles: ["candidate", "visitor"],
+          type: "lecture",
+          title: "תוכן חדש זמין",
+          body: `הקלטה או מצגת נוספו להרצאה: ${editForm.title}`,
+          link: "/",
+        }),
+      });
+    }
   }
 
   async function handleCreate() {
@@ -140,6 +168,19 @@ export default function AdminLecturesPage() {
     setShowNew(false);
     setLoading(false);
     loadLectures();
+
+    // Notify candidates + visitors about the new lecture
+    await fetch("/api/notifications/broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roles: ["candidate", "visitor"],
+        type: "lecture",
+        title: "הרצאה חדשה נוספה",
+        body: newForm.title,
+        link: "/",
+      }),
+    });
   }
 
   return (

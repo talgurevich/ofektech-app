@@ -86,6 +86,21 @@ export default function AdminAssignmentsPage() {
       }
     } else {
       setMessage("השיבוץ נוסף בהצלחה");
+
+      // Notify the mentor about the new mentee assignment
+      const candidate = candidates.find((c) => c.id === selectedCandidate);
+      await fetch("/api/notifications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: selectedMentor,
+          type: "task",
+          title: "חניך/ה חדש/ה שובץ/ה אליך",
+          body: candidate?.full_name || "",
+          link: "/",
+        }),
+      });
+
       setSelectedCandidate("");
     }
 

@@ -76,7 +76,31 @@ export default function GuidePage() {
       setSaving((prev) => ({ ...prev, [chapterId]: false }));
 
       if (!error && data) {
-        setEntries((prev) => ({ ...prev, [chapterId]: data }));
+        setEntries((prev) => {
+          const updated = { ...prev, [chapterId]: data };
+
+          // Check if all chapters are now filled
+          const filledNow = chapters.filter(
+            (ch) => updated[ch.id] && updated[ch.id].content.trim().length > 0
+          ).length;
+
+          if (filledNow === chapters.length && chapters.length > 0) {
+            // All chapters completed — notify admins
+            fetch("/api/notifications/broadcast", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                roles: ["admin"],
+                type: "guide",
+                title: "חניך/ה השלים/ה את מדריך התוכנית!",
+                body: "",
+                link: "/admin/candidates",
+              }),
+            });
+          }
+
+          return updated;
+        });
         setSaved((prev) => ({ ...prev, [chapterId]: true }));
         setTimeout(() => {
           setSaved((prev) => ({ ...prev, [chapterId]: false }));
