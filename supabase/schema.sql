@@ -117,6 +117,18 @@ create table candidate_chapter_entries (
   unique (candidate_id, chapter_id)
 );
 
+-- Notifications table
+create table notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  type text not null,
+  title text not null,
+  body text,
+  link text,
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 -- Tasks table
 create table tasks (
   id uuid primary key default gen_random_uuid(),
@@ -349,6 +361,21 @@ create policy "Mentors can add tasks to assigned mentees"
       and mentor_assignments.candidate_id = tasks.candidate_id
     )
   );
+
+-- Notifications: own + admin
+alter table notifications enable row level security;
+
+create policy "Users see own notifications"
+  on notifications for select using (user_id = auth.uid());
+
+create policy "Users update own notifications"
+  on notifications for update using (user_id = auth.uid());
+
+create policy "Authenticated users can insert notifications"
+  on notifications for insert with check (true);
+
+create policy "Admin can manage all notifications"
+  on notifications for all using (get_user_role() = 'admin');
 
 -- Weekly check-ins: own + admin
 create policy "Candidates see own checkins"

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
+import { NotificationBell } from "@/components/notification-bell";
 
 type UserRole = "candidate" | "mentor" | "admin" | "visitor";
 
@@ -114,13 +115,16 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
             />
           </div>
           {fullName && (
-            <div className="mt-3 px-1">
-              <p className="text-sm font-medium text-sidebar-foreground">
-                {fullName}
-              </p>
-              <p className="text-xs text-sidebar-foreground/60">
-                {getRoleLabel(role)}
-              </p>
+            <div className="mt-3 px-1 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sidebar-foreground">
+                  {fullName}
+                </p>
+                <p className="text-xs text-sidebar-foreground/60">
+                  {getRoleLabel(role)}
+                </p>
+              </div>
+              <NotificationBell />
             </div>
           )}
         </SidebarHeader>
@@ -180,6 +184,9 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
             <Menu className="size-5" />
           </SidebarTrigger>
           <img src="/logo.png" alt="OfekTech" className="h-7 w-auto" />
+          <div className="mr-auto">
+            <NotificationBell />
+          </div>
         </header>
         <div className="flex-1">{children}</div>
         <Footer />

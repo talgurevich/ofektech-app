@@ -155,6 +155,21 @@ export default function SessionFeedbackPage() {
       return;
     }
 
+    // Notify candidate about new feedback
+    if (myRole === "mentor" && session) {
+      await fetch("/api/notifications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: session.candidate_id,
+          type: "feedback",
+          title: "משוב חדש מהמנטור שלך",
+          body: `${otherPerson} הגיש/ה משוב על הפגישה`,
+          link: `/sessions/${id}/feedback`,
+        }),
+      });
+    }
+
     router.push("/");
     router.refresh();
   }

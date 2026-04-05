@@ -39,6 +39,19 @@ export function MentorTaskAdder({
       created_by: mentorId,
     });
 
+    // Notify candidate about new task
+    await fetch("/api/notifications/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetUserId: candidateId,
+        type: "task",
+        title: "משימה חדשה מהמנטור",
+        body: description.trim().slice(0, 100),
+        link: "/tasks",
+      }),
+    });
+
     setDescription("");
     setDeadline("");
     setOwner("mentor");
