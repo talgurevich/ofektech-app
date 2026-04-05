@@ -22,6 +22,7 @@ import {
   Users,
   Plus,
 } from "lucide-react";
+import { MentorTaskAdder } from "@/components/mentor-task-adder";
 
 export default async function MenteeDetailPage({
   params,
@@ -159,6 +160,7 @@ export default async function MenteeDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <MentorTaskAdder candidateId={candidateId} mentorId={user.id} />
           {/* Open tasks */}
           {openTasks.length > 0 && (
             <div className="space-y-2">

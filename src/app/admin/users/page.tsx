@@ -6,6 +6,7 @@ import type { Profile, UserRole, Cohort } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Trash2, X, Check, Upload, FileSpreadsheet } from "lucide-react";
+import Link from "next/link";
 
 export default function AdminUsersPage() {
   const supabase = createClient();
@@ -470,8 +471,10 @@ export default function AdminUsersPage() {
                         <Users className="size-3.5 text-[#22c55e]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
-                        <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
+                        <Link href={`/admin/candidates/${p.id}`} className="hover:underline">
+                          <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
+                          <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
+                        </Link>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

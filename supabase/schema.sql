@@ -341,6 +341,15 @@ create policy "Candidates manage own tasks"
 create policy "Admin can manage all tasks"
   on tasks for all using (get_user_role() = 'admin');
 
+create policy "Mentors can add tasks to assigned mentees"
+  on tasks for insert with check (
+    exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.candidate_id = tasks.candidate_id
+    )
+  );
+
 -- Weekly check-ins: own + admin
 create policy "Candidates see own checkins"
   on checkins for select using (
