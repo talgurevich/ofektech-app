@@ -6,13 +6,14 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic2,
-  ClipboardCheck,
   Users,
-  CalendarDays,
-  Star,
+  Rocket,
   ArrowLeft,
   ArrowRight,
-  Rocket,
+  ListTodo,
+  BookOpen,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -28,44 +29,78 @@ const CANDIDATE_STEPS: Step[] = [
   {
     title: "!ברוכים הבאים ל-OfekTech",
     description:
-      "הפורטל הזה מלווה אותך לאורך כל התוכנית — הכל במקום אחד, פשוט ונגיש.",
+      "הפורטל מלווה אותך לאורך כל התוכנית — ניהול משימות, בניית מצגת משקיעים, הרצאות ועוד. הכל במקום אחד.",
     icon: <Rocket className="size-8 text-[#22c55e]" />,
     image: "/logo.png",
   },
   {
-    title: "הרצאות ולוח זמנים",
+    title: "משימות",
     description:
-      "כאן תראו את כל ההרצאות, המרצים, התאריכים, וקישורים להקלטות ומצגות.",
+      "כאן תנהלו את המשימות שלכם לאורך התוכנית — הגדירו דדליינים, סמנו אחראי ועקבו אחרי ההתקדמות.",
+    icon: <ListTodo className="size-8 text-[#22c55e]" />,
+    image: "/screenshot-candidate.png",
+    bullets: [
+      "הוסיפו משימות בכל עת עם תאריך יעד ואחראי",
+      "סמנו משימות כהושלמו",
+      "צפו במשימות כרשימה או כציר זמן",
+    ],
+  },
+  {
+    title: "מדריך התוכנית",
+    description:
+      "מדריך לבניית מצגת משקיעים — 13 פרקים שתמלאו לאורך התוכנית. כתבו את תוכן המיזם שלכם בכל פרק.",
+    icon: <BookOpen className="size-8 text-[#22c55e]" />,
+    image: "/screenshot-checkin.png",
+    bullets: [
+      "פרקים כמו: הבעיה, הפתרון, גודל השוק, מודל עסקי ועוד",
+      "כתבו את התוכן שלכם בכל פרק — נשמר אוטומטית",
+      "עקבו אחרי ההתקדמות במדריך מהדשבורד",
+    ],
+  },
+  {
+    title: "הרצאות ומשוב",
+    description:
+      "כל ההרצאות, ההקלטות והמצגות במקום אחד. אחרי כל הרצאה תתבקשו למלא משוב קצר.",
     icon: <Mic2 className="size-8 text-[#22c55e]" />,
     image: "/screenshot-candidate.png",
     bullets: [
       "לוח הרצאות מלא עם תאריכים ומרצים",
       "קישורים להקלטות ומצגות אחרי כל הרצאה",
-      "אחרי כל הרצאה — תתבקשו למלא משוב קצר",
+      "משוב קצר אחרי כל הרצאה",
     ],
   },
+];
+
+const MENTOR_STEPS: Step[] = [
   {
-    title: "צ׳ק-אין שבועי",
+    title: "!תודה שהצטרפת כמנטור/ית",
     description:
-      "כל שבוע נבקש ממך למלא צ׳ק-אין קצר — זה עוזר לנו ולמנטור שלך ללוות אותך.",
-    icon: <ClipboardCheck className="size-8 text-[#22c55e]" />,
-    image: "/screenshot-checkin.png",
-    bullets: [
-      "שעות השקעה ומנטורינג",
-      "מצב רוח והתקדמות",
-      "הישגים, חסמים ויעדים לשבוע הבא",
-    ],
+      "הפורטל עוזר לך ללוות את היזמים שלך — לעקוב אחרי ההתקדמות שלהם, לראות את המשימות והמדריך שלהם, ולתת משוב מובנה.",
+    icon: <Rocket className="size-8 text-[#22c55e]" />,
+    image: "/logo.png",
   },
   {
-    title: "פגישות מנטורינג",
+    title: "החניכים שלך",
     description:
-      "אחרי כל פגישה עם המנטור — שניכם ממלאים משוב קצר. ככה אנחנו יודעים שהליווי עובד.",
+      "בדשבורד תראו את כל החניכים המשובצים אליכם עם סקירת התקדמות מלאה.",
     icon: <Users className="size-8 text-[#22c55e]" />,
     image: "/screenshot-mentor.png",
     bullets: [
-      "תיעוד פגישות עם המנטור שלך",
-      "משוב הדדי אחרי כל פגישה",
-      "מעקב אחרי כל הפגישות במקום אחד",
+      "צפייה במשימות של כל חניך/ה — מה פתוח ומה הושלם",
+      "מעקב אחרי ההתקדמות במדריך התוכנית",
+      "גישה לכל מה שהחניך/ה כתב/ה בפרקי המדריך",
+    ],
+  },
+  {
+    title: "משוב מובנה",
+    description:
+      "אחרי כל פגישה תתבקשו לדרג את היזם/ית ולכתוב משוב — כך אנחנו מוודאים שהליווי אפקטיבי.",
+    icon: <Star className="size-8 text-[#22c55e]" />,
+    image: "/screenshot-mentor.png",
+    bullets: [
+      "דירוג ב-5 קריטריונים: מיקוד, התקדמות, מוכנות, יוזמה, יישום",
+      "משוב כתוב חופשי",
+      "היסטוריית משובים לכל חניך/ה",
     ],
   },
 ];
@@ -73,8 +108,7 @@ const CANDIDATE_STEPS: Step[] = [
 const VISITOR_STEPS: Step[] = [
   {
     title: "!ברוכים הבאים ל-OfekTech",
-    description:
-      "הוזמנת לצפות בתוכן ההרצאות של התוכנית.",
+    description: "הוזמנת לצפות בתוכן ההרצאות של התוכנית.",
     icon: <Rocket className="size-8 text-[#22c55e]" />,
     image: "/logo.png",
   },
@@ -88,40 +122,6 @@ const VISITOR_STEPS: Step[] = [
       "לוח הרצאות מלא עם תאריכים ומרצים",
       "קישורים להקלטות זום אחרי כל הרצאה",
       "קישורים למצגות",
-    ],
-  },
-];
-
-const MENTOR_STEPS: Step[] = [
-  {
-    title: "!תודה שהצטרפת כמנטור/ית",
-    description:
-      "הפורטל עוזר לך ללוות את היזמים שלך בצורה מובנית ואפקטיבית.",
-    icon: <Rocket className="size-8 text-[#22c55e]" />,
-    image: "/logo.png",
-  },
-  {
-    title: "פגישות ומשוב",
-    description:
-      "אחרי כל פגישה — תתבקש/י לדרג את היזם/ית ולכתוב משוב חופשי.",
-    icon: <Star className="size-8 text-[#22c55e]" />,
-    image: "/screenshot-mentor.png",
-    bullets: [
-      "דירוג ב-5 קריטריונים: מיקוד, התקדמות, מוכנות, יוזמה, יישום",
-      "משוב כתוב חופשי",
-      "צפייה במשוב של היזם/ית על הפגישה",
-    ],
-  },
-  {
-    title: "מעקב אחרי יזמים",
-    description:
-      "בדשבורד שלך תראה/י את כל הפגישות, מי מילא משוב, ואיך ליצור קשר עם הצוות.",
-    icon: <CalendarDays className="size-8 text-[#22c55e]" />,
-    image: "/screenshot-mentor.png",
-    bullets: [
-      "סטטיסטיקות על פגישות ומשובים",
-      "רשימת פגישות עם סטטוס משוב",
-      "פרטי קשר של צוות OfekTech",
     ],
   },
 ];
@@ -188,7 +188,12 @@ export default function OnboardingPage() {
     );
   }
 
-  const steps = role === "mentor" ? MENTOR_STEPS : role === "visitor" ? VISITOR_STEPS : CANDIDATE_STEPS;
+  const steps =
+    role === "mentor"
+      ? MENTOR_STEPS
+      : role === "visitor"
+        ? VISITOR_STEPS
+        : CANDIDATE_STEPS;
   const current = steps[step];
   const isLast = step === steps.length - 1;
   const isLogoStep = current.image === "/logo.png";
@@ -219,9 +224,7 @@ export default function OnboardingPage() {
               {current.image && (
                 <div
                   className={`flex items-center justify-center ${
-                    isLogoStep
-                      ? "bg-white py-8"
-                      : "bg-[#1a2744] p-4"
+                    isLogoStep ? "bg-white py-8" : "bg-[#1a2744] p-4"
                   }`}
                 >
                   <img
