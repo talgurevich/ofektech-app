@@ -43,7 +43,6 @@ export async function GET(request: Request) {
 
     if (candidates) {
       for (const lecture of passedLectures) {
-        // Check who already submitted feedback
         const { data: existingFeedback } = await supabase
           .from("lecture_feedback")
           .select("candidate_id")
@@ -86,7 +85,6 @@ export async function GET(request: Request) {
         .single();
 
       if (!openingCheckin) {
-        // Check if we already notified today (avoid spam)
         const { data: existingNotif } = await supabase
           .from("notifications")
           .select("id")
@@ -113,18 +111,29 @@ export async function GET(request: Request) {
   // 3. No tasks yet (candidates created > 5 days ago)
   const { data: olderCandidates } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, venture_id")
     .eq("role", "candidate")
     .lte("created_at", fiveDaysAgo);
 
   if (olderCandidates) {
     for (const candidate of olderCandidates) {
-      const { count } = await supabase
+      // Check personal tasks
+      const { count: personalCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
         .eq("candidate_id", candidate.id);
 
-      if (count === 0) {
+      // Check venture tasks
+      let ventureCount = 0;
+      if (candidate.venture_id) {
+        const { count } = await supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .eq("venture_id", candidate.venture_id);
+        ventureCount = count || 0;
+      }
+
+      if ((personalCount || 0) + ventureCount === 0) {
         const { data: existingNotif } = await supabase
           .from("notifications")
           .select("id")
@@ -148,54 +157,72 @@ export async function GET(request: Request) {
     }
   }
 
-  // 4. Guide not started (candidates created > 7 days ago, 0 entries)
+  // 4. Guide not started (ventures with candidates created > 7 days ago, 0 entries)
   const { data: weekOldCandidates } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, venture_id")
     .eq("role", "candidate")
     .lte("created_at", sevenDaysAgo);
 
   if (weekOldCandidates) {
+    // Track which ventures we already checked
+    const checkedVentures = new Set<string>();
+
     for (const candidate of weekOldCandidates) {
+      if (!candidate.venture_id) continue;
+      if (checkedVentures.has(candidate.venture_id)) continue;
+      checkedVentures.add(candidate.venture_id);
+
       const { count } = await supabase
-        .from("candidate_chapter_entries")
+        .from("venture_chapter_entries")
         .select("*", { count: "exact", head: true })
-        .eq("candidate_id", candidate.id)
+        .eq("venture_id", candidate.venture_id)
         .neq("content", "");
 
       if (count === 0) {
-        const { data: existingNotif } = await supabase
-          .from("notifications")
+        // Notify all members of this venture
+        const { data: ventureMembers } = await supabase
+          .from("profiles")
           .select("id")
-          .eq("user_id", candidate.id)
-          .eq("type", "guide")
-          .eq("title", "התחילו למלא את מדריך התוכנית")
-          .gte("created_at", today)
-          .limit(1)
-          .single();
+          .eq("venture_id", candidate.venture_id);
 
-        if (!existingNotif) {
-          notifications.push({
-            user_id: candidate.id,
-            type: "guide",
-            title: "התחילו למלא את מדריך התוכנית",
-            body: "13 פרקים שיעזרו לכם לבנות מצגת משקיעים",
-            link: "/guide",
-          });
+        for (const member of ventureMembers || []) {
+          const { data: existingNotif } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", member.id)
+            .eq("type", "guide")
+            .eq("title", "התחילו למלא את מדריך התוכנית")
+            .gte("created_at", today)
+            .limit(1)
+            .single();
+
+          if (!existingNotif) {
+            notifications.push({
+              user_id: member.id,
+              type: "guide",
+              title: "התחילו למלא את מדריך התוכנית",
+              body: "13 פרקים שיעזרו לכם לבנות מצגת משקיעים",
+              link: "/guide",
+            });
+          }
         }
       }
     }
   }
 
-  // 5. Task overdue
-  const { data: overdueTasks } = await supabase
+  // 5. Task overdue — personal tasks
+  const { data: overduePersonalTasks } = await supabase
     .from("tasks")
     .select("id, candidate_id, description, deadline")
     .lt("deadline", today)
-    .eq("completed", false);
+    .eq("completed", false)
+    .not("candidate_id", "is", null);
 
-  if (overdueTasks) {
-    for (const task of overdueTasks) {
+  if (overduePersonalTasks) {
+    for (const task of overduePersonalTasks) {
+      if (!task.candidate_id) continue;
+
       const { data: existingNotif } = await supabase
         .from("notifications")
         .select("id")
@@ -214,6 +241,51 @@ export async function GET(request: Request) {
           body: task.description.slice(0, 100),
           link: "/tasks",
         });
+      }
+    }
+  }
+
+  // 6. Task overdue — venture tasks
+  const { data: overdueVentureTasks } = await supabase
+    .from("tasks")
+    .select("id, venture_id, description, deadline")
+    .lt("deadline", today)
+    .eq("completed", false)
+    .not("venture_id", "is", null);
+
+  if (overdueVentureTasks) {
+    // Track notified ventures to avoid duplication
+    const notifiedVentures = new Set<string>();
+
+    for (const task of overdueVentureTasks) {
+      if (!task.venture_id || notifiedVentures.has(task.venture_id)) continue;
+      notifiedVentures.add(task.venture_id);
+
+      const { data: ventureMembers } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("venture_id", task.venture_id);
+
+      for (const member of ventureMembers || []) {
+        const { data: existingNotif } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("user_id", member.id)
+          .eq("type", "task")
+          .eq("link", "/tasks")
+          .gte("created_at", today)
+          .limit(1)
+          .single();
+
+        if (!existingNotif) {
+          notifications.push({
+            user_id: member.id,
+            type: "task",
+            title: "משימת מיזם באיחור",
+            body: task.description.slice(0, 100),
+            link: "/tasks",
+          });
+        }
       }
     }
   }

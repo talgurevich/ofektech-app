@@ -9,15 +9,27 @@ export interface Cohort {
   created_at: string;
 }
 
+export interface Venture {
+  id: string;
+  name: string;
+  description: string | null;
+  cohort_id: string | null;
+  created_at: string;
+  cohort?: Cohort | null;
+  members?: Profile[];
+}
+
 export interface Profile {
   id: string;
   email: string;
   full_name: string;
   role: UserRole;
   cohort_id: string | null;
+  venture_id: string | null;
   onboarding_completed: boolean;
   created_at: string;
   cohort?: Cohort | null;
+  venture?: Venture | null;
 }
 
 export interface Lecture {
@@ -38,13 +50,12 @@ export interface Lecture {
 
 export interface MentorSession {
   id: string;
-  candidate_id: string;
+  venture_id: string;
   mentor_id: string;
   session_date: string;
   created_by: string;
   created_at: string;
-  // joined fields
-  candidate?: Profile;
+  venture?: Venture;
   mentor?: Profile;
 }
 
@@ -54,7 +65,6 @@ export interface LectureFeedback {
   candidate_id: string;
   content: string;
   submitted_at: string;
-  // joined
   lecture?: Lecture;
   candidate?: Profile;
 }
@@ -66,7 +76,6 @@ export interface SessionFeedback {
   role: FeedbackRole;
   content: string;
   submitted_at: string;
-  // joined
   session?: MentorSession;
 }
 
@@ -78,9 +87,9 @@ export interface GuideChapter {
   created_at: string;
 }
 
-export interface CandidateChapterEntry {
+export interface VentureChapterEntry {
   id: string;
-  candidate_id: string;
+  venture_id: string;
   chapter_id: string;
   content: string;
   updated_at: string;
@@ -88,7 +97,8 @@ export interface CandidateChapterEntry {
 
 export interface Task {
   id: string;
-  candidate_id: string;
+  candidate_id: string | null;
+  venture_id: string | null;
   description: string;
   owner: string;
   deadline: string | null;
@@ -111,9 +121,9 @@ export interface Notification {
 export interface MentorAssignment {
   id: string;
   mentor_id: string;
-  candidate_id: string;
+  venture_id: string;
   assigned_at: string;
-  candidate?: Profile;
+  venture?: Venture;
   mentor?: Profile;
 }
 
@@ -132,6 +142,5 @@ export interface WeeklyCheckin {
   lecture_usefulness: number | null;
   mentor_usefulness: number | null;
   submitted_at: string;
-  // joined
   candidate?: Profile;
 }

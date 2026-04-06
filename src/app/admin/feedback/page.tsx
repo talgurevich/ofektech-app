@@ -38,7 +38,7 @@ export default async function AdminFeedbackPage() {
   const { data: sessionFeedback } = await supabase
     .from("session_feedback")
     .select(
-      "*, session:mentor_sessions(session_date, candidate:profiles!mentor_sessions_candidate_id_fkey(full_name), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name)), submitter:profiles!session_feedback_submitted_by_fkey(full_name, email)"
+      "*, session:mentor_sessions(session_date, venture:ventures(name), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name)), submitter:profiles!session_feedback_submitted_by_fkey(full_name, email)"
     )
     .order("submitted_at", { ascending: false });
 
@@ -60,7 +60,7 @@ export default async function AdminFeedbackPage() {
             {sessionFeedback.map((fb) => {
               const session = fb.session as {
                 session_date: string;
-                candidate: { full_name: string } | null;
+                venture: { name: string } | null;
                 mentor: { full_name: string } | null;
               } | null;
               const submitter = fb.submitter as { full_name: string; email: string } | null;
@@ -76,7 +76,7 @@ export default async function AdminFeedbackPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-[#1a2744]">
-                            {session?.candidate?.full_name || "מועמד/ת"} ↔ {session?.mentor?.full_name || "מנטור"}
+                            {session?.venture?.name || "מיזם"} ↔ {session?.mentor?.full_name || "מנטור"}
                           </p>
                           <p className="text-xs text-gray-500">
                             {session?.session_date ? formatDate(session.session_date) : ""}

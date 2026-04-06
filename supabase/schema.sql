@@ -15,6 +15,15 @@ create table cohorts (
   created_at timestamptz not null default now()
 );
 
+-- Ventures table
+create table ventures (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  cohort_id uuid references cohorts(id),
+  created_at timestamptz not null default now()
+);
+
 -- Profiles table (extends auth.users)
 create table profiles (
   id uuid primary key references auth.users on delete cascade,
@@ -22,6 +31,7 @@ create table profiles (
   full_name text not null default '',
   role user_role not null default 'candidate',
   cohort_id uuid references cohorts(id),
+  venture_id uuid references ventures(id),
   onboarding_completed boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -62,10 +72,10 @@ create table lectures (
   created_at timestamptz not null default now()
 );
 
--- Mentor sessions table
+-- Mentor sessions table (per venture)
 create table mentor_sessions (
   id uuid primary key default gen_random_uuid(),
-  candidate_id uuid not null references profiles(id),
+  venture_id uuid not null references ventures(id),
   mentor_id uuid not null references profiles(id),
   session_date date not null,
   created_by uuid not null references profiles(id),
@@ -107,14 +117,14 @@ create table guide_chapters (
   created_at timestamptz not null default now()
 );
 
--- Candidate chapter entries (their written content per chapter)
-create table candidate_chapter_entries (
+-- Venture chapter entries (shared guide content per venture)
+create table venture_chapter_entries (
   id uuid primary key default gen_random_uuid(),
-  candidate_id uuid not null references profiles(id),
+  venture_id uuid not null references ventures(id),
   chapter_id uuid not null references guide_chapters(id),
   content text not null default '',
   updated_at timestamptz not null default now(),
-  unique (candidate_id, chapter_id)
+  unique (venture_id, chapter_id)
 );
 
 -- Notifications table
@@ -129,10 +139,11 @@ create table notifications (
   created_at timestamptz not null default now()
 );
 
--- Tasks table
+-- Tasks table (personal or venture-level)
 create table tasks (
   id uuid primary key default gen_random_uuid(),
-  candidate_id uuid not null references profiles(id),
+  candidate_id uuid references profiles(id),
+  venture_id uuid references ventures(id),
   description text not null,
   owner text not null default 'self',
   deadline date,
@@ -141,24 +152,22 @@ create table tasks (
   created_by uuid not null references profiles(id)
 );
 
--- Mentor assignments table
+-- Mentor assignments table (per venture)
 create table mentor_assignments (
   id uuid primary key default gen_random_uuid(),
   mentor_id uuid not null references profiles(id),
-  candidate_id uuid not null references profiles(id),
+  venture_id uuid not null references ventures(id),
   assigned_at timestamptz not null default now(),
-  unique (mentor_id, candidate_id)
+  unique (mentor_id, venture_id)
 );
 
--- Check-ins table (weekly, monthly, opening, ending)
+-- Check-ins table (stays personal)
 create table checkins (
   id uuid primary key default gen_random_uuid(),
   candidate_id uuid not null references profiles(id),
   type checkin_type not null,
   period_start date not null,
-  -- shared fields
   mood int check (mood between 1 and 5),
-  -- weekly fields
   hours_invested numeric,
   hours_mentoring numeric,
   progress_feeling text,
@@ -168,11 +177,9 @@ create table checkins (
   goal_next_week text,
   lecture_usefulness int check (lecture_usefulness between 1 and 5),
   mentor_usefulness int check (mentor_usefulness between 1 and 5),
-  -- monthly fields
   overall_satisfaction int check (overall_satisfaction between 1 and 5),
   monthly_highlights text,
   areas_for_improvement text,
-  -- opening fields
   venture_name text,
   venture_stage text,
   expectations text,
@@ -182,12 +189,10 @@ create table checkins (
   team_notes text,
   program_goals text,
   background text,
-  -- ending fields
   overall_experience int check (overall_experience between 1 and 5),
   key_takeaways text,
   recommendations text,
   would_recommend int check (would_recommend between 1 and 10),
-  --
   submitted_at timestamptz not null default now(),
   unique (candidate_id, type, period_start)
 );
@@ -197,11 +202,17 @@ create table checkins (
 -- ============================================
 
 alter table cohorts enable row level security;
+alter table ventures enable row level security;
 alter table profiles enable row level security;
 alter table lectures enable row level security;
 alter table mentor_sessions enable row level security;
 alter table lecture_feedback enable row level security;
 alter table session_feedback enable row level security;
+alter table guide_chapters enable row level security;
+alter table venture_chapter_entries enable row level security;
+alter table mentor_assignments enable row level security;
+alter table tasks enable row level security;
+alter table notifications enable row level security;
 alter table checkins enable row level security;
 
 -- Helper: get current user's role
@@ -210,66 +221,66 @@ returns user_role as $$
   select role from profiles where id = auth.uid();
 $$ language sql security definer stable;
 
--- Profiles: everyone can read, only admin can update role
--- Cohorts: everyone reads, admin manages
+-- Cohorts
 create policy "Anyone can read cohorts"
   on cohorts for select using (true);
-
 create policy "Admin can manage cohorts"
   on cohorts for all using (get_user_role() = 'admin');
 
+-- Ventures
+create policy "Anyone can read ventures"
+  on ventures for select using (true);
+create policy "Admin can manage ventures"
+  on ventures for all using (get_user_role() = 'admin');
+
+-- Profiles
 create policy "Anyone can read profiles"
   on profiles for select using (true);
-
 create policy "Users can update own profile"
   on profiles for update using (id = auth.uid());
-
 create policy "Admin can update any profile"
   on profiles for update using (get_user_role() = 'admin');
 
--- Lectures: everyone reads, admin creates/updates/deletes
+-- Lectures
 create policy "Anyone can read lectures"
   on lectures for select using (true);
-
 create policy "Admin can manage lectures"
   on lectures for all using (get_user_role() = 'admin');
 
--- Mentor sessions: participants + admin can see
-create policy "Participants and admin can read sessions"
+-- Mentor sessions (venture-based)
+create policy "Venture members and mentor can read sessions"
   on mentor_sessions for select using (
-    candidate_id = auth.uid()
-    or mentor_id = auth.uid()
+    mentor_id = auth.uid()
     or get_user_role() = 'admin'
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = mentor_sessions.venture_id
+    )
   );
-
-create policy "Candidates and mentors can create sessions"
+create policy "Mentors can create sessions"
   on mentor_sessions for insert with check (
     created_by = auth.uid()
-    and (get_user_role() in ('candidate', 'mentor'))
+    and get_user_role() = 'mentor'
   );
-
 create policy "Admin can manage sessions"
   on mentor_sessions for all using (get_user_role() = 'admin');
 
--- Lecture feedback: own + admin
+-- Lecture feedback
 create policy "Candidates see own lecture feedback"
   on lecture_feedback for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
   );
-
 create policy "Candidates submit own lecture feedback"
   on lecture_feedback for insert with check (
     candidate_id = auth.uid()
     and get_user_role() = 'candidate'
   );
-
 create policy "Candidates update own lecture feedback"
-  on lecture_feedback for update using (
-    candidate_id = auth.uid()
-  );
+  on lecture_feedback for update using (candidate_id = auth.uid());
 
--- Session feedback: participants + admin
+-- Session feedback (venture-based sessions)
 create policy "Participants and admin see session feedback"
   on session_feedback for select using (
     submitted_by = auth.uid()
@@ -277,120 +288,140 @@ create policy "Participants and admin see session feedback"
     or exists (
       select 1 from mentor_sessions ms
       where ms.id = session_id
-      and (ms.candidate_id = auth.uid() or ms.mentor_id = auth.uid())
+      and (
+        ms.mentor_id = auth.uid()
+        or exists (
+          select 1 from profiles
+          where profiles.id = auth.uid()
+          and profiles.venture_id = ms.venture_id
+        )
+      )
     )
   );
-
 create policy "Participants submit session feedback"
-  on session_feedback for insert with check (
-    submitted_by = auth.uid()
-  );
-
+  on session_feedback for insert with check (submitted_by = auth.uid());
 create policy "Participants update own session feedback"
-  on session_feedback for update using (
-    submitted_by = auth.uid()
-  );
+  on session_feedback for update using (submitted_by = auth.uid());
 
--- Guide chapters: anyone reads, admin manages
-alter table guide_chapters enable row level security;
-alter table candidate_chapter_entries enable row level security;
-
+-- Guide chapters
 create policy "Anyone can read guide chapters"
   on guide_chapters for select using (true);
-
 create policy "Admin can manage guide chapters"
   on guide_chapters for all using (get_user_role() = 'admin');
 
-create policy "Candidates and assigned mentors see entries"
-  on candidate_chapter_entries for select using (
-    candidate_id = auth.uid()
-    or get_user_role() = 'admin'
+-- Venture chapter entries (shared per venture)
+create policy "Venture members and assigned mentors see entries"
+  on venture_chapter_entries for select using (
+    get_user_role() = 'admin'
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = venture_chapter_entries.venture_id
+    )
     or exists (
       select 1 from mentor_assignments
       where mentor_assignments.mentor_id = auth.uid()
-      and mentor_assignments.candidate_id = candidate_chapter_entries.candidate_id
+      and mentor_assignments.venture_id = venture_chapter_entries.venture_id
     )
   );
-
-create policy "Candidates manage own entries"
-  on candidate_chapter_entries for all using (candidate_id = auth.uid());
-
+create policy "Venture members manage own entries"
+  on venture_chapter_entries for all using (
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = venture_chapter_entries.venture_id
+    )
+  );
 create policy "Admin can manage all entries"
-  on candidate_chapter_entries for all using (get_user_role() = 'admin');
+  on venture_chapter_entries for all using (get_user_role() = 'admin');
 
--- Mentor assignments: mentor sees own, admin manages
-alter table mentor_assignments enable row level security;
-
-create policy "Mentors see own assignments"
+-- Mentor assignments (venture-based)
+create policy "Mentors and venture members see assignments"
   on mentor_assignments for select using (
     mentor_id = auth.uid()
-    or candidate_id = auth.uid()
     or get_user_role() = 'admin'
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = mentor_assignments.venture_id
+    )
   );
-
 create policy "Admin can manage assignments"
   on mentor_assignments for all using (get_user_role() = 'admin');
 
--- Tasks: own + admin + assigned mentor
-alter table tasks enable row level security;
-
-create policy "Candidates and assigned mentors see tasks"
+-- Tasks (personal + venture)
+create policy "Users see own and venture tasks"
   on tasks for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
     or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = tasks.venture_id
+      and tasks.venture_id is not null
+    )
+    or exists (
       select 1 from mentor_assignments
       where mentor_assignments.mentor_id = auth.uid()
-      and mentor_assignments.candidate_id = tasks.candidate_id
+      and (
+        mentor_assignments.venture_id = tasks.venture_id
+        or exists (
+          select 1 from profiles p2
+          where p2.id = tasks.candidate_id
+          and p2.venture_id = mentor_assignments.venture_id
+        )
+      )
     )
   );
-
 create policy "Candidates manage own tasks"
+  on tasks for all using (candidate_id = auth.uid());
+create policy "Venture members manage venture tasks"
   on tasks for all using (
-    candidate_id = auth.uid()
+    tasks.venture_id is not null
+    and exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = tasks.venture_id
+    )
   );
-
 create policy "Admin can manage all tasks"
   on tasks for all using (get_user_role() = 'admin');
-
-create policy "Mentors can add tasks to assigned mentees"
+create policy "Mentors can add tasks to assigned ventures"
   on tasks for insert with check (
     exists (
       select 1 from mentor_assignments
       where mentor_assignments.mentor_id = auth.uid()
-      and mentor_assignments.candidate_id = tasks.candidate_id
+      and (
+        mentor_assignments.venture_id = tasks.venture_id
+        or exists (
+          select 1 from profiles p2
+          where p2.id = tasks.candidate_id
+          and p2.venture_id = mentor_assignments.venture_id
+        )
+      )
     )
   );
 
--- Notifications: own + admin
-alter table notifications enable row level security;
-
+-- Notifications
 create policy "Users see own notifications"
   on notifications for select using (user_id = auth.uid());
-
 create policy "Users update own notifications"
   on notifications for update using (user_id = auth.uid());
-
 create policy "Authenticated users can insert notifications"
   on notifications for insert with check (true);
-
 create policy "Admin can manage all notifications"
   on notifications for all using (get_user_role() = 'admin');
 
--- Weekly check-ins: own + admin
+-- Check-ins (personal)
 create policy "Candidates see own checkins"
   on checkins for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
   );
-
 create policy "Candidates submit own checkins"
   on checkins for insert with check (
     candidate_id = auth.uid()
     and get_user_role() = 'candidate'
   );
-
 create policy "Candidates update own checkins"
-  on checkins for update using (
-    candidate_id = auth.uid()
-  );
+  on checkins for update using (candidate_id = auth.uid());

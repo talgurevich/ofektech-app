@@ -1,21 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Loader2, X } from "lucide-react";
 
 const ownerOptions = [
   { value: "mentor", label: "מנטור" },
-  { value: "self", label: "החניך/ה" },
+  { value: "self", label: "המיזם" },
   { value: "team", label: "צוות" },
 ];
 
 export function MentorTaskAdder({
-  candidateId,
+  ventureId,
   mentorId,
 }: {
-  candidateId: string;
+  ventureId: string;
   mentorId: string;
 }) {
   const router = useRouter();
@@ -25,6 +25,18 @@ export function MentorTaskAdder({
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [owner, setOwner] = useState("mentor");
+  const [ventureMembers, setVentureMembers] = useState<{ id: string; full_name: string }[]>([]);
+
+  useEffect(() => {
+    async function loadMembers() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("venture_id", ventureId);
+      if (data) setVentureMembers(data);
+    }
+    loadMembers();
+  }, [ventureId, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,25 +44,27 @@ export function MentorTaskAdder({
     setSubmitting(true);
 
     await supabase.from("tasks").insert({
-      candidate_id: candidateId,
+      venture_id: ventureId,
       description: description.trim(),
       owner,
       deadline: deadline || null,
       created_by: mentorId,
     });
 
-    // Notify candidate about new task
-    await fetch("/api/notifications/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetUserId: candidateId,
-        type: "task",
-        title: "משימה חדשה מהמנטור",
-        body: description.trim().slice(0, 100),
-        link: "/tasks",
-      }),
-    });
+    // Notify all venture members about new task
+    for (const member of ventureMembers) {
+      await fetch("/api/notifications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: member.id,
+          type: "task",
+          title: "משימה חדשה מהמנטור",
+          body: description.trim().slice(0, 100),
+          link: "/tasks",
+        }),
+      });
+    }
 
     setDescription("");
     setDeadline("");
@@ -67,7 +81,7 @@ export function MentorTaskAdder({
         className="inline-flex items-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
       >
         <Plus className="size-4" />
-        הוסף משימה לחניך/ה
+        הוסף משימה למיזם
       </button>
     );
   }

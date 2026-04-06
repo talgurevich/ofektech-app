@@ -20,6 +20,8 @@ import {
   Loader2,
   List,
   GitCommitHorizontal,
+  Briefcase,
+  User,
 } from "lucide-react";
 import type { Task } from "@/lib/types";
 
@@ -38,6 +40,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [ventureId, setVentureId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<"list" | "timeline">("list");
@@ -46,16 +49,33 @@ export default function TasksPage() {
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [owner, setOwner] = useState("self");
+  const [taskScope, setTaskScope] = useState<"personal" | "venture">("personal");
 
   const fetchTasks = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
 
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("candidate_id", user.id)
+    // Get user's venture_id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("venture_id")
+      .eq("id", user.id)
+      .single();
+
+    const userVentureId = profile?.venture_id || null;
+    setVentureId(userVentureId);
+
+    // Fetch personal tasks + venture tasks
+    let query = supabase.from("tasks").select("*");
+
+    if (userVentureId) {
+      query = query.or(`candidate_id.eq.${user.id},venture_id.eq.${userVentureId}`);
+    } else {
+      query = query.eq("candidate_id", user.id);
+    }
+
+    const { data } = await query
       .order("completed", { ascending: true })
       .order("deadline", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -76,17 +96,27 @@ export default function TasksPage() {
     if (!description.trim() || !userId) return;
     setSubmitting(true);
 
-    await supabase.from("tasks").insert({
-      candidate_id: userId,
+    const insertData: Record<string, unknown> = {
       description: description.trim(),
       owner,
       deadline: deadline || null,
       created_by: userId,
-    });
+    };
+
+    if (taskScope === "venture" && ventureId) {
+      insertData.venture_id = ventureId;
+      insertData.candidate_id = null;
+    } else {
+      insertData.candidate_id = userId;
+      insertData.venture_id = null;
+    }
+
+    await supabase.from("tasks").insert(insertData);
 
     setDescription("");
     setDeadline("");
     setOwner("self");
+    setTaskScope("personal");
     setShowForm(false);
     setSubmitting(false);
     fetchTasks();
@@ -175,6 +205,41 @@ export default function TasksPage() {
                   dir="rtl"
                 />
               </div>
+
+              {/* Scope toggle */}
+              {ventureId && (
+                <div>
+                  <label className="block text-sm font-medium text-[#1a2744] mb-2">
+                    סוג משימה
+                  </label>
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setTaskScope("personal")}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        taskScope === "personal"
+                          ? "bg-white text-[#1a2744] shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <User className="size-3.5" />
+                      משימה אישית
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTaskScope("venture")}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        taskScope === "venture"
+                          ? "bg-white text-[#1a2744] shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <Briefcase className="size-3.5" />
+                      משימה למיזם
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -316,13 +381,14 @@ function TaskRow({
   onToggle: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
+  const isVentureTask = !!task.venture_id;
+
   return (
     <div
       className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
         task.completed ? "bg-gray-50/50 opacity-60" : "bg-gray-50/50"
       }`}
     >
-      {/* Checkbox */}
       <button
         onClick={() => onToggle(task)}
         className="mt-0.5 shrink-0 focus:outline-none"
@@ -335,7 +401,6 @@ function TaskRow({
         )}
       </button>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <p
           className={`text-sm font-medium ${
@@ -353,6 +418,19 @@ function TaskRow({
           >
             {ownerLabel(task.owner)}
           </Badge>
+          <Badge
+            className={`text-[10px] border-0 ${
+              isVentureTask
+                ? "bg-[#1a2744]/10 text-[#1a2744]"
+                : "bg-[#22c55e]/10 text-[#22c55e]"
+            }`}
+          >
+            {isVentureTask ? (
+              <><Briefcase className="size-2.5 ml-0.5" /> מיזם</>
+            ) : (
+              <><User className="size-2.5 ml-0.5" /> אישי</>
+            )}
+          </Badge>
           {task.deadline && (
             <span className="inline-flex items-center gap-1 text-xs text-gray-500">
               <CalendarDays className="size-3" />
@@ -365,7 +443,6 @@ function TaskRow({
         </div>
       </div>
 
-      {/* Delete */}
       <button
         onClick={() => onDelete(task.id)}
         className="shrink-0 mt-0.5 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors focus:outline-none"
@@ -386,10 +463,8 @@ function TaskTimeline({
   onToggle: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
-  // Group tasks by deadline date (or "ללא תאריך" if no deadline)
   const today = new Date().toISOString().split("T")[0];
 
-  // Sort: overdue first, then by deadline, then no deadline
   const sorted = [...tasks].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     const aDate = a.deadline || "9999-12-31";
@@ -397,7 +472,6 @@ function TaskTimeline({
     return aDate.localeCompare(bDate);
   });
 
-  // Group by date
   const groups = new Map<string, Task[]>();
   sorted.forEach((task) => {
     const key = task.deadline || "no-date";
@@ -419,7 +493,6 @@ function TaskTimeline({
 
   return (
     <div className="relative">
-      {/* Timeline line */}
       <div className="absolute right-[19px] top-0 bottom-0 w-0.5 bg-gray-200" />
 
       <div className="space-y-6">
@@ -430,7 +503,6 @@ function TaskTimeline({
 
           return (
             <div key={dateKey} className="relative">
-              {/* Date marker */}
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className={`relative z-10 flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
@@ -464,45 +536,58 @@ function TaskTimeline({
                 </Badge>
               </div>
 
-              {/* Tasks for this date */}
               <div className="mr-[19px] pr-8 space-y-2">
-                {groupTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
-                      task.completed ? "bg-gray-50/50 opacity-60" : "bg-white shadow-sm border border-gray-100"
-                    }`}
-                  >
-                    <button
-                      onClick={() => onToggle(task)}
-                      className="mt-0.5 shrink-0 focus:outline-none"
+                {groupTasks.map((task) => {
+                  const isVentureTask = !!task.venture_id;
+                  return (
+                    <div
+                      key={task.id}
+                      className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
+                        task.completed ? "bg-gray-50/50 opacity-60" : "bg-white shadow-sm border border-gray-100"
+                      }`}
                     >
-                      {task.completed ? (
-                        <CheckCircle2 className="size-5 text-[#22c55e]" />
-                      ) : (
-                        <Circle className="size-5 text-gray-300 hover:text-[#22c55e] transition-colors" />
-                      )}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-medium ${
-                          task.completed ? "text-gray-400 line-through" : "text-[#1a2744]"
-                        }`}
+                      <button
+                        onClick={() => onToggle(task)}
+                        className="mt-0.5 shrink-0 focus:outline-none"
                       >
-                        {task.description}
-                      </p>
-                      <Badge variant="secondary" className="text-[10px] mt-1">
-                        {ownerLabel(task.owner)}
-                      </Badge>
+                        {task.completed ? (
+                          <CheckCircle2 className="size-5 text-[#22c55e]" />
+                        ) : (
+                          <Circle className="size-5 text-gray-300 hover:text-[#22c55e] transition-colors" />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-medium ${
+                            task.completed ? "text-gray-400 line-through" : "text-[#1a2744]"
+                          }`}
+                        >
+                          {task.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-[10px]">
+                            {ownerLabel(task.owner)}
+                          </Badge>
+                          <Badge
+                            className={`text-[10px] border-0 ${
+                              isVentureTask
+                                ? "bg-[#1a2744]/10 text-[#1a2744]"
+                                : "bg-[#22c55e]/10 text-[#22c55e]"
+                            }`}
+                          >
+                            {isVentureTask ? "מיזם" : "אישי"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onDelete(task.id)}
+                        className="shrink-0 mt-0.5 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors focus:outline-none"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => onDelete(task.id)}
-                      className="shrink-0 mt-0.5 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors focus:outline-none"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, MessageSquare, Send, ArrowRight, ArrowLeft, Pencil } from "lucide-react";
+import { Briefcase, MessageSquare, Send, ArrowRight, ArrowLeft, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -23,10 +23,10 @@ interface Feedback {
 }
 
 const RATING_QUESTIONS = [
-  { key: "rating_focus", label: "מיקוד", question: "האם היזם/ית מרוכז/ת ומכוון/ת למטרה?" },
-  { key: "rating_progress", label: "התקדמות", question: "כמה התקדם/ה היזם/ית מאז הפגישה האחרונה?" },
-  { key: "rating_preparedness", label: "מוכנות", question: "האם היזם/ית הגיע/ה מוכן/ה לפגישה?" },
-  { key: "rating_initiative", label: "יוזמה", question: "כמה יוזמה מגלה היזם/ית?" },
+  { key: "rating_focus", label: "מיקוד", question: "האם היזמים מרוכזים ומכוונים למטרה?" },
+  { key: "rating_progress", label: "התקדמות", question: "כמה התקדם המיזם מאז הפגישה האחרונה?" },
+  { key: "rating_preparedness", label: "מוכנות", question: "האם הצוות הגיע מוכן לפגישה?" },
+  { key: "rating_initiative", label: "יוזמה", question: "כמה יוזמה מגלה הצוות?" },
   { key: "rating_followthrough", label: "יישום", question: "כמה מהמשימות מהפגישה הקודמת יושמו?" },
 ];
 
@@ -39,8 +39,8 @@ const RATING_LABELS = [
 ];
 
 const STEPS = [
-  { id: "ratings", title: "דירוג", emoji: "⭐" },
-  { id: "content", title: "משוב כתוב", emoji: "✍️" },
+  { id: "ratings", title: "דירוג", emoji: "" },
+  { id: "content", title: "משוב כתוב", emoji: "" },
 ];
 
 export default function SessionFeedbackPage() {
@@ -49,11 +49,12 @@ export default function SessionFeedbackPage() {
   const supabase = createClient();
   const [session, setSession] = useState<{
     session_date: string;
-    candidate_id: string;
+    venture_id: string;
     mentor_id: string;
-    candidate: { full_name: string } | null;
+    venture: { name: string } | null;
     mentor: { full_name: string } | null;
   } | null>(null);
+  const [ventureMembers, setVentureMembers] = useState<{ id: string; full_name: string }[]>([]);
   const [userId, setUserId] = useState("");
   const [myRole, setMyRole] = useState("");
   const [myFeedback, setMyFeedback] = useState<Feedback | null>(null);
@@ -94,11 +95,22 @@ export default function SessionFeedbackPage() {
       const { data: sess } = await supabase
         .from("mentor_sessions")
         .select(
-          "*, candidate:profiles!mentor_sessions_candidate_id_fkey(full_name), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name)"
+          "*, venture:ventures(name), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name)"
         )
         .eq("id", id)
         .single();
-      if (sess) setSession(sess);
+      if (sess) {
+        setSession(sess);
+
+        // Get venture members
+        if (sess.venture_id) {
+          const { data: members } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .eq("venture_id", sess.venture_id);
+          if (members) setVentureMembers(members);
+        }
+      }
 
       const { data: allFeedback } = await supabase
         .from("session_feedback")
@@ -136,7 +148,6 @@ export default function SessionFeedbackPage() {
       content: formData.content,
     };
 
-    // Only include ratings for mentors
     if (myRole === "mentor") {
       payload.rating_focus = Number(formData.rating_focus) || null;
       payload.rating_progress = Number(formData.rating_progress) || null;
@@ -155,19 +166,21 @@ export default function SessionFeedbackPage() {
       return;
     }
 
-    // Notify candidate about new feedback
+    // Notify all venture members about new feedback
     if (myRole === "mentor" && session) {
-      await fetch("/api/notifications/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetUserId: session.candidate_id,
-          type: "feedback",
-          title: "משוב חדש מהמנטור שלך",
-          body: `${otherPerson} הגיש/ה משוב על הפגישה`,
-          link: `/sessions/${id}/feedback`,
-        }),
-      });
+      for (const member of ventureMembers) {
+        await fetch("/api/notifications/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetUserId: member.id,
+            type: "feedback",
+            title: "משוב חדש מהמנטור שלך",
+            body: `${session.mentor?.full_name || "המנטור"} הגיש/ה משוב על הפגישה`,
+            link: `/sessions/${id}/feedback`,
+          }),
+        });
+      }
     }
 
     router.push("/");
@@ -182,18 +195,17 @@ export default function SessionFeedbackPage() {
     );
   }
 
-  const otherPerson =
-    myRole === "candidate"
-      ? session.mentor?.full_name || "מנטור"
-      : session.candidate?.full_name || "מועמד/ת";
-  const otherRoleLabel = myRole === "candidate" ? "מנטור/ית" : "יזם/ית";
+  const ventureName = session.venture?.name || "מיזם";
+  const mentorName = session.mentor?.full_name || "מנטור";
+  const otherLabel = myRole === "candidate" ? mentorName : ventureName;
+  const otherRoleLabel = myRole === "candidate" ? "מנטור/ית" : "מיזם";
   const myRoleLabel = myRole === "candidate" ? "יזם/ית" : "מנטור/ית";
   const hasSubmitted = !!myFeedback && !isEditing;
   const isMentor = myRole === "mentor";
-  const totalSteps = isMentor ? STEPS.length : 1; // candidates only get the text step
+  const totalSteps = isMentor ? STEPS.length : 1;
   const isLast = step === totalSteps - 1;
 
-  // View mode — show submitted feedback
+  // View mode
   if (hasSubmitted) {
     return (
       <main className="max-w-xl mx-auto p-4 md:p-8 w-full space-y-6">
@@ -207,9 +219,9 @@ export default function SessionFeedbackPage() {
           </Link>
           <h1 className="text-2xl font-bold text-[#1a2744]">פגישת מנטורינג</h1>
           <div className="flex items-center gap-2 mt-1">
-            <Users className="size-4 text-gray-400" />
+            <Briefcase className="size-4 text-gray-400" />
             <span className="text-gray-600">
-              {otherPerson} — {formatDate(session.session_date)}
+              {ventureName} -- {formatDate(session.session_date)}
             </span>
           </div>
         </div>
@@ -232,7 +244,6 @@ export default function SessionFeedbackPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Ratings display */}
             {isMentor && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {RATING_QUESTIONS.map((q) => {
@@ -247,7 +258,7 @@ export default function SessionFeedbackPage() {
                             : "bg-gray-100 text-gray-400"
                         }`}
                       >
-                        {val ? `${val}/5` : "—"}
+                        {val ? `${val}/5` : "---"}
                       </Badge>
                     </div>
                   );
@@ -272,7 +283,7 @@ export default function SessionFeedbackPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
                 <MessageSquare className="size-4" />
-                משוב {otherRoleLabel} — {otherPerson}
+                משוב {otherRoleLabel} -- {otherLabel}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -290,7 +301,7 @@ export default function SessionFeedbackPage() {
                               : "bg-gray-100 text-gray-400"
                           }`}
                         >
-                          {val ? `${val}/5` : "—"}
+                          {val ? `${val}/5` : "---"}
                         </Badge>
                       </div>
                     );
@@ -309,7 +320,7 @@ export default function SessionFeedbackPage() {
           <Card className="border-0 shadow-sm bg-gray-50/50">
             <CardContent className="pt-0">
               <p className="text-sm text-gray-400 text-center py-2">
-                {otherPerson} טרם הגיש/ה משוב
+                {otherLabel} טרם הגיש/ו משוב
               </p>
             </CardContent>
           </Card>
@@ -318,10 +329,9 @@ export default function SessionFeedbackPage() {
     );
   }
 
-  // Edit/create mode — wizard form
+  // Edit/create mode
   return (
     <main className="max-w-xl mx-auto p-4 md:p-8 w-full">
-      {/* Header */}
       <div className="mb-6">
         <Link
           href="/"
@@ -332,9 +342,9 @@ export default function SessionFeedbackPage() {
         </Link>
         <h1 className="text-2xl font-bold text-[#1a2744]">משוב על פגישת מנטורינג</h1>
         <div className="flex items-center gap-2 mt-1">
-          <Users className="size-4 text-gray-400" />
+          <Briefcase className="size-4 text-gray-400" />
           <span className="text-gray-600">
-            {otherPerson} — {formatDate(session.session_date)}
+            {ventureName} -- {formatDate(session.session_date)}
           </span>
         </div>
       </div>
@@ -343,7 +353,7 @@ export default function SessionFeedbackPage() {
       {isMentor && (
         <>
           <p className="text-sm text-gray-500 mb-2">
-            {STEPS[step].title} — שלב {step + 1} מתוך {totalSteps}
+            {STEPS[step].title} -- שלב {step + 1} מתוך {totalSteps}
           </p>
           <div className="flex gap-1.5 mb-8">
             {STEPS.map((s, i) => (
@@ -378,7 +388,7 @@ export default function SessionFeedbackPage() {
             <Card className="border-0 shadow-sm">
               <CardContent className="pt-0 space-y-6">
                 <p className="text-lg font-semibold text-[#1a2744]">
-                  דרג/י את היזם/ית
+                  דרג/י את המיזם
                 </p>
                 {RATING_QUESTIONS.map((q) => (
                   <div key={q.key}>

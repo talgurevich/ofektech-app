@@ -10,7 +10,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowRight,
   ListTodo,
@@ -21,15 +20,17 @@ import {
   CalendarDays,
   Users,
   Plus,
+  Briefcase,
+  User,
 } from "lucide-react";
 import { MentorTaskAdder } from "@/components/mentor-task-adder";
 
-export default async function MenteeDetailPage({
+export default async function VentureDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: candidateId } = await params;
+  const { id: ventureId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -46,56 +47,89 @@ export default async function MenteeDetailPage({
 
   if (profile?.role !== "mentor") redirect("/");
 
-  // Check this candidate is assigned to this mentor
+  // Check this venture is assigned to this mentor
   const { data: assignment } = await supabase
     .from("mentor_assignments")
     .select("id")
     .eq("mentor_id", user.id)
-    .eq("candidate_id", candidateId)
+    .eq("venture_id", ventureId)
     .single();
 
   if (!assignment) redirect("/");
 
-  // Get candidate profile
-  const { data: candidate } = await supabase
-    .from("profiles")
+  // Get venture info
+  const { data: venture } = await supabase
+    .from("ventures")
     .select("*")
-    .eq("id", candidateId)
+    .eq("id", ventureId)
     .single();
 
-  if (!candidate) redirect("/");
+  if (!venture) redirect("/");
 
-  // Get tasks for this candidate
-  const { data: tasks } = await supabase
+  // Get venture members
+  const { data: members } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("venture_id", ventureId)
+    .order("full_name");
+
+  // Get venture tasks + personal tasks of all members
+  const memberIds = (members || []).map((m) => m.id);
+  let allTasks: Array<{
+    id: string;
+    candidate_id: string | null;
+    venture_id: string | null;
+    description: string;
+    owner: string;
+    deadline: string | null;
+    completed: boolean;
+    created_at: string;
+  }> = [];
+
+  // Venture tasks
+  const { data: ventureTasks } = await supabase
     .from("tasks")
     .select("*")
-    .eq("candidate_id", candidateId)
+    .eq("venture_id", ventureId)
     .order("created_at", { ascending: false });
 
-  const openTasks = tasks?.filter((t) => !t.completed) || [];
-  const completedTasks = tasks?.filter((t) => t.completed) || [];
+  if (ventureTasks) allTasks = [...ventureTasks];
 
-  // Get guide chapters + candidate entries
+  // Personal tasks of members
+  if (memberIds.length > 0) {
+    const { data: personalTasks } = await supabase
+      .from("tasks")
+      .select("*")
+      .in("candidate_id", memberIds)
+      .is("venture_id", null)
+      .order("created_at", { ascending: false });
+    if (personalTasks) allTasks = [...allTasks, ...personalTasks];
+  }
+
+  const openTasks = allTasks.filter((t) => !t.completed);
+  const completedTasks = allTasks.filter((t) => t.completed);
+
+  // Get guide chapters + venture entries
   const { data: chapters } = await supabase
     .from("guide_chapters")
     .select("*")
     .order("chapter_number", { ascending: true });
 
   const { data: entries } = await supabase
-    .from("candidate_chapter_entries")
+    .from("venture_chapter_entries")
     .select("*")
-    .eq("candidate_id", candidateId);
+    .eq("venture_id", ventureId);
 
   const entriesByChapter = new Map(
     (entries || []).map((e) => [e.chapter_id, e.content])
   );
 
-  // Get sessions between this mentor and candidate
+  // Get sessions for this venture
   const { data: sessions } = await supabase
     .from("mentor_sessions")
     .select("*")
     .eq("mentor_id", user.id)
-    .eq("candidate_id", candidateId)
+    .eq("venture_id", ventureId)
     .order("session_date", { ascending: false });
 
   // Get feedback for those sessions
@@ -111,14 +145,10 @@ export default async function MenteeDetailPage({
 
   const ownerLabel = (owner: string) => {
     switch (owner) {
-      case "self":
-        return "עצמי";
-      case "mentor":
-        return "מנטור";
-      case "team":
-        return "צוות";
-      default:
-        return owner;
+      case "self": return "עצמי";
+      case "mentor": return "מנטור";
+      case "team": return "צוות";
+      default: return owner;
     }
   };
 
@@ -131,20 +161,37 @@ export default async function MenteeDetailPage({
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#1a2744] transition-colors mb-3"
         >
           <ArrowRight className="size-4" />
-          חזרה לחניכים שלי
+          חזרה למיזמים שלי
         </Link>
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-full bg-[#1a2744]/10">
-            <Users className="size-5 text-[#1a2744]" />
+            <Briefcase className="size-5 text-[#1a2744]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#1a2744]">
-              {candidate.full_name}
+              {venture.name}
             </h1>
-            <p className="text-sm text-gray-500" dir="ltr">
-              {candidate.email}
-            </p>
+            {venture.description && (
+              <p className="text-sm text-gray-500">{venture.description}</p>
+            )}
           </div>
+        </div>
+
+        {/* Members */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Users className="size-4 text-gray-400" />
+          <span className="text-sm text-gray-500">חברי המיזם:</span>
+          {(members || []).map((m) => (
+            <Badge
+              key={m.id}
+              className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs"
+            >
+              {m.full_name || m.email}
+            </Badge>
+          ))}
+          {(!members || members.length === 0) && (
+            <span className="text-sm text-gray-400">אין חברים</span>
+          )}
         </div>
       </div>
 
@@ -160,7 +207,7 @@ export default async function MenteeDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <MentorTaskAdder candidateId={candidateId} mentorId={user.id} />
+          <MentorTaskAdder ventureId={ventureId} mentorId={user.id} />
           {/* Open tasks */}
           {openTasks.length > 0 && (
             <div className="space-y-2">
@@ -176,6 +223,19 @@ export default async function MenteeDetailPage({
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-[10px]">
                         {ownerLabel(task.owner)}
+                      </Badge>
+                      <Badge
+                        className={`text-[10px] border-0 ${
+                          task.venture_id
+                            ? "bg-[#1a2744]/10 text-[#1a2744]"
+                            : "bg-[#22c55e]/10 text-[#22c55e]"
+                        }`}
+                      >
+                        {task.venture_id ? (
+                          <><Briefcase className="size-2.5 ml-0.5" /> מיזם</>
+                        ) : (
+                          <><User className="size-2.5 ml-0.5" /> אישי</>
+                        )}
                       </Badge>
                       {task.deadline && (
                         <span className="text-xs text-gray-500">
@@ -219,7 +279,7 @@ export default async function MenteeDetailPage({
             </div>
           )}
 
-          {(tasks?.length || 0) === 0 && (
+          {allTasks.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               אין משימות
             </p>
@@ -294,7 +354,7 @@ export default async function MenteeDetailPage({
               </CardDescription>
             </div>
             <Link
-              href={`/sessions/new?candidate=${candidateId}`}
+              href={`/sessions/new?venture=${ventureId}`}
               className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
             >
               <Plus className="size-3.5" />
@@ -313,9 +373,8 @@ export default async function MenteeDetailPage({
                 <div className="flex items-center gap-2 mb-2">
                   <CalendarDays className="size-4 text-gray-400" />
                   <span className="text-xs text-gray-500">
-                    {sessionDate ? formatDate(sessionDate) : "—"}
+                    {sessionDate ? formatDate(sessionDate) : "---"}
                   </span>
-                  {/* Ratings */}
                   {fb.rating_focus && (
                     <div className="flex gap-1 mr-auto">
                       {[
@@ -325,16 +384,10 @@ export default async function MenteeDetailPage({
                         { key: "rating_initiative", label: "יוזמה" },
                         { key: "rating_followthrough", label: "יישום" },
                       ].map((r) => {
-                        const val = fb[r.key as keyof typeof fb] as
-                          | number
-                          | null;
+                        const val = fb[r.key as keyof typeof fb] as number | null;
                         if (!val) return null;
                         return (
-                          <Badge
-                            key={r.key}
-                            variant="secondary"
-                            className="text-[10px]"
-                          >
+                          <Badge key={r.key} variant="secondary" className="text-[10px]">
                             {r.label}: {val}/5
                           </Badge>
                         );

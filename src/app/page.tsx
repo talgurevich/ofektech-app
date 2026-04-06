@@ -27,6 +27,7 @@ import {
   Sparkles,
   ListTodo,
   BookOpen,
+  Briefcase,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -70,6 +71,7 @@ export default async function Dashboard() {
       <CandidateDashboard
         userId={user.id}
         fullName={profile.full_name}
+        ventureId={profile.venture_id}
       />
     );
   }
@@ -87,7 +89,6 @@ async function VisitorDashboard({
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Get all lectures
   const { data: lectures } = await supabase
     .from("lectures")
     .select("*")
@@ -96,7 +97,6 @@ async function VisitorDashboard({
   return (
     <main className="max-w-4xl mx-auto p-4 md:p-8">
       <AnimatedContainer>
-        {/* Greeting */}
         <AnimatedItem>
           <div className="mb-2">
             <h1 className="text-2xl font-bold text-[#1a2744]">
@@ -108,7 +108,6 @@ async function VisitorDashboard({
           </div>
         </AnimatedItem>
 
-        {/* Lectures */}
         <AnimatedItem>
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -127,7 +126,6 @@ async function VisitorDashboard({
                 <div className="space-y-3">
                   {lectures.map((lecture) => {
                     const isPast = lecture.scheduled_date <= today;
-
                     return (
                       <div
                         key={lecture.id}
@@ -146,7 +144,6 @@ async function VisitorDashboard({
                         >
                           {lecture.lecture_number || "#"}
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-[#1a2744]">
                             {lecture.title}
@@ -161,53 +158,27 @@ async function VisitorDashboard({
                               </span>
                             )}
                             {lecture.location && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] gap-1"
-                              >
-                                {lecture.location === "זום" ? (
-                                  <Video className="size-3" />
-                                ) : (
-                                  <MapPin className="size-3" />
-                                )}
+                              <Badge variant="secondary" className="text-[10px] gap-1">
+                                {lecture.location === "זום" ? <Video className="size-3" /> : <MapPin className="size-3" />}
                                 {lecture.location}
                               </Badge>
                             )}
                             {isPast && lecture.recording_url && (
-                              <a
-                                href={lecture.recording_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
-                              >
-                                <Video className="size-3" />
-                                הקלטה
-                                <ExternalLink className="size-2.5" />
+                              <a href={lecture.recording_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                <Video className="size-3" /> הקלטה <ExternalLink className="size-2.5" />
                               </a>
                             )}
                             {isPast && lecture.presentation_url && (
-                              <a
-                                href={lecture.presentation_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
-                              >
-                                <FileText className="size-3" />
-                                מצגת
-                                <ExternalLink className="size-2.5" />
+                              <a href={lecture.presentation_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                <FileText className="size-3" /> מצגת <ExternalLink className="size-2.5" />
                               </a>
                             )}
                           </div>
                         </div>
-
                         <div className="shrink-0">
                           {!isPast && (
-                            <Badge
-                              variant="secondary"
-                              className="text-gray-400"
-                            >
-                              <Clock className="size-3 ml-1" />
-                              בקרוב
+                            <Badge variant="secondary" className="text-gray-400">
+                              <Clock className="size-3 ml-1" /> בקרוב
                             </Badge>
                           )}
                         </div>
@@ -220,7 +191,6 @@ async function VisitorDashboard({
           </Card>
         </AnimatedItem>
 
-        {/* Contact */}
         <AnimatedItem>
           <TeamContactCard />
         </AnimatedItem>
@@ -232,13 +202,54 @@ async function VisitorDashboard({
 async function CandidateDashboard({
   userId,
   fullName,
+  ventureId,
 }: {
   userId: string;
   fullName?: string;
+  ventureId?: string | null;
 }) {
   const supabase = await createClient();
-
   const today = new Date().toISOString().split("T")[0];
+
+  // Get venture info + members
+  let ventureName: string | null = null;
+  let ventureMembers: { id: string; full_name: string }[] = [];
+  if (ventureId) {
+    const { data: venture } = await supabase
+      .from("ventures")
+      .select("name")
+      .eq("id", ventureId)
+      .single();
+    ventureName = venture?.name || null;
+
+    const { data: members } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("venture_id", ventureId)
+      .neq("id", userId)
+      .order("full_name");
+    ventureMembers = members || [];
+  }
+
+  // Get assigned mentor (via venture)
+  let mentorName: string | null = null;
+  if (ventureId) {
+    const { data: mentorAssignment } = await supabase
+      .from("mentor_assignments")
+      .select("mentor_id")
+      .eq("venture_id", ventureId)
+      .limit(1)
+      .maybeSingle();
+
+    if (mentorAssignment?.mentor_id) {
+      const { data: mentorProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", mentorAssignment.mentor_id)
+        .single();
+      mentorName = mentorProfile?.full_name || null;
+    }
+  }
 
   // Get all lectures
   const { data: lectures } = await supabase
@@ -256,23 +267,6 @@ async function CandidateDashboard({
     lectureFeedback?.map((f) => f.lecture_id) || []
   );
 
-  // Get assigned mentor
-  const { data: mentorAssignments } = await supabase
-    .from("mentor_assignments")
-    .select("mentor_id")
-    .eq("candidate_id", userId)
-    .limit(1);
-
-  let mentorName: string | null = null;
-  if (mentorAssignments?.[0]?.mentor_id) {
-    const { data: mentorProfile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", mentorAssignments[0].mentor_id)
-      .single();
-    mentorName = mentorProfile?.full_name || null;
-  }
-
   // Check opening check-in
   const { data: openingCheckin } = await supabase
     .from("checkins")
@@ -282,38 +276,55 @@ async function CandidateDashboard({
     .limit(1)
     .single();
 
-  // Get open tasks
-  const { data: openTasks } = await supabase
+  // Get open tasks: personal + venture
+  let taskQuery = supabase
     .from("tasks")
     .select("*")
-    .eq("candidate_id", userId)
     .eq("completed", false)
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(5);
 
+  if (ventureId) {
+    taskQuery = taskQuery.or(`candidate_id.eq.${userId},venture_id.eq.${ventureId}`);
+  } else {
+    taskQuery = taskQuery.eq("candidate_id", userId);
+  }
+
+  const { data: openTasks } = await taskQuery;
+
   // Count all open tasks
-  const { count: openTaskCount } = await supabase
+  let countQuery = supabase
     .from("tasks")
     .select("*", { count: "exact", head: true })
-    .eq("candidate_id", userId)
     .eq("completed", false);
 
-  // Guide progress
+  if (ventureId) {
+    countQuery = countQuery.or(`candidate_id.eq.${userId},venture_id.eq.${ventureId}`);
+  } else {
+    countQuery = countQuery.eq("candidate_id", userId);
+  }
+
+  const { count: openTaskCount } = await countQuery;
+
+  // Guide progress (venture-based)
   const { count: guideChapterCount } = await supabase
     .from("guide_chapters")
     .select("*", { count: "exact", head: true });
 
-  const { count: guideFilledCount } = await supabase
-    .from("candidate_chapter_entries")
-    .select("*", { count: "exact", head: true })
-    .eq("candidate_id", userId)
-    .neq("content", "");
+  let guideFilledCount = 0;
+  if (ventureId) {
+    const { count } = await supabase
+      .from("venture_chapter_entries")
+      .select("*", { count: "exact", head: true })
+      .eq("venture_id", ventureId)
+      .neq("content", "");
+    guideFilledCount = count || 0;
+  }
 
   const pastLectureIds = new Set(
     lectures?.filter((l) => l.scheduled_date <= today).map((l) => l.id) || []
   );
 
-  // Stats
   const feedbackCount = submittedLectureIds.size;
   const upcomingLectures =
     lectures?.filter((l) => l.scheduled_date > today).length || 0;
@@ -331,6 +342,51 @@ async function CandidateDashboard({
               ברוכים הבאים לפורטל OfekTech
             </p>
           </div>
+        </AnimatedItem>
+
+        {/* Venture info card */}
+        <AnimatedItem>
+          {ventureId && ventureName ? (
+            <Card className="border-0 shadow-sm bg-gradient-to-l from-[#1a2744]/5 to-[#1a2744]/10">
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/15">
+                    <Briefcase className="size-5 text-[#1a2744]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#1a2744]">{ventureName}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {ventureMembers.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          שותפים: {ventureMembers.map((m) => m.full_name).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {mentorName && (
+                    <div className="text-left">
+                      <p className="text-[10px] text-gray-500">מנטור/ית</p>
+                      <p className="text-sm font-medium text-[#1a2744]">{mentorName}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-sm bg-amber-50/50">
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-amber-100">
+                    <Briefcase className="size-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-[#1a2744]">אינך משויך/ת למיזם עדיין</p>
+                    <p className="text-xs text-gray-500">פנה לצוות OfekTech להצטרפות למיזם</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </AnimatedItem>
 
         {/* Stats row */}
@@ -383,7 +439,7 @@ async function CandidateDashboard({
         {/* Two-column layout on desktop */}
         <AnimatedItem>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Right column — Lectures (wider) */}
+            {/* Right column -- Lectures (wider) */}
             <div className="lg:col-span-3 space-y-6">
               <Card className="border-0 shadow-sm">
                 <CardHeader>
@@ -425,7 +481,6 @@ async function CandidateDashboard({
                             >
                               {lecture.lecture_number || "#"}
                             </div>
-
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-[#1a2744]">
                                 {lecture.title}
@@ -440,50 +495,27 @@ async function CandidateDashboard({
                                   </span>
                                 )}
                                 {lecture.location && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] gap-1"
-                                  >
-                                    {lecture.location === "זום" ? (
-                                      <Video className="size-3" />
-                                    ) : (
-                                      <MapPin className="size-3" />
-                                    )}
+                                  <Badge variant="secondary" className="text-[10px] gap-1">
+                                    {lecture.location === "זום" ? <Video className="size-3" /> : <MapPin className="size-3" />}
                                     {lecture.location}
                                   </Badge>
                                 )}
                                 {isPast && lecture.recording_url && (
-                                  <a
-                                    href={lecture.recording_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
-                                  >
-                                    <Video className="size-3" />
-                                    הקלטה
-                                    <ExternalLink className="size-2.5" />
+                                  <a href={lecture.recording_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                    <Video className="size-3" /> הקלטה <ExternalLink className="size-2.5" />
                                   </a>
                                 )}
                                 {isPast && lecture.presentation_url && (
-                                  <a
-                                    href={lecture.presentation_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline"
-                                  >
-                                    <FileText className="size-3" />
-                                    מצגת
-                                    <ExternalLink className="size-2.5" />
+                                  <a href={lecture.presentation_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                    <FileText className="size-3" /> מצגת <ExternalLink className="size-2.5" />
                                   </a>
                                 )}
                               </div>
                             </div>
-
                             <div className="shrink-0">
                               {hasSubmitted ? (
                                 <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 hover:bg-[#22c55e]/10">
-                                  <CheckCircle2 className="size-3 ml-1" />
-                                  הושלם
+                                  <CheckCircle2 className="size-3 ml-1" /> הושלם
                                 </Badge>
                               ) : isPast ? (
                                 <Link
@@ -493,12 +525,8 @@ async function CandidateDashboard({
                                   מלא משוב
                                 </Link>
                               ) : (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-gray-400"
-                                >
-                                  <Clock className="size-3 ml-1" />
-                                  בקרוב
+                                <Badge variant="secondary" className="text-gray-400">
+                                  <Clock className="size-3 ml-1" /> בקרוב
                                 </Badge>
                               )}
                             </div>
@@ -511,7 +539,7 @@ async function CandidateDashboard({
               </Card>
             </div>
 
-            {/* Left column — Check-in, Tasks, Sessions, Contact */}
+            {/* Left column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Opening check-in CTA */}
               {!openingCheckin && (
@@ -522,20 +550,15 @@ async function CandidateDashboard({
                         <Sparkles className="size-5 text-[#1a2744]" />
                       </div>
                       <div>
-                        <p className="font-semibold text-[#1a2744]">
-                          צ׳ק-אין פתיחה
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          ספרו לנו על המיזם, הציפיות והיעדים שלכם
-                        </p>
+                        <p className="font-semibold text-[#1a2744]">צ׳ק-אין פתיחה</p>
+                        <p className="text-sm text-gray-500">ספרו לנו על המיזם, הציפיות והיעדים שלכם</p>
                       </div>
                     </div>
                     <Link
                       href="/checkin/opening"
                       className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1a2744] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2744]/90 transition-colors"
                     >
-                      מלא עכשיו
-                      <ArrowLeft className="size-4" />
+                      מלא עכשיו <ArrowLeft className="size-4" />
                     </Link>
                   </CardContent>
                 </Card>
@@ -546,8 +569,7 @@ async function CandidateDashboard({
                 <CardHeader>
                   <div className="flex items-center justify-between w-full">
                     <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
-                      <ListTodo className="size-5" />
-                      משימות
+                      <ListTodo className="size-5" /> משימות
                     </CardTitle>
                     <Link
                       href="/tasks"
@@ -582,15 +604,17 @@ async function CandidateDashboard({
                                   {formatDate(task.deadline)}
                                 </span>
                               )}
+                              <Badge variant="secondary" className="text-[10px]">
+                                {task.owner === "self" ? "אני" : task.owner === "mentor" ? "מנטור" : "צוות"}
+                              </Badge>
                               <Badge
-                                variant="secondary"
-                                className="text-[10px]"
+                                className={`text-[10px] border-0 ${
+                                  task.venture_id
+                                    ? "bg-[#1a2744]/10 text-[#1a2744]"
+                                    : "bg-[#22c55e]/10 text-[#22c55e]"
+                                }`}
                               >
-                                {task.owner === "self"
-                                  ? "אני"
-                                  : task.owner === "mentor"
-                                    ? "מנטור"
-                                    : "צוות"}
+                                {task.venture_id ? "מיזם" : "אישי"}
                               </Badge>
                             </div>
                           </div>
@@ -602,14 +626,13 @@ async function CandidateDashboard({
                     href="/tasks"
                     className="inline-flex items-center gap-1 text-sm text-[#22c55e] hover:underline mt-4"
                   >
-                    צפייה בכל המשימות
-                    <ArrowLeft className="size-3.5" />
+                    צפייה בכל המשימות <ArrowLeft className="size-3.5" />
                   </Link>
                 </CardContent>
               </Card>
 
               {/* Guide progress */}
-              {(guideChapterCount ?? 0) > 0 && (
+              {(guideChapterCount ?? 0) > 0 && ventureId && (
                 <Card className="border-0 shadow-sm">
                   <CardContent className="pt-0">
                     <div className="flex items-center gap-3 mb-3">
@@ -637,8 +660,7 @@ async function CandidateDashboard({
                       href="/guide"
                       className="inline-flex items-center gap-1 text-sm text-[#22c55e] hover:underline"
                     >
-                      המשך למדריך
-                      <ArrowLeft className="size-3.5" />
+                      המשך למדריך <ArrowLeft className="size-3.5" />
                     </Link>
                   </CardContent>
                 </Card>
@@ -663,15 +685,13 @@ async function MentorDashboard({
 }) {
   const supabase = await createClient();
 
-  // Get assigned mentees
+  // Get assigned ventures
   const { data: assignments } = await supabase
     .from("mentor_assignments")
-    .select(
-      "*, candidate:profiles!mentor_assignments_candidate_id_fkey(id, full_name, email)"
-    )
+    .select("*, venture:ventures(id, name, description)")
     .eq("mentor_id", userId);
 
-  const menteeIds = assignments?.map((a) => (a.candidate as { id: string }).id) || [];
+  const ventureIds = assignments?.map((a) => (a.venture as { id: string }).id) || [];
 
   // Get total sessions count
   const { count: totalSessions } = await supabase
@@ -685,15 +705,22 @@ async function MentorDashboard({
     .select("*", { count: "exact", head: true })
     .eq("submitted_by", userId);
 
-  // For each mentee, get their stats
-  const menteeStats = await Promise.all(
+  // For each venture, get stats
+  const ventureStats = await Promise.all(
     (assignments || []).map(async (assignment) => {
-      const candidate = assignment.candidate as {
+      const venture = assignment.venture as {
         id: string;
-        full_name: string;
-        email: string;
+        name: string;
+        description: string | null;
       };
 
+      // Get members
+      const { data: members } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("venture_id", venture.id);
+
+      // Get venture tasks
       const [
         { count: openTasks },
         { count: completedTasks },
@@ -703,30 +730,32 @@ async function MentorDashboard({
         supabase
           .from("tasks")
           .select("*", { count: "exact", head: true })
-          .eq("candidate_id", candidate.id)
+          .eq("venture_id", venture.id)
           .eq("completed", false),
         supabase
           .from("tasks")
           .select("*", { count: "exact", head: true })
-          .eq("candidate_id", candidate.id)
+          .eq("venture_id", venture.id)
           .eq("completed", true),
         supabase
-          .from("candidate_chapter_entries")
+          .from("venture_chapter_entries")
           .select("*", { count: "exact", head: true })
-          .eq("candidate_id", candidate.id)
+          .eq("venture_id", venture.id)
           .neq("content", ""),
         supabase
           .from("mentor_sessions")
           .select("session_date")
-          .eq("candidate_id", candidate.id)
+          .eq("venture_id", venture.id)
           .eq("mentor_id", userId)
           .order("session_date", { ascending: false })
           .limit(1),
       ]);
 
       return {
-        id: candidate.id,
-        name: candidate.full_name || candidate.email,
+        id: venture.id,
+        name: venture.name,
+        description: venture.description,
+        members: members || [],
         openTasks: openTasks || 0,
         completedTasks: completedTasks || 0,
         filledChapters: filledChapters || 0,
@@ -763,13 +792,13 @@ async function MentorDashboard({
             <Card className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-4 pt-0">
                 <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <Users className="size-5 text-[#22c55e]" />
+                  <Briefcase className="size-5 text-[#22c55e]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#1a2744]">
-                    {menteeIds.length}
+                    {ventureIds.length}
                   </p>
-                  <p className="text-xs text-gray-500">חניכים</p>
+                  <p className="text-xs text-gray-500">מיזמים</p>
                 </div>
               </CardContent>
             </Card>
@@ -804,34 +833,49 @@ async function MentorDashboard({
           </div>
         </AnimatedItem>
 
-        {/* Mentee cards */}
-        {menteeStats.length > 0 ? (
+        {/* Venture cards */}
+        {ventureStats.length > 0 ? (
           <AnimatedItem>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {menteeStats.map((mentee) => {
+              {ventureStats.map((venture) => {
                 const guidePercent = guideTotal
-                  ? Math.round((mentee.filledChapters / guideTotal) * 100)
+                  ? Math.round((venture.filledChapters / guideTotal) * 100)
                   : 0;
 
                 return (
-                  <Card key={mentee.id} className="border-0 shadow-sm">
+                  <Card key={venture.id} className="border-0 shadow-sm">
                     <CardContent className="pt-0 space-y-4">
-                      {/* Name */}
+                      {/* Name + members */}
                       <div className="flex items-center gap-3">
                         <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/10">
-                          <Users className="size-4 text-[#1a2744]" />
+                          <Briefcase className="size-4 text-[#1a2744]" />
                         </div>
-                        <p className="text-lg font-semibold text-[#1a2744]">
-                          {mentee.name}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-semibold text-[#1a2744]">
+                            {venture.name}
+                          </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {venture.members.map((m) => (
+                              <Badge
+                                key={m.id}
+                                variant="secondary"
+                                className="text-[10px]"
+                              >
+                                {m.full_name || m.email}
+                              </Badge>
+                            ))}
+                            {venture.members.length === 0 && (
+                              <span className="text-xs text-gray-400">אין חברים</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Tasks */}
                       <div className="flex items-center gap-2 text-sm">
                         <ListTodo className="size-4 text-gray-400" />
                         <span className="text-gray-600">
-                          {mentee.openTasks} פתוחות, {mentee.completedTasks}{" "}
-                          הושלמו
+                          {venture.openTasks} פתוחות, {venture.completedTasks} הושלמו
                         </span>
                       </div>
 
@@ -840,7 +884,7 @@ async function MentorDashboard({
                         <div className="flex items-center gap-2 text-sm mb-1.5">
                           <BookOpen className="size-4 text-gray-400" />
                           <span className="text-gray-600">
-                            {mentee.filledChapters}/{guideTotal} פרקים
+                            {venture.filledChapters}/{guideTotal} פרקים
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
@@ -855,8 +899,8 @@ async function MentorDashboard({
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarDays className="size-4 text-gray-400" />
                         <span className="text-gray-600">
-                          {mentee.lastSessionDate
-                            ? `פגישה אחרונה: ${formatDate(mentee.lastSessionDate)}`
+                          {venture.lastSessionDate
+                            ? `פגישה אחרונה: ${formatDate(venture.lastSessionDate)}`
                             : "אין פגישות"}
                         </span>
                       </div>
@@ -864,13 +908,13 @@ async function MentorDashboard({
                       {/* Actions */}
                       <div className="flex gap-2 pt-1">
                         <Link
-                          href={`/mentees/${mentee.id}`}
+                          href={`/ventures/${venture.id}`}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1a2744] px-4 py-2 text-sm font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
                         >
                           צפייה בפרטים
                         </Link>
                         <Link
-                          href={`/sessions/new?candidate=${mentee.id}`}
+                          href={`/sessions/new?venture=${venture.id}`}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
                         >
                           הוסף משוב
@@ -886,8 +930,8 @@ async function MentorDashboard({
           <AnimatedItem>
             <Card className="border-0 shadow-sm">
               <CardContent className="py-12 text-center">
-                <Users className="size-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-400 text-sm">אין חניכים משובצים</p>
+                <Briefcase className="size-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-400 text-sm">אין מיזמים משובצים</p>
               </CardContent>
             </Card>
           </AnimatedItem>

@@ -64,7 +64,7 @@ export default async function AdminDashboard() {
   const { data: recentSessions } = await supabase
     .from("mentor_sessions")
     .select(
-      "*, candidate:profiles!mentor_sessions_candidate_id_fkey(full_name, email), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name, email)"
+      "*, venture:ventures(name), mentor:profiles!mentor_sessions_mentor_id_fkey(full_name, email)"
     )
     .order("session_date", { ascending: false })
     .limit(10);
@@ -210,18 +210,14 @@ export default async function AdminDashboard() {
           ) : (
             <div className="space-y-2">
               {recentSessions.map((session) => {
-                const candidate = session.candidate as {
-                  full_name: string;
-                  email: string;
+                const venture = session.venture as {
+                  name: string;
                 } | null;
                 const mentor = session.mentor as {
                   full_name: string;
                   email: string;
                 } | null;
                 const feedbackSubmitters = feedbackBySession.get(session.id);
-                const candidateFeedback = feedbackSubmitters?.has(
-                  session.candidate_id
-                );
                 const mentorFeedback = feedbackSubmitters?.has(
                   session.mentor_id
                 );
@@ -237,7 +233,7 @@ export default async function AdminDashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-[#1a2744] truncate">
-                          {candidate?.full_name || candidate?.email || "מועמד/ת"}{" "}
+                          {venture?.name || "מיזם"}{" "}
                           ←{" "}
                           {mentor?.full_name || mentor?.email || "מנטור/ית"}
                         </p>
@@ -247,16 +243,6 @@ export default async function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] ${
-                          candidateFeedback
-                            ? "bg-[#22c55e]/10 text-[#22c55e]"
-                            : "bg-gray-100 text-gray-400"
-                        }`}
-                      >
-                        יזם {candidateFeedback ? "✓" : "✗"}
-                      </Badge>
                       <Badge
                         variant="secondary"
                         className={`text-[10px] ${

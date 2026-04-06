@@ -2,34 +2,33 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import type { Profile } from "@/lib/types";
+import type { Profile, Venture } from "@/lib/types";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { UserCheck, X, Users, UserPlus, AlertCircle } from "lucide-react";
+import { UserCheck, X, Users, UserPlus, AlertCircle, Briefcase } from "lucide-react";
 
-interface Assignment {
+interface AssignmentWithJoins {
   id: string;
   mentor_id: string;
-  candidate_id: string;
+  venture_id: string;
   assigned_at: string;
-  candidate: { id: string; full_name: string; email: string } | null;
+  venture: { id: string; name: string; description: string | null } | null;
   mentor: { id: string; full_name: string; email: string } | null;
 }
 
 export default function AdminAssignmentsPage() {
   const supabase = createClient();
   const [mentors, setMentors] = useState<Profile[]>([]);
-  const [candidates, setCandidates] = useState<Profile[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [ventures, setVentures] = useState<(Venture & { memberCount: number })[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentWithJoins[]>([]);
   const [selectedMentor, setSelectedMentor] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [selectedVenture, setSelectedVenture] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -40,7 +39,7 @@ export default function AdminAssignmentsPage() {
   async function loadData() {
     const [
       { data: mentorData },
-      { data: candidateData },
+      { data: ventureData },
       { data: assignmentData },
     ] = await Promise.all([
       supabase
@@ -49,33 +48,45 @@ export default function AdminAssignmentsPage() {
         .eq("role", "mentor")
         .order("full_name"),
       supabase
-        .from("profiles")
+        .from("ventures")
         .select("*")
-        .eq("role", "candidate")
-        .order("full_name"),
+        .order("name"),
       supabase
         .from("mentor_assignments")
         .select(
-          "*, candidate:profiles!mentor_assignments_candidate_id_fkey(id, full_name, email), mentor:profiles!mentor_assignments_mentor_id_fkey(id, full_name, email)"
+          "*, venture:ventures(id, name, description), mentor:profiles!mentor_assignments_mentor_id_fkey(id, full_name, email)"
         )
         .order("assigned_at", { ascending: false }),
     ]);
 
     if (mentorData) setMentors(mentorData);
-    if (candidateData) setCandidates(candidateData);
-    if (assignmentData) setAssignments(assignmentData as Assignment[]);
+    if (assignmentData) setAssignments(assignmentData as AssignmentWithJoins[]);
+
+    if (ventureData) {
+      // Get member counts
+      const withCounts = await Promise.all(
+        ventureData.map(async (v) => {
+          const { count } = await supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("venture_id", v.id);
+          return { ...v, memberCount: count || 0 };
+        })
+      );
+      setVentures(withCounts);
+    }
   }
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedMentor || !selectedCandidate) return;
+    if (!selectedMentor || !selectedVenture) return;
 
     setLoading(true);
     setMessage("");
 
     const { error } = await supabase.from("mentor_assignments").insert({
       mentor_id: selectedMentor,
-      candidate_id: selectedCandidate,
+      venture_id: selectedVenture,
     });
 
     if (error) {
@@ -87,21 +98,21 @@ export default function AdminAssignmentsPage() {
     } else {
       setMessage("השיבוץ נוסף בהצלחה");
 
-      // Notify the mentor about the new mentee assignment
-      const candidate = candidates.find((c) => c.id === selectedCandidate);
+      // Notify the mentor about the new venture assignment
+      const venture = ventures.find((v) => v.id === selectedVenture);
       await fetch("/api/notifications/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetUserId: selectedMentor,
           type: "task",
-          title: "חניך/ה חדש/ה שובץ/ה אליך",
-          body: candidate?.full_name || "",
+          title: "מיזם חדש שובץ אליך",
+          body: venture?.name || "",
           link: "/",
         }),
       });
 
-      setSelectedCandidate("");
+      setSelectedVenture("");
     }
 
     setLoading(false);
@@ -128,7 +139,7 @@ export default function AdminAssignmentsPage() {
   // Group assignments by mentor
   const assignmentsByMentor = new Map<
     string,
-    { mentor: Profile; assignments: Assignment[] }
+    { mentor: Profile; assignments: AssignmentWithJoins[] }
   >();
   mentors.forEach((m) => {
     assignmentsByMentor.set(m.id, { mentor: m, assignments: [] });
@@ -140,10 +151,10 @@ export default function AdminAssignmentsPage() {
     }
   });
 
-  // Find unassigned candidates
-  const assignedCandidateIds = new Set(assignments.map((a) => a.candidate_id));
-  const unassignedCandidates = candidates.filter(
-    (c) => !assignedCandidateIds.has(c.id)
+  // Find unassigned ventures
+  const assignedVentureIds = new Set(assignments.map((a) => a.venture_id));
+  const unassignedVentures = ventures.filter(
+    (v) => !assignedVentureIds.has(v.id)
   );
 
   return (
@@ -154,7 +165,7 @@ export default function AdminAssignmentsPage() {
           שיבוץ מנטורים
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          שיבוץ חניכים למנטורים — כל מנטור יכול לראות רק את החניכים המשובצים אליו
+          שיבוץ מיזמים למנטורים -- כל מנטור יכול לראות רק את המיזמים המשובצים אליו
         </p>
       </div>
 
@@ -200,18 +211,18 @@ export default function AdminAssignmentsPage() {
             </div>
             <div className="flex-1 min-w-[180px]">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                חניך/ה
+                מיזם
               </label>
               <select
-                value={selectedCandidate}
-                onChange={(e) => setSelectedCandidate(e.target.value)}
+                value={selectedVenture}
+                onChange={(e) => setSelectedVenture(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
               >
-                <option value="">בחר חניך/ה</option>
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.full_name || c.email}
+                <option value="">בחר מיזם</option>
+                {ventures.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name} ({v.memberCount} חברים)
                   </option>
                 ))}
               </select>
@@ -251,29 +262,38 @@ export default function AdminAssignmentsPage() {
                     </p>
                   </div>
                   <Badge variant="secondary" className="mr-auto text-xs">
-                    {mentorAssignments.length} חניכים
+                    {mentorAssignments.length} מיזמים
                   </Badge>
                 </div>
 
                 {mentorAssignments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {mentorAssignments.map((a) => (
-                      <Badge
-                        key={a.id}
-                        className="bg-[#22c55e]/10 text-[#22c55e] border-0 gap-1.5 pr-1.5 text-sm"
-                      >
-                        {a.candidate?.full_name || "—"}
-                        <button
-                          onClick={() => handleRemove(a.id)}
-                          className="rounded-full p-0.5 hover:bg-[#22c55e]/20 transition-colors"
+                    {mentorAssignments.map((a) => {
+                      const ventureInfo = ventures.find((v) => v.id === a.venture_id);
+                      return (
+                        <Badge
+                          key={a.id}
+                          className="bg-[#22c55e]/10 text-[#22c55e] border-0 gap-1.5 pr-1.5 text-sm"
                         >
-                          <X className="size-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                          <Briefcase className="size-3" />
+                          {a.venture?.name || "---"}
+                          {ventureInfo && (
+                            <span className="text-[#22c55e]/60 text-[10px]">
+                              ({ventureInfo.memberCount})
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleRemove(a.id)}
+                            className="rounded-full p-0.5 hover:bg-[#22c55e]/20 transition-colors"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400">אין חניכים משובצים</p>
+                  <p className="text-sm text-gray-400">אין מיזמים משובצים</p>
                 )}
               </CardContent>
             </Card>
@@ -285,27 +305,27 @@ export default function AdminAssignmentsPage() {
         )}
       </section>
 
-      {/* Unassigned candidates */}
-      {unassignedCandidates.length > 0 && (
+      {/* Unassigned ventures */}
+      {unassignedVentures.length > 0 && (
         <section>
           <Separator className="mb-6" />
           <h2 className="text-lg font-semibold text-[#1a2744] flex items-center gap-2 mb-4">
             <AlertCircle className="size-5 text-amber-500" />
-            חניכים ללא מנטור ({unassignedCandidates.length})
+            מיזמים ללא מנטור ({unassignedVentures.length})
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {unassignedCandidates.map((c) => (
-              <Card key={c.id} className="border-0 shadow-sm bg-amber-50/50">
+            {unassignedVentures.map((v) => (
+              <Card key={v.id} className="border-0 shadow-sm bg-amber-50/50">
                 <CardContent className="flex items-center gap-3 pt-0">
                   <div className="flex size-8 items-center justify-center rounded-full bg-amber-100">
-                    <Users className="size-3.5 text-amber-600" />
+                    <Briefcase className="size-3.5 text-amber-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[#1a2744]">
-                      {c.full_name || "—"}
+                      {v.name}
                     </p>
-                    <p className="text-xs text-gray-500" dir="ltr">
-                      {c.email}
+                    <p className="text-xs text-gray-500">
+                      {v.memberCount} חברים
                     </p>
                   </div>
                 </CardContent>

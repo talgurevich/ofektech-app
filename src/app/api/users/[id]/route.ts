@@ -37,23 +37,59 @@ export async function DELETE(
 
   const adminClient = createAdminClient();
 
+  // Get the user's profile to check venture membership
+  const { data: targetProfile } = await adminClient
+    .from("profiles")
+    .select("venture_id")
+    .eq("id", id)
+    .single();
+
+  const userVentureId = targetProfile?.venture_id;
+
+  // Check if this is the last member of their venture
+  let isLastVentureMember = false;
+  if (userVentureId) {
+    const { count } = await adminClient
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("venture_id", userVentureId)
+      .neq("id", id);
+    isLastVentureMember = (count || 0) === 0;
+  }
+
   // Clean up related data before deleting user
   await adminClient.from("session_feedback").delete().eq("submitted_by", id);
-  await adminClient.from("mentor_assignments").delete().or(`mentor_id.eq.${id},candidate_id.eq.${id}`);
+
+  // Clean up mentor assignments where user is a mentor
+  await adminClient.from("mentor_assignments").delete().eq("mentor_id", id);
+
+  // If last venture member, clean up venture-related data
+  if (isLastVentureMember && userVentureId) {
+    // Clean up mentor assignments for the venture
+    await adminClient.from("mentor_assignments").delete().eq("venture_id", userVentureId);
+
+    // Clean up venture chapter entries
+    await adminClient.from("venture_chapter_entries").delete().eq("venture_id", userVentureId);
+
+    // Clean up venture tasks (venture tasks stay if other members exist)
+    await adminClient.from("tasks").delete().eq("venture_id", userVentureId);
+  }
+
+  // Delete personal tasks
   await adminClient.from("tasks").delete().eq("candidate_id", id);
-  await adminClient.from("candidate_chapter_entries").delete().eq("candidate_id", id);
+
   await adminClient.from("checkins").delete().eq("candidate_id", id);
   await adminClient.from("lecture_feedback").delete().eq("candidate_id", id);
 
-  // Delete sessions where user is candidate or mentor
+  // Delete sessions where user is mentor
   const { data: sessions } = await adminClient
     .from("mentor_sessions")
     .select("id")
-    .or(`candidate_id.eq.${id},mentor_id.eq.${id}`);
+    .eq("mentor_id", id);
   if (sessions && sessions.length > 0) {
     const sessionIds = sessions.map((s) => s.id);
     await adminClient.from("session_feedback").delete().in("session_id", sessionIds);
-    await adminClient.from("mentor_sessions").delete().or(`candidate_id.eq.${id},mentor_id.eq.${id}`);
+    await adminClient.from("mentor_sessions").delete().eq("mentor_id", id);
   }
 
   // Delete lectures created by this user

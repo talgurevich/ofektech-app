@@ -10,7 +10,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowRight,
   ListTodo,
@@ -23,6 +22,8 @@ import {
   Mic2,
   ClipboardCheck,
   BarChart3,
+  Briefcase,
+  User,
 } from "lucide-react";
 
 export default async function AdminCandidateDetailPage({
@@ -36,21 +37,37 @@ export default async function AdminCandidateDetailPage({
   // Get candidate profile with cohort
   const { data: candidate } = await supabase
     .from("profiles")
-    .select("*, cohort:cohorts(name)")
+    .select("*, cohort:cohorts(name), venture:ventures(id, name)")
     .eq("id", candidateId)
     .single();
 
   if (!candidate) redirect("/admin/users");
 
-  // Get assigned mentor
-  const { data: mentorAssignment } = await supabase
-    .from("mentor_assignments")
-    .select("*, mentor:profiles!mentor_assignments_mentor_id_fkey(full_name, email)")
-    .eq("candidate_id", candidateId)
-    .limit(1)
-    .maybeSingle();
+  const ventureId = candidate.venture_id;
+  const ventureName = (candidate.venture as { id: string; name: string } | null)?.name;
 
-  const mentorProfile = mentorAssignment?.mentor as { full_name: string; email: string } | null;
+  // Get assigned mentor (via venture)
+  let mentorProfile: { full_name: string; email: string } | null = null;
+  if (ventureId) {
+    const { data: mentorAssignment } = await supabase
+      .from("mentor_assignments")
+      .select("*, mentor:profiles!mentor_assignments_mentor_id_fkey(full_name, email)")
+      .eq("venture_id", ventureId)
+      .limit(1)
+      .maybeSingle();
+    mentorProfile = mentorAssignment?.mentor as { full_name: string; email: string } | null;
+  }
+
+  // Get venture members
+  let ventureMembers: { id: string; full_name: string }[] = [];
+  if (ventureId) {
+    const { data: members } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("venture_id", ventureId)
+      .neq("id", candidateId);
+    ventureMembers = members || [];
+  }
 
   // Get opening check-in
   const { data: openingCheckin } = await supabase
@@ -61,33 +78,50 @@ export default async function AdminCandidateDetailPage({
     .limit(1)
     .maybeSingle();
 
-  // Get all tasks
-  const { data: tasks } = await supabase
+  // Get personal tasks
+  const { data: personalTasks } = await supabase
     .from("tasks")
     .select("*")
     .eq("candidate_id", candidateId)
     .order("completed", { ascending: true })
     .order("created_at", { ascending: false });
 
-  const openTasks = tasks?.filter((t) => !t.completed) || [];
-  const completedTasks = tasks?.filter((t) => t.completed) || [];
+  // Get venture tasks
+  let ventureTasks: typeof personalTasks = [];
+  if (ventureId) {
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("venture_id", ventureId)
+      .order("completed", { ascending: true })
+      .order("created_at", { ascending: false });
+    ventureTasks = data || [];
+  }
 
-  // Get guide chapters + candidate entries
+  const allTasks = [...(personalTasks || []), ...(ventureTasks || [])];
+  const openTasks = allTasks.filter((t) => !t.completed);
+  const completedTasks = allTasks.filter((t) => t.completed);
+
+  // Get guide chapters + venture entries
   const { data: chapters } = await supabase
     .from("guide_chapters")
     .select("*")
     .order("chapter_number", { ascending: true });
 
-  const { data: entries } = await supabase
-    .from("candidate_chapter_entries")
-    .select("*")
-    .eq("candidate_id", candidateId);
+  let entries: { chapter_id: string; content: string }[] = [];
+  if (ventureId) {
+    const { data } = await supabase
+      .from("venture_chapter_entries")
+      .select("*")
+      .eq("venture_id", ventureId);
+    entries = data || [];
+  }
 
   const entriesByChapter = new Map(
-    (entries || []).map((e) => [e.chapter_id, e.content])
+    entries.map((e) => [e.chapter_id, e.content])
   );
 
-  const filledChapters = (entries || []).filter(
+  const filledChapters = entries.filter(
     (e) => e.content && e.content.trim() !== ""
   ).length;
 
@@ -98,30 +132,41 @@ export default async function AdminCandidateDetailPage({
     .eq("candidate_id", candidateId)
     .order("submitted_at", { ascending: false });
 
-  // Get session feedback from mentors about this candidate
-  const { data: candidateSessions } = await supabase
-    .from("mentor_sessions")
-    .select("id")
-    .eq("candidate_id", candidateId);
+  // Get session feedback for sessions with this candidate's venture
+  let sessionFeedback: Array<{
+    id: string;
+    content: string;
+    rating_focus: number | null;
+    rating_progress: number | null;
+    rating_preparedness: number | null;
+    rating_initiative: number | null;
+    rating_followthrough: number | null;
+    session: { session_date: string; mentor_id: string } | null;
+  }> = [];
 
-  const sessionIds = candidateSessions?.map((s) => s.id) || [];
+  if (ventureId) {
+    const { data: ventureSessions } = await supabase
+      .from("mentor_sessions")
+      .select("id")
+      .eq("venture_id", ventureId);
 
-  const { data: sessionFeedback } = sessionIds.length > 0
-    ? await supabase
+    const sessionIds = ventureSessions?.map((s) => s.id) || [];
+
+    if (sessionIds.length > 0) {
+      const { data } = await supabase
         .from("session_feedback")
         .select("*, session:mentor_sessions(session_date, mentor_id)")
         .in("session_id", sessionIds)
         .eq("role", "mentor")
-        .order("submitted_at", { ascending: false })
-    : { data: [] as never[] };
+        .order("submitted_at", { ascending: false });
+      sessionFeedback = (data || []) as typeof sessionFeedback;
+    }
+  }
 
   // Get mentor names for session feedback
   const mentorIds = [
     ...new Set(
-      (sessionFeedback || []).map((fb) => {
-        const session = fb.session as { session_date: string; mentor_id: string } | null;
-        return session?.mentor_id;
-      }).filter(Boolean)
+      sessionFeedback.map((fb) => fb.session?.mentor_id).filter(Boolean) as string[]
     ),
   ];
 
@@ -140,14 +185,10 @@ export default async function AdminCandidateDetailPage({
 
   const ownerLabel = (owner: string) => {
     switch (owner) {
-      case "self":
-        return "אני";
-      case "mentor":
-        return "מנטור";
-      case "team":
-        return "צוות";
-      default:
-        return owner;
+      case "self": return "אני";
+      case "mentor": return "מנטור";
+      case "team": return "צוות";
+      default: return owner;
     }
   };
 
@@ -182,13 +223,34 @@ export default async function AdminCandidateDetailPage({
             </div>
           </div>
         </div>
-        <div className="mt-3 text-sm text-gray-600">
-          <span className="font-medium">מנטור/ית: </span>
-          {mentorProfile ? (
-            <span>{mentorProfile.full_name}</span>
-          ) : (
-            <span className="text-gray-400">לא משובץ</span>
-          )}
+
+        {/* Venture + Mentor info */}
+        <div className="mt-3 space-y-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Briefcase className="size-4 text-gray-400" />
+            <span className="font-medium">מיזם: </span>
+            {ventureName ? (
+              <span>
+                {ventureName}
+                {ventureMembers.length > 0 && (
+                  <span className="text-gray-400">
+                    {" "}(עם {ventureMembers.map((m) => m.full_name).join(", ")})
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-gray-400">לא משובץ למיזם</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Users className="size-4 text-gray-400" />
+            <span className="font-medium">מנטור/ית: </span>
+            {mentorProfile ? (
+              <span>{mentorProfile.full_name}</span>
+            ) : (
+              <span className="text-gray-400">לא משובץ</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -281,7 +343,6 @@ export default async function AdminCandidateDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Open tasks */}
           {openTasks.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-500">פתוחות</p>
@@ -297,6 +358,15 @@ export default async function AdminCandidateDetailPage({
                       <Badge variant="secondary" className="text-[10px]">
                         {ownerLabel(task.owner)}
                       </Badge>
+                      <Badge
+                        className={`text-[10px] border-0 ${
+                          task.venture_id
+                            ? "bg-[#1a2744]/10 text-[#1a2744]"
+                            : "bg-[#22c55e]/10 text-[#22c55e]"
+                        }`}
+                      >
+                        {task.venture_id ? "מיזם" : "אישי"}
+                      </Badge>
                       {task.deadline && (
                         <span className="text-xs text-gray-500">
                           {formatDate(task.deadline)}
@@ -309,7 +379,6 @@ export default async function AdminCandidateDetailPage({
             </div>
           )}
 
-          {/* Completed tasks */}
           {completedTasks.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-500">הושלמו</p>
@@ -339,7 +408,7 @@ export default async function AdminCandidateDetailPage({
             </div>
           )}
 
-          {(tasks?.length || 0) === 0 && (
+          {allTasks.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               אין משימות
             </p>
@@ -353,6 +422,11 @@ export default async function AdminCandidateDetailPage({
           <CardTitle className="flex items-center gap-2 text-[#1a2744]">
             <BookOpen className="size-5" />
             מדריך התוכנית
+            {ventureName && (
+              <Badge className="text-[10px] bg-[#1a2744]/10 text-[#1a2744] border-0 mr-2">
+                משותף למיזם
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
             {filledChapters} מתוך {chapters?.length || 0} פרקים מולאו
@@ -462,15 +536,12 @@ export default async function AdminCandidateDetailPage({
             משובי מנטורינג
           </CardTitle>
           <CardDescription>
-            {sessionFeedback?.length || 0} משובים
+            {sessionFeedback.length} משובים
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {(sessionFeedback || []).map((fb) => {
-            const session = fb.session as {
-              session_date: string;
-              mentor_id: string;
-            } | null;
+          {sessionFeedback.map((fb) => {
+            const session = fb.session;
             const mentorName = session?.mentor_id
               ? mentorNameMap.get(session.mentor_id) || "---"
               : "---";
@@ -487,7 +558,6 @@ export default async function AdminCandidateDetailPage({
                   <Badge variant="secondary" className="text-[10px]">
                     {mentorName}
                   </Badge>
-                  {/* Ratings */}
                   {fb.rating_focus && (
                     <div className="flex gap-1 mr-auto">
                       {[
@@ -497,9 +567,7 @@ export default async function AdminCandidateDetailPage({
                         { key: "rating_initiative", label: "יוזמה" },
                         { key: "rating_followthrough", label: "יישום" },
                       ].map((r) => {
-                        const val = fb[r.key as keyof typeof fb] as
-                          | number
-                          | null;
+                        const val = fb[r.key as keyof typeof fb] as number | null;
                         if (!val) return null;
                         return (
                           <Badge
@@ -523,7 +591,7 @@ export default async function AdminCandidateDetailPage({
             );
           })}
 
-          {(!sessionFeedback || sessionFeedback.length === 0) && (
+          {sessionFeedback.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               אין משובי מנטורינג
             </p>
