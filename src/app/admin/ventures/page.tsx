@@ -20,6 +20,8 @@ import {
   Users,
   UserPlus,
   AlertCircle,
+  Pencil,
+  Check,
 } from "lucide-react";
 
 export default function AdminVenturesPage() {
@@ -40,6 +42,11 @@ export default function AdminVenturesPage() {
   // Assign candidate state per venture
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState("");
+
+  // Edit venture state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   useEffect(() => {
     loadData();
@@ -204,6 +211,34 @@ export default function AdminVenturesPage() {
     loadData();
   }
 
+  function startEdit(venture: Venture & { members: Profile[]; cohort: Cohort | null }) {
+    setEditingId(venture.id);
+    setEditName(venture.name);
+    setEditDescription(venture.description || "");
+  }
+
+  async function saveEdit(ventureId: string) {
+    if (!editName.trim()) return;
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("ventures")
+      .update({
+        name: editName.trim(),
+        description: editDescription.trim() || null,
+      })
+      .eq("id", ventureId);
+
+    if (error) {
+      setMessage(`שגיאה: ${error.message}`);
+    } else {
+      setEditingId(null);
+    }
+
+    setLoading(false);
+    loadData();
+  }
+
   // Candidates not assigned to any venture
   const unassignedCandidates = candidates.filter((c) => !c.venture_id);
 
@@ -310,30 +345,69 @@ export default function AdminVenturesPage() {
                 <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/10">
                   <Briefcase className="size-5 text-[#1a2744]" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#1a2744]">
-                    {venture.name}
-                  </p>
-                  {venture.description && (
-                    <p className="text-xs text-gray-500">{venture.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {venture.cohort && (
-                    <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs">
-                      {venture.cohort.name}
+                {editingId === venture.id ? (
+                  <div className="flex-1 flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="flex-1 min-w-[150px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    />
+                    <input
+                      type="text"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="תיאור"
+                      className="flex-1 min-w-[150px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    />
+                    <button
+                      onClick={() => saveEdit(venture.id)}
+                      disabled={loading}
+                      className="p-2 text-[#22c55e] hover:bg-[#22c55e]/10 rounded-lg transition-colors"
+                    >
+                      <Check className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#1a2744]">
+                      {venture.name}
+                    </p>
+                    {venture.description && (
+                      <p className="text-xs text-gray-500">{venture.description}</p>
+                    )}
+                  </div>
+                )}
+                {editingId !== venture.id && (
+                  <div className="flex items-center gap-2">
+                    {venture.cohort && (
+                      <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs">
+                        {venture.cohort.name}
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      {venture.members.length} חברים
                     </Badge>
-                  )}
-                  <Badge variant="secondary" className="text-xs">
-                    {venture.members.length} חברים
-                  </Badge>
-                  <button
-                    onClick={() => handleDeleteVenture(venture.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
+                    <button
+                      onClick={() => startEdit(venture)}
+                      className="p-2 text-gray-400 hover:text-[#1a2744] transition-colors rounded-lg hover:bg-gray-100"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteVenture(venture.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Members */}
