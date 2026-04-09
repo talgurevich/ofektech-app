@@ -48,26 +48,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Update the profile with the correct role and cohort
-  const profileData: Record<string, unknown> = {
-    role,
+  // Create profile (no auto-trigger — must insert manually)
+  const { error: profileError } = await adminClient.from("profiles").upsert({
+    id: data.user.id,
+    email,
     full_name: full_name || "",
-  };
-  if (cohort_id) profileData.cohort_id = cohort_id;
-
-  const { error: profileError } = await adminClient
-    .from("profiles")
-    .update(profileData)
-    .eq("id", data.user.id);
+    role,
+    ...(cohort_id ? { cohort_id } : {}),
+  }, { onConflict: "id" });
 
   if (profileError) {
-    await adminClient.from("profiles").insert({
-      id: data.user.id,
-      email,
-      full_name: full_name || "",
-      role,
-      ...(cohort_id ? { cohort_id } : {}),
-    });
+    return NextResponse.json({ error: profileError.message }, { status: 400 });
   }
 
   // Send styled invite email via Resend
