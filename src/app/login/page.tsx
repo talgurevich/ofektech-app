@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -28,6 +30,30 @@ export default function LoginPage() {
       setError("שגיאה בהתחברות עם Google");
       setLoading(false);
     }
+  }
+
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!magicEmail.trim()) return;
+    setLoading(true);
+    setError("");
+    setMagicSent(false);
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: magicEmail.trim(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError("שגיאה בשליחת הקישור. ודא/י שהאימייל נכון.");
+      setLoading(false);
+      return;
+    }
+
+    setMagicSent(true);
+    setLoading(false);
   }
 
   return (
@@ -191,6 +217,58 @@ export default function LoginPage() {
             </svg>
             כניסה עם Google
           </button>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-transparent px-3 text-gray-500 text-xs">או</span>
+            </div>
+          </div>
+
+          {/* Magic link */}
+          {magicSent ? (
+            <div className="text-center space-y-2">
+              <div className="flex justify-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-[#22c55e]/20">
+                  <svg className="size-6 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-sm text-white font-medium">קישור נשלח!</p>
+              <p className="text-xs text-gray-400">
+                בדקו את תיבת הדואר ב-{magicEmail}
+              </p>
+              <button
+                onClick={() => { setMagicSent(false); setMagicEmail(""); }}
+                className="text-xs text-[#22c55e] hover:underline mt-2"
+              >
+                שלח שוב
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleMagicLink} className="space-y-3">
+              <input
+                type="email"
+                value={magicEmail}
+                onChange={(e) => setMagicEmail(e.target.value)}
+                placeholder="האימייל שלך"
+                required
+                dir="ltr"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 focus:border-transparent"
+              />
+              <button
+                type="submit"
+                disabled={loading || !magicEmail.trim()}
+                className="w-full rounded-xl bg-[#1a2744] border border-white/10 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-[#1a2744]/80 disabled:opacity-50"
+              >
+                {loading ? "שולח..." : "שלח לי קישור להתחברות"}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Screenshots showcase */}
