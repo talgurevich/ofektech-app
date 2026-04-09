@@ -109,6 +109,7 @@ export default function OpeningCheckinPage() {
 
     if (err) {
       setError("שגיאה בשמירה. נסה שוב.");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בשמירת שאלון פתיחה" }) });
       setLoading(false);
       return;
     }

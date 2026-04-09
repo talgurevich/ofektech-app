@@ -64,6 +64,7 @@ function NewSessionForm() {
 
     if (err) {
       setError("שגיאה ביצירת הפגישה");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה ביצירת פגישת מנטורינג" }) });
       setLoading(false);
       return;
     }

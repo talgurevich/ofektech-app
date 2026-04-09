@@ -61,6 +61,7 @@ export default function LectureFeedbackPage() {
 
     if (err) {
       setError("שגיאה בשמירה");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בשמירת משוב הרצאה" }) });
       setLoading(false);
       return;
     }

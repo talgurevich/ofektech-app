@@ -16,6 +16,7 @@ const EMOJI: Record<string, string> = {
   lecture: "📚",
   venture: "🚀",
   assignment: "🤝",
+  error: "🚨",
 };
 
 export async function trackEvent({

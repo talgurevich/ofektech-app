@@ -162,6 +162,7 @@ export default function SessionFeedbackPage() {
 
     if (err) {
       setError("שגיאה בשמירה");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בשמירת משוב מנטורינג" }) });
       setLoading(false);
       return;
     }

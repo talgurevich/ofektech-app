@@ -28,6 +28,7 @@ export default function LoginPage() {
 
     if (error) {
       setError("שגיאה בהתחברות עם Google");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בהתחברות עם Google" }) });
       setLoading(false);
     }
   }
@@ -48,6 +49,7 @@ export default function LoginPage() {
 
     if (error) {
       setError("שגיאה בשליחת הקישור. ודא/י שהאימייל נכון.");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בשליחת קישור קסם" }) });
       setLoading(false);
       return;
     }
