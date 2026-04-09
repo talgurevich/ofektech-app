@@ -36,24 +36,9 @@ create table profiles (
   created_at timestamptz not null default now()
 );
 
--- Auto-create profile on user signup
-create or replace function handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, email, full_name, role)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'candidate')
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
+-- NOTE: No auto-create trigger. Profiles are created ONLY by the admin
+-- invite API (/api/invite). This prevents unauthorized users from
+-- getting access by self-registering via Google OAuth or magic link.
 
 -- Lectures table
 create table lectures (
