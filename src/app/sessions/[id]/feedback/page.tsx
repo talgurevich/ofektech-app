@@ -193,7 +193,7 @@ export default function SessionFeedbackPage() {
   if (!session) {
     return (
       <main className="max-w-xl mx-auto p-4 md:p-8 w-full">
-        <p className="text-gray-500">טוען...</p>
+        <img src="/loading.gif" alt="טוען..." className="size-24 object-contain" />
       </main>
     );
   }

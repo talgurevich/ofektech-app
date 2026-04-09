@@ -142,8 +142,8 @@ export default function TasksPage() {
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto p-4 md:p-8 flex justify-center pt-20">
-        <Loader2 className="size-6 animate-spin text-[#1a2744]" />
+      <main className="flex min-h-[60vh] items-center justify-center">
+        <img src="/loading.gif" alt="טוען..." className="size-24 object-contain" />
       </main>
     );
   }

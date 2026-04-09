@@ -187,7 +187,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-400">טוען...</p>
+        <img src="/loading.gif" alt="טוען..." className="size-24 object-contain" />
       </main>
     );
   }
