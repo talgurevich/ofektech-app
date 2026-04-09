@@ -12,7 +12,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "OfekTech Portal",
-  description: "פורטל מאיץ עופקטק",
+  description: "פורטל מאיץ אופקטק — יזמות, חדשנות וטכנולוגיה",
+  openGraph: {
+    title: "OfekTech Portal",
+    description: "פורטל מאיץ אופקטק — יזמות, חדשנות וטכנולוגיה",
+    siteName: "אופקטק — OfekTech",
+  },
 };
 
 export default function RootLayout({
