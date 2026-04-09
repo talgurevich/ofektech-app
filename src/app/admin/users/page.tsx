@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { Profile, UserRole, Cohort } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Trash2, X, Check, Upload, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, Trash2, X, Check, Upload, FileSpreadsheet, Send } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminUsersPage() {
@@ -103,6 +103,21 @@ export default function AdminUsersPage() {
     } else {
       setMessage("המשתמש נמחק");
       loadProfiles();
+    }
+  }
+
+  async function handleResendInvite(email: string, fullName: string, userRole: string) {
+    const res = await fetch("/api/resend-invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, full_name: fullName, role: userRole }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(`שגיאה: ${data.error}`);
+    } else {
+      setMessage(`הזמנה נשלחה שוב ל-${email}`);
     }
   }
 
@@ -489,6 +504,13 @@ export default function AdminUsersPage() {
                         ))}
                       </select>
                       <button
+                        onClick={() => handleResendInvite(p.email, p.full_name, p.role)}
+                        className="p-2 text-gray-400 hover:text-[#22c55e] transition-colors rounded-lg hover:bg-[#22c55e]/10"
+                        title="שלח הזמנה מחדש"
+                      >
+                        <Send className="size-4" />
+                      </button>
+                      <button
                         onClick={() => handleDelete(p.id, p.full_name)}
                         className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
                       >
@@ -526,12 +548,21 @@ export default function AdminUsersPage() {
                     <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(p.id, p.full_name)}
-                  className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleResendInvite(p.email, p.full_name, p.role)}
+                    className="p-2 text-gray-400 hover:text-[#22c55e] transition-colors rounded-lg hover:bg-[#22c55e]/10"
+                    title="שלח הזמנה מחדש"
+                  >
+                    <Send className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id, p.full_name)}
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -561,12 +592,21 @@ export default function AdminUsersPage() {
                     <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(p.id, p.full_name)}
-                  className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleResendInvite(p.email, p.full_name, p.role)}
+                    className="p-2 text-gray-400 hover:text-[#22c55e] transition-colors rounded-lg hover:bg-[#22c55e]/10"
+                    title="שלח הזמנה מחדש"
+                  >
+                    <Send className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id, p.full_name)}
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </CardContent>
             </Card>
           ))}
