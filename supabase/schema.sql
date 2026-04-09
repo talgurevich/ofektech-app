@@ -33,6 +33,14 @@ create table profiles (
   cohort_id uuid references cohorts(id),
   venture_id uuid references ventures(id),
   onboarding_completed boolean not null default false,
+  avatar_url text,
+  phone text,
+  motto text,
+  linkedin_url text,
+  bio text,
+  venture_role text,
+  company text,
+  expertise text,
   created_at timestamptz not null default now()
 );
 

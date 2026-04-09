@@ -69,7 +69,7 @@ export default async function VentureDetailPage({
   // Get venture members
   const { data: members } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, avatar_url, venture_role")
     .eq("venture_id", ventureId)
     .order("full_name");
 
@@ -184,9 +184,21 @@ export default async function VentureDetailPage({
           {(members || []).map((m) => (
             <Badge
               key={m.id}
-              className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs"
+              className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs gap-1.5"
             >
+              {m.avatar_url ? (
+                <img
+                  src={m.avatar_url}
+                  alt={m.full_name || ""}
+                  className="size-5 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#22c55e]/20 text-[8px] font-bold text-[#22c55e]">
+                  {(m.full_name || m.email || "?").charAt(0)}
+                </span>
+              )}
               {m.full_name || m.email}
+              {m.venture_role && ` — ${m.venture_role}`}
             </Badge>
           ))}
           {(!members || members.length === 0) && (

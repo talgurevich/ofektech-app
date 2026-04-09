@@ -15,7 +15,7 @@ export async function SidebarWrapper({ children }: { children: React.ReactNode }
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, full_name")
+      .select("role, full_name, avatar_url")
       .eq("id", user.id)
       .single();
 
@@ -27,6 +27,7 @@ export async function SidebarWrapper({ children }: { children: React.ReactNode }
       <AppSidebarLayout
         role={profile.role as "candidate" | "mentor" | "admin"}
         fullName={profile.full_name}
+        avatarUrl={profile.avatar_url}
       >
         {children}
       </AppSidebarLayout>

@@ -17,6 +17,7 @@ import {
   UserCheck,
   GraduationCap,
   Briefcase,
+  UserCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,6 +43,7 @@ type UserRole = "candidate" | "mentor" | "admin" | "visitor";
 interface AppSidebarProps {
   role: UserRole;
   fullName?: string;
+  avatarUrl?: string | null;
   children: React.ReactNode;
 }
 
@@ -49,10 +51,12 @@ const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
   { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
   { href: "/tasks", label: "משימות", icon: ListTodo },
+  { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
+  { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const visitorLinks = [
@@ -68,6 +72,7 @@ const adminLinks = [
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
   { href: "/admin/checkins", label: "צ׳ק-אין", icon: ClipboardCheck },
+  { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 function getLinks(role: UserRole) {
@@ -96,7 +101,7 @@ function getRoleLabel(role: UserRole) {
   }
 }
 
-export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) {
+export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSidebarProps) {
   const pathname = usePathname();
   const links = getLinks(role);
 
@@ -118,13 +123,28 @@ export function AppSidebarLayout({ role, fullName, children }: AppSidebarProps) 
           </div>
           {fullName && (
             <div className="mt-3 px-1 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-sidebar-foreground">
-                  {fullName}
-                </p>
-                <p className="text-xs text-sidebar-foreground/60">
-                  {getRoleLabel(role)}
-                </p>
+              <div className="flex items-center gap-2">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={fullName}
+                    className="size-8 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#22c55e]/20 shrink-0">
+                    <span className="text-sm font-bold text-[#22c55e]">
+                      {fullName.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-sidebar-foreground">
+                    {fullName}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60">
+                    {getRoleLabel(role)}
+                  </p>
+                </div>
               </div>
               <NotificationBell />
             </div>

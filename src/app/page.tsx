@@ -233,6 +233,9 @@ async function CandidateDashboard({
 
   // Get assigned mentor (via venture)
   let mentorName: string | null = null;
+  let mentorAvatar: string | null = null;
+  let mentorPhone: string | null = null;
+  let mentorExpertise: string | null = null;
   if (ventureId) {
     const { data: mentorAssignment } = await supabase
       .from("mentor_assignments")
@@ -244,10 +247,13 @@ async function CandidateDashboard({
     if (mentorAssignment?.mentor_id) {
       const { data: mentorProfile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, avatar_url, phone, expertise")
         .eq("id", mentorAssignment.mentor_id)
         .single();
       mentorName = mentorProfile?.full_name || null;
+      mentorAvatar = mentorProfile?.avatar_url || null;
+      mentorPhone = mentorProfile?.phone || null;
+      mentorExpertise = mentorProfile?.expertise || null;
     }
   }
 
@@ -667,7 +673,12 @@ async function CandidateDashboard({
               )}
 
               {/* Contact */}
-              <TeamContactCard mentorName={mentorName} />
+              <TeamContactCard
+                mentorName={mentorName}
+                mentorAvatar={mentorAvatar}
+                mentorPhone={mentorPhone}
+                mentorExpertise={mentorExpertise}
+              />
             </div>
           </div>
         </AnimatedItem>
@@ -721,7 +732,7 @@ async function MentorDashboard({
       // Get members
       const { data: members } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, avatar_url, venture_role")
         .eq("venture_id", venture.id);
 
       // Get venture tasks
@@ -863,9 +874,21 @@ async function MentorDashboard({
                               <Badge
                                 key={m.id}
                                 variant="secondary"
-                                className="text-[10px]"
+                                className="text-[10px] gap-1"
                               >
+                                {m.avatar_url ? (
+                                  <img
+                                    src={m.avatar_url}
+                                    alt={m.full_name || ""}
+                                    className="size-5 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex size-5 items-center justify-center rounded-full bg-[#22c55e]/20 text-[8px] font-bold text-[#22c55e]">
+                                    {(m.full_name || m.email || "?").charAt(0)}
+                                  </span>
+                                )}
                                 {m.full_name || m.email}
+                                {m.venture_role && ` — ${m.venture_role}`}
                               </Badge>
                             ))}
                             {venture.members.length === 0 && (
@@ -950,7 +973,17 @@ async function MentorDashboard({
   );
 }
 
-function TeamContactCard({ mentorName }: { mentorName?: string | null }) {
+function TeamContactCard({
+  mentorName,
+  mentorAvatar,
+  mentorPhone,
+  mentorExpertise,
+}: {
+  mentorName?: string | null;
+  mentorAvatar?: string | null;
+  mentorPhone?: string | null;
+  mentorExpertise?: string | null;
+}) {
   const contacts = [
     { name: "טל גורביץ׳", phone: "050-442-5322" },
     { name: "אתי אילן", phone: "050-735-4911" },
@@ -967,12 +1000,37 @@ function TeamContactCard({ mentorName }: { mentorName?: string | null }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {mentorName && (
-          <div className="flex items-center gap-2 bg-[#22c55e]/5 rounded-lg px-3 py-2 mb-1">
-            <Users className="size-4 text-[#22c55e]" />
-            <div>
+          <div className="flex items-center gap-3 bg-[#22c55e]/5 rounded-lg px-3 py-2 mb-1">
+            {mentorAvatar ? (
+              <img
+                src={mentorAvatar}
+                alt={mentorName}
+                className="size-8 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="flex size-8 items-center justify-center rounded-full bg-[#22c55e]/20 shrink-0">
+                <span className="text-sm font-bold text-[#22c55e]">
+                  {mentorName.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
               <p className="text-[10px] text-gray-500">המנטור/ית שלך</p>
               <p className="text-sm font-semibold text-[#1a2744]">{mentorName}</p>
+              {mentorExpertise && (
+                <p className="text-xs text-gray-500">{mentorExpertise}</p>
+              )}
             </div>
+            {mentorPhone && (
+              <a
+                href={`tel:${mentorPhone.replace(/-/g, "")}`}
+                className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline shrink-0"
+                dir="ltr"
+              >
+                <Phone className="size-3" />
+                {mentorPhone}
+              </a>
+            )}
           </div>
         )}
         {contacts.map((c) => (

@@ -27,6 +27,14 @@ export interface Profile {
   cohort_id: string | null;
   venture_id: string | null;
   onboarding_completed: boolean;
+  avatar_url: string | null;
+  phone: string | null;
+  motto: string | null;
+  linkedin_url: string | null;
+  bio: string | null;
+  venture_role: string | null;
+  company: string | null;
+  expertise: string | null;
   created_at: string;
   cohort?: Cohort | null;
   venture?: Venture | null;

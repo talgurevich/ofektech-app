@@ -24,6 +24,8 @@ import {
   BarChart3,
   Briefcase,
   User,
+  Phone,
+  ExternalLink,
 } from "lucide-react";
 
 export default async function AdminCandidateDetailPage({
@@ -204,9 +206,19 @@ export default async function AdminCandidateDetailPage({
           חזרה לניהול משתמשים
         </Link>
         <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-full bg-[#1a2744]/10">
-            <Users className="size-5 text-[#1a2744]" />
-          </div>
+          {candidate.avatar_url ? (
+            <img
+              src={candidate.avatar_url}
+              alt={candidate.full_name || ""}
+              className="size-14 rounded-full object-cover ring-2 ring-gray-100 shrink-0"
+            />
+          ) : (
+            <div className="flex size-14 items-center justify-center rounded-full bg-[#22c55e]/20 ring-2 ring-gray-100 shrink-0">
+              <span className="text-xl font-bold text-[#22c55e]">
+                {(candidate.full_name || "?").charAt(0)}
+              </span>
+            </div>
+          )}
           <div>
             <h1 className="text-2xl font-bold text-[#1a2744]">
               {candidate.full_name || "---"}
@@ -221,8 +233,37 @@ export default async function AdminCandidateDetailPage({
                 </Badge>
               )}
             </div>
+            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+              {candidate.phone && (
+                <a
+                  href={`tel:${candidate.phone.replace(/-/g, "")}`}
+                  className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#22c55e] transition-colors"
+                  dir="ltr"
+                >
+                  <Phone className="size-3.5" />
+                  {candidate.phone}
+                </a>
+              )}
+              {candidate.linkedin_url && (
+                <a
+                  href={candidate.linkedin_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#22c55e] transition-colors"
+                  dir="ltr"
+                >
+                  LinkedIn
+                  <ExternalLink className="size-3" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
+        {candidate.bio && (
+          <p className="mt-3 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+            {candidate.bio}
+          </p>
+        )}
 
         {/* Venture + Mentor info */}
         <div className="mt-3 space-y-1">
