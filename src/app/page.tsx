@@ -48,7 +48,7 @@ export default async function Dashboard() {
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  if (!profile) redirect("/not-registered");
 
   // Admin redirect
   if (profile.role === "admin") {

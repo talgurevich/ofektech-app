@@ -40,6 +40,21 @@ export default function LoginPage() {
     setError("");
     setMagicSent(false);
 
+    // Check if email is registered
+    const checkRes = await fetch("/api/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: magicEmail.trim() }),
+    });
+    const { exists } = await checkRes.json();
+
+    if (!exists) {
+      setError("אימייל זה אינו רשום במערכת. לשאלות ניתן לפנות ל-ofektech.innovation@gmail.com");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: `ניסיון כניסה עם אימייל לא רשום: ${magicEmail.trim()}` }) });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: magicEmail.trim(),
       options: {
