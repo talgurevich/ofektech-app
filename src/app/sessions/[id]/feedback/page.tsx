@@ -193,7 +193,7 @@ export default function SessionFeedbackPage() {
   if (!session) {
     return (
       <main className="max-w-xl mx-auto p-4 md:p-8 w-full">
-        <img src="/loading.gif" alt="טוען..." className="size-24 object-contain" />
+        <img src="/logo-icon.png" alt="טוען..." className="size-20 object-contain animate-spin" style={{ animationDuration: "2s" }} />
       </main>
     );
   }

@@ -187,7 +187,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <img src="/loading.gif" alt="טוען..." className="size-24 object-contain" />
+        <img src="/logo-icon.png" alt="טוען..." className="size-20 object-contain animate-spin" style={{ animationDuration: "2s" }} />
       </main>
     );
   }
