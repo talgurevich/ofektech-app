@@ -691,7 +691,11 @@ async function MentorDashboard({
     .select("*, venture:ventures(id, name, description)")
     .eq("mentor_id", userId);
 
-  const ventureIds = assignments?.map((a) => (a.venture as { id: string }).id) || [];
+  // Filter out assignments with null ventures (from migration)
+  const validAssignments = (assignments || []).filter(
+    (a) => a.venture && (a.venture as { id: string }).id
+  );
+  const ventureIds = validAssignments.map((a) => (a.venture as { id: string }).id);
 
   // Get total sessions count
   const { count: totalSessions } = await supabase
@@ -707,7 +711,7 @@ async function MentorDashboard({
 
   // For each venture, get stats
   const ventureStats = await Promise.all(
-    (assignments || []).map(async (assignment) => {
+    validAssignments.map(async (assignment) => {
       const venture = assignment.venture as {
         id: string;
         name: string;
