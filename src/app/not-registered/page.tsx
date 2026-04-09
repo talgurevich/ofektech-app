@@ -1,28 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { Mail } from "lucide-react";
 import Link from "next/link";
 
-export default async function NotRegisteredPage() {
-  // If user has a profile, they shouldn't be here
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .single();
-
-    if (profile) redirect("/");
-
-    // Sign them out since they're not registered
-    await supabase.auth.signOut();
-  }
-
+export default function NotRegisteredPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#f4f6f9] p-6">
       <div className="w-full max-w-md text-center space-y-6">

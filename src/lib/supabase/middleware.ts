@@ -5,7 +5,8 @@ export async function updateSession(request: NextRequest) {
   // Allow auth callback and login page without authentication
   if (
     request.nextUrl.pathname.startsWith("/auth/callback") ||
-    request.nextUrl.pathname === "/login"
+    request.nextUrl.pathname === "/login" ||
+    request.nextUrl.pathname === "/not-registered"
   ) {
     return NextResponse.next({ request });
   }
