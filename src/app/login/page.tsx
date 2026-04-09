@@ -41,12 +41,20 @@ export default function LoginPage() {
     setMagicSent(false);
 
     // Check if email is registered
-    const checkRes = await fetch("/api/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: magicEmail.trim() }),
-    });
-    const { exists } = await checkRes.json();
+    let exists = true;
+    try {
+      const checkRes = await fetch("/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: magicEmail.trim() }),
+      });
+      if (checkRes.ok) {
+        const data = await checkRes.json();
+        exists = data.exists;
+      }
+    } catch {
+      // If check fails, let them through
+    }
 
     if (!exists) {
       setError("אימייל זה אינו רשום במערכת. לשאלות ניתן לפנות ל-ofektech.innovation@gmail.com");
