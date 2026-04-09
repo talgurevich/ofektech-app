@@ -10,18 +10,21 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
+
+    // Check profiles table (invited users have profiles)
     const { count, error } = await supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .ilike("email", email.trim());
 
     if (error) {
-      // If we can't check, let them through (don't block on error)
-      return NextResponse.json({ exists: true });
+      // Fail closed — block if we can't verify
+      return NextResponse.json({ exists: false });
     }
 
     return NextResponse.json({ exists: (count || 0) > 0 });
   } catch {
-    return NextResponse.json({ exists: true });
+    // Fail closed
+    return NextResponse.json({ exists: false });
   }
 }

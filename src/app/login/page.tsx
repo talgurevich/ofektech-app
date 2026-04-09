@@ -41,7 +41,7 @@ export default function LoginPage() {
     setMagicSent(false);
 
     // Check if email is registered
-    let exists = true;
+    let exists = false;
     try {
       const checkRes = await fetch("/api/check-email", {
         method: "POST",
@@ -53,7 +53,7 @@ export default function LoginPage() {
         exists = data.exists;
       }
     } catch {
-      // If check fails, let them through
+      // Fail closed — block if we can't verify
     }
 
     if (!exists) {
