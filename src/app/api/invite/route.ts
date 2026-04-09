@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/events";
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 
@@ -180,6 +181,8 @@ export async function POST(request: Request) {
     // User was created but email failed — don't error out
     console.error("Resend email error:", emailError);
   }
+
+  await trackEvent({ type: "user_invited", actor: "מנהל", description: `משתמש חדש הוזמן: ${full_name || email} (${role === "mentor" ? "מנטור" : role === "visitor" ? "מאזין" : "יזם"})` });
 
   return NextResponse.json({ user: data.user });
 }

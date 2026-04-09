@@ -109,6 +109,7 @@ export default function AdminVenturesPage() {
       setMessage(`שגיאה: ${error.message}`);
     } else {
       setMessage("המיזם נוצר בהצלחה");
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "venture", description: `מיזם חדש: ${name.trim()}` }) });
       setName("");
       setDescription("");
       setCohortId("");

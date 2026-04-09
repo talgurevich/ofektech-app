@@ -117,6 +117,8 @@ export default function AdminLecturesPage() {
       }),
     });
 
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "lecture", description: `הרצאה עודכנה: ${editForm.title}` }) });
+
     // If recording or presentation was added, send additional notification
     if (editForm.recording_url || editForm.presentation_url) {
       await fetch("/api/notifications/broadcast", {
@@ -181,6 +183,8 @@ export default function AdminLecturesPage() {
         link: "/",
       }),
     });
+
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "lecture", description: `הרצאה חדשה: ${newForm.title}` }) });
   }
 
   return (

@@ -113,6 +113,8 @@ export default function OpeningCheckinPage() {
       return;
     }
 
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "checkin", description: "שאלון פתיחה הוגש" }) });
+
     router.push("/");
     router.refresh();
   }

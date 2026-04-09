@@ -65,6 +65,8 @@ export default function LectureFeedbackPage() {
       return;
     }
 
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "lecture_feedback", description: "משוב הרצאה הוגש" }) });
+
     router.push("/");
     router.refresh();
   }

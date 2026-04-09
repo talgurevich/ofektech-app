@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/events";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
@@ -40,9 +41,11 @@ export async function DELETE(
   // Get the user's profile to check venture membership
   const { data: targetProfile } = await adminClient
     .from("profiles")
-    .select("venture_id")
+    .select("venture_id, email, full_name")
     .eq("id", id)
     .single();
+
+  const targetEmail = targetProfile?.full_name || targetProfile?.email || id;
 
   const userVentureId = targetProfile?.venture_id;
 
@@ -109,6 +112,8 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await trackEvent({ type: "user_deleted", actor: "מנהל", description: `משתמש נמחק: ${targetEmail}` });
 
   return NextResponse.json({ success: true });
 }

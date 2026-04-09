@@ -94,6 +94,9 @@ export default function GuidePage() {
       setSaving((prev) => ({ ...prev, [chapterId]: false }));
 
       if (!error && data) {
+        // Fire-and-forget event tracking for chapter save
+        fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "guide", description: `פרק "${chapters.find(c => c.id === chapterId)?.title}" עודכן` }) });
+
         setEntries((prev) => {
           const updated = { ...prev, [chapterId]: data };
 
@@ -115,6 +118,9 @@ export default function GuidePage() {
                 link: "/admin/candidates",
               }),
             });
+
+            // Fire-and-forget event tracking for guide completion
+            fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "guide_complete", description: "כל 13 פרקי המדריך הושלמו!" }) });
 
             // Notify all venture members
             if (ventureId) {

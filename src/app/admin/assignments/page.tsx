@@ -112,6 +112,8 @@ export default function AdminAssignmentsPage() {
         }),
       });
 
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "assignment", description: `מנטור שובץ למיזם` }) });
+
       setSelectedVenture("");
     }
 

@@ -113,6 +113,8 @@ export default function TasksPage() {
 
     await supabase.from("tasks").insert(insertData);
 
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "task_created", description: `משימה חדשה: ${description.trim().slice(0, 50)}` }) });
+
     setDescription("");
     setDeadline("");
     setOwner("self");
@@ -127,6 +129,9 @@ export default function TasksPage() {
       .from("tasks")
       .update({ completed: !task.completed })
       .eq("id", task.id);
+    if (!task.completed) {
+      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "task_completed", description: `משימה הושלמה: ${task.description.slice(0, 50)}` }) });
+    }
     fetchTasks();
   }
 

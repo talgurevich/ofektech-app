@@ -176,6 +176,8 @@ export default function OnboardingPage() {
       .update({ onboarding_completed: true })
       .eq("id", user.id);
 
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "onboarding", description: "אונבורדינג הושלם" }) });
+
     router.push("/");
     router.refresh();
   }

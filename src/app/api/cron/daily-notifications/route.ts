@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/events";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -293,6 +294,7 @@ export async function GET(request: Request) {
   // Insert all notifications
   if (notifications.length > 0) {
     await supabase.from("notifications").insert(notifications);
+    await trackEvent({ type: "system", description: `סיכום יומי: ${notifications.length} התראות נשלחו` });
   }
 
   return NextResponse.json({
