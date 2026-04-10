@@ -134,6 +134,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [role, setRole] = useState<"candidate" | "mentor" | "visitor">("candidate");
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -168,6 +169,9 @@ export default function OnboardingPage() {
   }, [supabase, router]);
 
   async function completeOnboarding() {
+    if (completing) return;
+    setCompleting(true);
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -209,7 +213,8 @@ export default function OnboardingPage() {
         <div className="flex justify-start mb-4">
           <button
             onClick={completeOnboarding}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            disabled={completing}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
           >
             דלג
           </button>
@@ -313,10 +318,20 @@ export default function OnboardingPage() {
           {isLast ? (
             <button
               onClick={completeOnboarding}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#22c55e] hover:bg-[#16a34a] transition-colors shadow-sm"
+              disabled={completing}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#22c55e] hover:bg-[#16a34a] transition-colors shadow-sm disabled:opacity-70"
             >
-              בואו נתחיל
-              <Rocket className="size-4" />
+              {completing ? (
+                <>
+                  <img src="/logo-icon.png" alt="" className="size-4 animate-spin" style={{ animationDuration: "1s" }} />
+                  נכנסים...
+                </>
+              ) : (
+                <>
+                  בואו נתחיל
+                  <Rocket className="size-4" />
+                </>
+              )}
             </button>
           ) : (
             <button
