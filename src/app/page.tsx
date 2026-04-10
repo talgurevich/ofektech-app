@@ -672,15 +672,18 @@ async function CandidateDashboard({
                 </Card>
               )}
 
-              {/* Contact */}
-              <TeamContactCard
-                mentorName={mentorName}
-                mentorAvatar={mentorAvatar}
-                mentorPhone={mentorPhone}
-                mentorExpertise={mentorExpertise}
-              />
             </div>
           </div>
+        </AnimatedItem>
+
+        {/* Contact — always last */}
+        <AnimatedItem>
+          <TeamContactCard
+            mentorName={mentorName}
+            mentorAvatar={mentorAvatar}
+            mentorPhone={mentorPhone}
+            mentorExpertise={mentorExpertise}
+          />
         </AnimatedItem>
       </AnimatedContainer>
     </main>
