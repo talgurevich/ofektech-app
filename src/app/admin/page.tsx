@@ -20,6 +20,7 @@ import {
   ListTodo,
   Briefcase,
   Star,
+  UserCheck,
 } from "lucide-react";
 
 export default async function AdminDashboard() {
@@ -44,6 +45,16 @@ export default async function AdminDashboard() {
     .select("id, full_name, email, venture_id")
     .eq("role", "candidate")
     .order("full_name");
+
+  // Onboarding status for all non-admin users
+  const { data: allUsers } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, onboarding_completed")
+    .neq("role", "admin")
+    .order("full_name");
+
+  const onboardedUsers = allUsers?.filter((u) => u.onboarding_completed) || [];
+  const notOnboardedUsers = allUsers?.filter((u) => !u.onboarding_completed) || [];
 
   // Opening check-ins
   const { data: openingCheckins } = await supabase
@@ -137,6 +148,67 @@ export default async function AdminDashboard() {
 
         {/* Left column */}
         <div className="space-y-6">
+
+          {/* Onboarding status */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                  <UserCheck className="size-5" />
+                  אונבורדינג
+                </CardTitle>
+                <Badge variant="secondary" className="text-sm">
+                  {onboardedUsers.length} / {allUsers?.length || 0}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#22c55e] transition-all"
+                  style={{ width: `${allUsers?.length ? (onboardedUsers.length / allUsers.length) * 100 : 0}%` }}
+                />
+              </div>
+
+              {notOnboardedUsers.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">טרם השלימו ({notOnboardedUsers.length})</p>
+                  <div className="space-y-1">
+                    {notOnboardedUsers.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-red-50/50">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="size-3.5 text-red-400 shrink-0" />
+                          <span className="text-xs text-[#1a2744]">{u.full_name || u.email}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {u.role === "mentor" ? "מנטור" : u.role === "visitor" ? "מאזין" : "יזם"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {onboardedUsers.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">השלימו ({onboardedUsers.length})</p>
+                  <div className="space-y-1">
+                    {onboardedUsers.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-[#22c55e]/5">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
+                          <span className="text-xs text-[#1a2744]">{u.full_name || u.email}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {u.role === "mentor" ? "מנטור" : u.role === "visitor" ? "מאזין" : "יזם"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Opening check-in status */}
           <Card className="border-0 shadow-sm">
