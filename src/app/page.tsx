@@ -445,8 +445,8 @@ async function CandidateDashboard({
         {/* Two-column layout on desktop */}
         <AnimatedItem>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Right column -- Lectures (wider) */}
-            <div className="lg:col-span-3 space-y-6">
+            {/* Lectures column — shows second on mobile, first on desktop */}
+            <div className="lg:col-span-3 space-y-6 order-2 lg:order-1">
               <Card className="border-0 shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-[#1a2744]">
@@ -545,8 +545,8 @@ async function CandidateDashboard({
               </Card>
             </div>
 
-            {/* Left column */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* Tasks, Guide, Contact — shows first on mobile, second on desktop */}
+            <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
               {/* Opening check-in CTA */}
               {!openingCheckin && (
                 <Card className="border-0 shadow-sm bg-gradient-to-l from-[#1a2744]/5 to-[#1a2744]/15 ring-1 ring-[#1a2744]/20">
