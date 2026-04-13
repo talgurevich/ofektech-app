@@ -114,13 +114,13 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
       >
         {/* Header with logo */}
         <SidebarHeader className="px-4 py-5">
-          <div className="flex items-center" dir="ltr">
+          <Link href="/" className="flex items-center" dir="ltr">
             <img
               src="/logo.png"
               alt="OfekTech"
               className="h-9 w-auto object-contain"
             />
-          </div>
+          </Link>
           {fullName && (
             <div className="mt-3 px-1 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
           <SidebarTrigger>
             <Menu className="size-5" />
           </SidebarTrigger>
-          <img src="/logo.png" alt="OfekTech" className="h-7 w-auto" />
+          <Link href="/"><img src="/logo.png" alt="OfekTech" className="h-7 w-auto" /></Link>
           <div className="mr-auto">
             <NotificationBell />
           </div>
