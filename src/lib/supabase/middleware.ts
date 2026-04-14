@@ -6,7 +6,8 @@ export async function updateSession(request: NextRequest) {
   if (
     request.nextUrl.pathname.startsWith("/auth/callback") ||
     request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname === "/not-registered"
+    request.nextUrl.pathname === "/not-registered" ||
+    request.nextUrl.pathname.startsWith("/manual")
   ) {
     return NextResponse.next({ request });
   }
