@@ -115,6 +115,11 @@ export default function TasksPage() {
 
     fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "task_created", description: `משימה חדשה: ${description.trim().slice(0, 50)}` }) });
 
+    // Email notification to mentor + admin
+    if (ventureId) {
+      fetch("/api/email-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "candidate_task", ventureId, description: description.trim().slice(0, 100) }) });
+    }
+
     setDescription("");
     setDeadline("");
     setOwner("self");

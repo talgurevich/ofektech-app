@@ -134,6 +134,9 @@ function NewSessionForm() {
       }
     }
 
+    // Email notification
+    fetch("/api/email-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "mentor_feedback", ventureId, sessionId: session.id }) });
+
     router.push("/");
     router.refresh();
   }

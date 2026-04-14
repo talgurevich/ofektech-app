@@ -68,6 +68,9 @@ export function MentorTaskAdder({
 
     fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "mentor_task", description: `מנטור הוסיף משימה: ${description.trim().slice(0, 50)}` }) });
 
+    // Email notification
+    fetch("/api/email-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "mentor_task", ventureId, description: description.trim().slice(0, 100) }) });
+
     setDescription("");
     setDeadline("");
     setOwner("mentor");
