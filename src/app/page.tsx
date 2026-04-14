@@ -34,6 +34,7 @@ import {
   AnimatedItem,
 } from "@/components/dashboard-shell";
 import { MentorTaskAdder } from "@/components/mentor-task-adder";
+import { VentureKpiCard } from "@/components/venture-kpi-card";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -808,19 +809,7 @@ async function MentorDashboard({
         {/* Stats row */}
         <AnimatedItem>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-4 pt-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <Briefcase className="size-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">
-                    {ventureIds.length}
-                  </p>
-                  <p className="text-xs text-gray-500">מיזמים</p>
-                </div>
-              </CardContent>
-            </Card>
+            <VentureKpiCard ventures={ventureStats.map(v => ({ id: v.id, name: v.name }))} />
 
             <Card className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-4 pt-0">
