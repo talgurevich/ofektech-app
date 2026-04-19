@@ -28,7 +28,7 @@ export default function LoginPage() {
 
     if (error) {
       setError("שגיאה בהתחברות עם Google");
-      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בהתחברות עם Google" }) });
+      fetch("/api/login-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בהתחברות עם Google" }) });
       setLoading(false);
     }
   }
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
     if (!exists) {
       setError("אימייל זה אינו רשום במערכת. לשאלות ניתן לפנות ל-ofektech.innovation@gmail.com");
-      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: `ניסיון כניסה עם אימייל לא רשום: ${magicEmail.trim()}` }) });
+      fetch("/api/login-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", email: magicEmail.trim(), description: `ניסיון כניסה עם אימייל לא רשום: ${magicEmail.trim()}` }) });
       setLoading(false);
       return;
     }
@@ -72,7 +72,7 @@ export default function LoginPage() {
 
     if (error) {
       setError("שגיאה בשליחת הקישור. ודא/י שהאימייל נכון.");
-      fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", description: "שגיאה בשליחת קישור קסם" }) });
+      fetch("/api/login-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "error", email: magicEmail.trim(), description: `שגיאה בשליחת קישור קסם: ${magicEmail.trim()}` }) });
       setLoading(false);
       return;
     }
