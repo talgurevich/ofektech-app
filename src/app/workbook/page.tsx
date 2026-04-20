@@ -1,8 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { WorkbookClient } from "./workbook-client";
+import { WORKBOOK_SHEETS } from "@/lib/workbook";
 
-export default async function WorkbookPage() {
+export default async function WorkbookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sheet?: string }>;
+}) {
+  const { sheet } = await searchParams;
+  const initialSheet = WORKBOOK_SHEETS.some((s) => s.key === sheet)
+    ? sheet
+    : WORKBOOK_SHEETS[0].key;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -38,5 +48,11 @@ export default async function WorkbookPage() {
     .eq("id", profile.venture_id)
     .single();
 
-  return <WorkbookClient ventureId={profile.venture_id} ventureName={venture?.name || ""} />;
+  return (
+    <WorkbookClient
+      ventureId={profile.venture_id}
+      ventureName={venture?.name || ""}
+      initialSheetKey={initialSheet!}
+    />
+  );
 }

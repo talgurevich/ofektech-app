@@ -10,11 +10,16 @@ import { cn } from "@/lib/utils";
 interface Props {
   ventureId: string;
   ventureName: string;
+  initialSheetKey?: string;
 }
 
-export function WorkbookClient({ ventureId, ventureName }: Props) {
+export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const [activeSheetKey, setActiveSheetKey] = useState<string>(WORKBOOK_SHEETS[0].key);
+  const [activeSheetKey, setActiveSheetKey] = useState<string>(
+    initialSheetKey && WORKBOOK_SHEETS.some((s) => s.key === initialSheetKey)
+      ? initialSheetKey
+      : WORKBOOK_SHEETS[0].key
+  );
   const [entries, setEntries] = useState<WorkbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());

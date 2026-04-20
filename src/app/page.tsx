@@ -35,6 +35,7 @@ import {
 } from "@/components/dashboard-shell";
 import { MentorTaskAdder } from "@/components/mentor-task-adder";
 import { VentureKpiCard } from "@/components/venture-kpi-card";
+import { DashboardActions } from "@/components/dashboard-actions";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -400,6 +401,11 @@ async function CandidateDashboard({
               </CardContent>
             </Card>
           </div>
+        </AnimatedItem>
+
+        {/* Quick-action buttons */}
+        <AnimatedItem>
+          <DashboardActions />
         </AnimatedItem>
 
         {/* Opening check-in CTA */}
