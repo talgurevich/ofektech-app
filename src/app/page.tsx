@@ -212,7 +212,6 @@ async function CandidateDashboard({
   ventureId?: string | null;
 }) {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
 
   // Get venture info + members
   let ventureName: string | null = null;
@@ -260,19 +259,6 @@ async function CandidateDashboard({
     }
   }
 
-  // Get lecture counts for KPIs (feedback submitted + upcoming)
-  const { data: lectures } = await supabase
-    .from("lectures")
-    .select("id, scheduled_date");
-
-  const { count: feedbackCount } = await supabase
-    .from("lecture_feedback")
-    .select("*", { count: "exact", head: true })
-    .eq("candidate_id", userId);
-
-  const upcomingLectures =
-    lectures?.filter((l) => l.scheduled_date > today).length || 0;
-
   // Check opening check-in
   const { data: openingCheckin } = await supabase
     .from("checkins")
@@ -281,20 +267,6 @@ async function CandidateDashboard({
     .eq("type", "opening")
     .limit(1)
     .single();
-
-  // Count all open tasks for KPI
-  let countQuery = supabase
-    .from("tasks")
-    .select("*", { count: "exact", head: true })
-    .eq("completed", false);
-
-  if (ventureId) {
-    countQuery = countQuery.or(`candidate_id.eq.${userId},venture_id.eq.${ventureId}`);
-  } else {
-    countQuery = countQuery.eq("candidate_id", userId);
-  }
-
-  const { count: openTaskCount } = await countQuery;
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-8">
@@ -354,53 +326,6 @@ async function CandidateDashboard({
               </CardContent>
             </Card>
           )}
-        </AnimatedItem>
-
-        {/* Stats row */}
-        <AnimatedItem>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-4 pt-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <ListTodo className="size-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">
-                    {openTaskCount || 0}
-                  </p>
-                  <p className="text-xs text-gray-500">משימות פתוחות</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-4 pt-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <MessageSquare className="size-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">
-                    {feedbackCount}
-                  </p>
-                  <p className="text-xs text-gray-500">משובים שהוגשו</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-4 pt-0">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
-                  <Mic2 className="size-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">
-                    {upcomingLectures}
-                  </p>
-                  <p className="text-xs text-gray-500">הרצאות קרובות</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </AnimatedItem>
 
         {/* Quick-action buttons */}
