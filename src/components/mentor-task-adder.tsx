@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, Loader2, X } from "lucide-react";
 
 const ownerOptions = [
-  { value: "mentor", label: "מנטור" },
-  { value: "self", label: "המיזם" },
-  { value: "team", label: "צוות" },
+  { value: "מנטור", label: "מנטור" },
+  { value: "המיזם", label: "המיזם" },
+  { value: "צוות", label: "צוות" },
 ];
 
 export function MentorTaskAdder({
@@ -24,7 +24,7 @@ export function MentorTaskAdder({
   const [submitting, setSubmitting] = useState(false);
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [owner, setOwner] = useState("mentor");
+  const [owner, setOwner] = useState("מנטור");
   const [ventureMembers, setVentureMembers] = useState<{ id: string; full_name: string }[]>([]);
 
   useEffect(() => {
@@ -43,12 +43,30 @@ export function MentorTaskAdder({
     if (!description.trim()) return;
     setSubmitting(true);
 
-    await supabase.from("tasks").insert({
+    // Append to the workbook "tasks" sheet (shared with entrepreneurs)
+    const { data: maxRow } = await supabase
+      .from("workbook_entries")
+      .select("position")
+      .eq("venture_id", ventureId)
+      .eq("sheet_key", "tasks")
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const position = (maxRow?.position ?? -1) + 1;
+
+    const today = new Date().toISOString().split("T")[0];
+    await supabase.from("workbook_entries").insert({
       venture_id: ventureId,
-      description: description.trim(),
-      owner,
-      deadline: deadline || null,
+      sheet_key: "tasks",
+      position,
       created_by: mentorId,
+      data: {
+        task: description.trim(),
+        assignee: owner,
+        date: today,
+        due_date: deadline || "",
+        done: false,
+      },
     });
 
     // Notify all venture members about new task
@@ -61,7 +79,7 @@ export function MentorTaskAdder({
           type: "task",
           title: "משימה חדשה מהמנטור",
           body: description.trim().slice(0, 100),
-          link: "/tasks",
+          link: "/workbook?sheet=tasks",
         }),
       });
     }
@@ -73,7 +91,7 @@ export function MentorTaskAdder({
 
     setDescription("");
     setDeadline("");
-    setOwner("mentor");
+    setOwner("מנטור");
     setShowForm(false);
     setSubmitting(false);
     router.refresh();
@@ -160,7 +178,7 @@ export function MentorTaskAdder({
               setShowForm(false);
               setDescription("");
               setDeadline("");
-              setOwner("mentor");
+              setOwner("מנטור");
             }}
             className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 transition-colors"
           >

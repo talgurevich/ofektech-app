@@ -388,23 +388,24 @@ async function MentorDashboard({
         .select("id, full_name, email, avatar_url, venture_role")
         .eq("venture_id", venture.id);
 
-      // Get venture tasks
+      // Get venture tasks (from workbook) + chapter + session stats
       const [
-        { count: openTasks },
+        { count: totalTasks },
         { count: completedTasks },
         { count: filledChapters },
         { data: latestSession },
       ] = await Promise.all([
         supabase
-          .from("tasks")
+          .from("workbook_entries")
           .select("*", { count: "exact", head: true })
           .eq("venture_id", venture.id)
-          .eq("completed", false),
+          .eq("sheet_key", "tasks"),
         supabase
-          .from("tasks")
+          .from("workbook_entries")
           .select("*", { count: "exact", head: true })
           .eq("venture_id", venture.id)
-          .eq("completed", true),
+          .eq("sheet_key", "tasks")
+          .eq("data->>done", "true"),
         supabase
           .from("venture_chapter_entries")
           .select("*", { count: "exact", head: true })
@@ -418,6 +419,7 @@ async function MentorDashboard({
           .order("session_date", { ascending: false })
           .limit(1),
       ]);
+      const openTasks = (totalTasks || 0) - (completedTasks || 0);
 
       return {
         id: venture.id,

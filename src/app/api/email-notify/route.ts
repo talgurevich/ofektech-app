@@ -97,7 +97,7 @@ export async function POST(request: Request) {
           heading: "משימה חדשה מהמנטור",
           body: `${actorName} הוסיף/ה משימה למיזם ${ventureName}${description ? `: "${description}"` : ""}.`,
           ctaText: "צפייה במשימות",
-          ctaUrl: `${BASE_URL}/tasks`,
+          ctaUrl: `${BASE_URL}/workbook?sheet=tasks`,
         });
       }
       break;

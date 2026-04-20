@@ -434,12 +434,17 @@ create policy "Venture members and assigned mentors read workbook"
       and mentor_assignments.venture_id = workbook_entries.venture_id
     )
   );
-create policy "Venture members manage workbook"
+create policy "Venture members and assigned mentors manage workbook"
   on workbook_entries for all using (
     exists (
       select 1 from profiles
       where profiles.id = auth.uid()
       and profiles.venture_id = workbook_entries.venture_id
+    )
+    or exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.venture_id = workbook_entries.venture_id
     )
   );
 create policy "Admin manages all workbook entries"
