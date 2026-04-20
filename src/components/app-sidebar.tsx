@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Briefcase,
   UserCircle,
+  Table2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
   { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
   { href: "/tasks", label: "משימות", icon: ListTodo },
+  { href: "/workbook", label: "חוברת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 

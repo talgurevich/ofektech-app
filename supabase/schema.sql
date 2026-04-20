@@ -154,6 +154,19 @@ create table mentor_assignments (
   unique (mentor_id, venture_id)
 );
 
+-- Workbook entries (per-venture structured "spreadsheet" rows)
+create table workbook_entries (
+  id uuid primary key default gen_random_uuid(),
+  venture_id uuid not null references ventures(id) on delete cascade,
+  sheet_key text not null,
+  data jsonb not null default '{}'::jsonb,
+  position int not null default 0,
+  created_by uuid not null references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index workbook_entries_venture_sheet_idx on workbook_entries (venture_id, sheet_key, position);
+
 -- Check-ins table (stays personal)
 create table checkins (
   id uuid primary key default gen_random_uuid(),
@@ -207,6 +220,7 @@ alter table mentor_assignments enable row level security;
 alter table tasks enable row level security;
 alter table notifications enable row level security;
 alter table checkins enable row level security;
+alter table workbook_entries enable row level security;
 
 -- Helper: get current user's role
 create or replace function get_user_role()
@@ -404,6 +418,32 @@ create policy "Authenticated users can insert notifications"
   on notifications for insert with check (true);
 create policy "Admin can manage all notifications"
   on notifications for all using (get_user_role() = 'admin');
+
+-- Workbook entries (per-venture)
+create policy "Venture members and assigned mentors read workbook"
+  on workbook_entries for select using (
+    get_user_role() = 'admin'
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = workbook_entries.venture_id
+    )
+    or exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.venture_id = workbook_entries.venture_id
+    )
+  );
+create policy "Venture members manage workbook"
+  on workbook_entries for all using (
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = workbook_entries.venture_id
+    )
+  );
+create policy "Admin manages all workbook entries"
+  on workbook_entries for all using (get_user_role() = 'admin');
 
 -- Check-ins (personal)
 create policy "Candidates see own checkins"

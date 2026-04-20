@@ -135,6 +135,17 @@ export interface MentorAssignment {
   mentor?: Profile;
 }
 
+export interface WorkbookEntry {
+  id: string;
+  venture_id: string;
+  sheet_key: string;
+  data: Record<string, unknown>;
+  position: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WeeklyCheckin {
   id: string;
   candidate_id: string;
