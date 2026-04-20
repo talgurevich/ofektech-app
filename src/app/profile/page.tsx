@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -18,6 +19,8 @@ import {
   User,
   Briefcase,
   GraduationCap,
+  Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 
@@ -53,6 +56,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [openingCheckinDone, setOpeningCheckinDone] = useState(true);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +90,19 @@ export default function ProfilePage() {
           avatar_url: data.avatar_url || "",
         });
       }
+
+      // Candidates: check if opening check-in was submitted
+      if (data?.role === "candidate") {
+        const { data: checkin } = await supabase
+          .from("checkins")
+          .select("id")
+          .eq("candidate_id", user.id)
+          .eq("type", "opening")
+          .limit(1)
+          .maybeSingle();
+        setOpeningCheckinDone(!!checkin);
+      }
+
       setLoading(false);
     }
     load();
@@ -187,6 +204,29 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Opening check-in CTA — candidates only */}
+      {role === "candidate" && !openingCheckinDone && (
+        <Card className="border-0 shadow-sm bg-gradient-to-l from-[#1a2744]/5 to-[#1a2744]/15 ring-1 ring-[#1a2744]/20">
+          <CardContent className="flex flex-col items-start gap-3 pt-0">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/20">
+                <Sparkles className="size-5 text-[#1a2744]" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#1a2744]">צ׳ק-אין פתיחה</p>
+                <p className="text-sm text-gray-500">ספרו לנו על המיזם, הציפיות והיעדים שלכם</p>
+              </div>
+            </div>
+            <Link
+              href="/checkin/opening"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1a2744] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2744]/90 transition-colors"
+            >
+              מלא עכשיו <ArrowLeft className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Avatar section */}
       <div className="flex flex-col items-center gap-3">

@@ -259,14 +259,6 @@ async function CandidateDashboard({
     }
   }
 
-  // Check opening check-in
-  const { data: openingCheckin } = await supabase
-    .from("checkins")
-    .select("id")
-    .eq("candidate_id", userId)
-    .eq("type", "opening")
-    .limit(1)
-    .single();
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-8">
@@ -333,30 +325,6 @@ async function CandidateDashboard({
           <DashboardActions />
         </AnimatedItem>
 
-        {/* Opening check-in CTA */}
-        {!openingCheckin && (
-          <AnimatedItem>
-            <Card className="border-0 shadow-sm bg-gradient-to-l from-[#1a2744]/5 to-[#1a2744]/15 ring-1 ring-[#1a2744]/20">
-              <CardContent className="flex flex-col items-start gap-3 pt-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/20">
-                    <Sparkles className="size-5 text-[#1a2744]" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-[#1a2744]">צ׳ק-אין פתיחה</p>
-                    <p className="text-sm text-gray-500">ספרו לנו על המיזם, הציפיות והיעדים שלכם</p>
-                  </div>
-                </div>
-                <Link
-                  href="/checkin/opening"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1a2744] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2744]/90 transition-colors"
-                >
-                  מלא עכשיו <ArrowLeft className="size-4" />
-                </Link>
-              </CardContent>
-            </Card>
-          </AnimatedItem>
-        )}
 
         {/* Contact — always last */}
         <AnimatedItem>
