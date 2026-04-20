@@ -132,19 +132,6 @@ create table notifications (
   created_at timestamptz not null default now()
 );
 
--- Tasks table (personal or venture-level)
-create table tasks (
-  id uuid primary key default gen_random_uuid(),
-  candidate_id uuid references profiles(id),
-  venture_id uuid references ventures(id),
-  description text not null,
-  owner text not null default 'self',
-  deadline date,
-  completed boolean not null default false,
-  created_at timestamptz not null default now(),
-  created_by uuid not null references profiles(id)
-);
-
 -- Mentor assignments table (per venture)
 create table mentor_assignments (
   id uuid primary key default gen_random_uuid(),
@@ -217,7 +204,6 @@ alter table session_feedback enable row level security;
 alter table guide_chapters enable row level security;
 alter table venture_chapter_entries enable row level security;
 alter table mentor_assignments enable row level security;
-alter table tasks enable row level security;
 alter table notifications enable row level security;
 alter table checkins enable row level security;
 alter table workbook_entries enable row level security;
@@ -355,59 +341,6 @@ create policy "Mentors and venture members see assignments"
   );
 create policy "Admin can manage assignments"
   on mentor_assignments for all using (get_user_role() = 'admin');
-
--- Tasks (personal + venture)
-create policy "Users see own and venture tasks"
-  on tasks for select using (
-    candidate_id = auth.uid()
-    or get_user_role() = 'admin'
-    or exists (
-      select 1 from profiles
-      where profiles.id = auth.uid()
-      and profiles.venture_id = tasks.venture_id
-      and tasks.venture_id is not null
-    )
-    or exists (
-      select 1 from mentor_assignments
-      where mentor_assignments.mentor_id = auth.uid()
-      and (
-        mentor_assignments.venture_id = tasks.venture_id
-        or exists (
-          select 1 from profiles p2
-          where p2.id = tasks.candidate_id
-          and p2.venture_id = mentor_assignments.venture_id
-        )
-      )
-    )
-  );
-create policy "Candidates manage own tasks"
-  on tasks for all using (candidate_id = auth.uid());
-create policy "Venture members manage venture tasks"
-  on tasks for all using (
-    tasks.venture_id is not null
-    and exists (
-      select 1 from profiles
-      where profiles.id = auth.uid()
-      and profiles.venture_id = tasks.venture_id
-    )
-  );
-create policy "Admin can manage all tasks"
-  on tasks for all using (get_user_role() = 'admin');
-create policy "Mentors can add tasks to assigned ventures"
-  on tasks for insert with check (
-    exists (
-      select 1 from mentor_assignments
-      where mentor_assignments.mentor_id = auth.uid()
-      and (
-        mentor_assignments.venture_id = tasks.venture_id
-        or exists (
-          select 1 from profiles p2
-          where p2.id = tasks.candidate_id
-          and p2.venture_id = mentor_assignments.venture_id
-        )
-      )
-    )
-  );
 
 -- Notifications
 create policy "Users see own notifications"

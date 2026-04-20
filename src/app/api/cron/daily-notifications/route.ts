@@ -109,7 +109,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 3. No tasks yet (candidates created > 5 days ago)
+  // 3. No tasks yet (candidates with a venture, created > 5 days ago)
   const { data: olderCandidates } = await supabase
     .from("profiles")
     .select("id, venture_id")
@@ -118,23 +118,15 @@ export async function GET(request: Request) {
 
   if (olderCandidates) {
     for (const candidate of olderCandidates) {
-      // Check personal tasks
-      const { count: personalCount } = await supabase
-        .from("tasks")
+      if (!candidate.venture_id) continue;
+
+      const { count } = await supabase
+        .from("workbook_entries")
         .select("*", { count: "exact", head: true })
-        .eq("candidate_id", candidate.id);
+        .eq("venture_id", candidate.venture_id)
+        .eq("sheet_key", "tasks");
 
-      // Check venture tasks
-      let ventureCount = 0;
-      if (candidate.venture_id) {
-        const { count } = await supabase
-          .from("tasks")
-          .select("*", { count: "exact", head: true })
-          .eq("venture_id", candidate.venture_id);
-        ventureCount = count || 0;
-      }
-
-      if ((personalCount || 0) + ventureCount === 0) {
+      if ((count || 0) === 0) {
         const { data: existingNotif } = await supabase
           .from("notifications")
           .select("id")
@@ -151,7 +143,7 @@ export async function GET(request: Request) {
             type: "task",
             title: "הוסיפו את המשימה הראשונה שלכם",
             body: "ניהול משימות עוזר לעקוב אחרי ההתקדמות",
-            link: "/tasks",
+            link: "/workbook?sheet=tasks",
           });
         }
       }
@@ -212,60 +204,29 @@ export async function GET(request: Request) {
     }
   }
 
-  // 5. Task overdue — personal tasks
-  const { data: overduePersonalTasks } = await supabase
-    .from("tasks")
-    .select("id, candidate_id, description, deadline")
-    .lt("deadline", today)
-    .eq("completed", false)
-    .not("candidate_id", "is", null);
+  // 5. Overdue workbook tasks — notify venture members
+  const { data: overdueTasks } = await supabase
+    .from("workbook_entries")
+    .select("id, venture_id, data")
+    .eq("sheet_key", "tasks")
+    .lt("data->>due_date", today)
+    .neq("data->>due_date", "");
 
-  if (overduePersonalTasks) {
-    for (const task of overduePersonalTasks) {
-      if (!task.candidate_id) continue;
-
-      const { data: existingNotif } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("user_id", task.candidate_id)
-        .eq("type", "task")
-        .eq("link", "/tasks")
-        .gte("created_at", today)
-        .limit(1)
-        .single();
-
-      if (!existingNotif) {
-        notifications.push({
-          user_id: task.candidate_id,
-          type: "task",
-          title: "משימה באיחור",
-          body: task.description.slice(0, 100),
-          link: "/tasks",
-        });
-      }
-    }
-  }
-
-  // 6. Task overdue — venture tasks
-  const { data: overdueVentureTasks } = await supabase
-    .from("tasks")
-    .select("id, venture_id, description, deadline")
-    .lt("deadline", today)
-    .eq("completed", false)
-    .not("venture_id", "is", null);
-
-  if (overdueVentureTasks) {
-    // Track notified ventures to avoid duplication
+  if (overdueTasks) {
     const notifiedVentures = new Set<string>();
 
-    for (const task of overdueVentureTasks) {
-      if (!task.venture_id || notifiedVentures.has(task.venture_id)) continue;
-      notifiedVentures.add(task.venture_id);
+    for (const row of overdueTasks) {
+      const data = (row.data || {}) as Record<string, unknown>;
+      if (data.done === true) continue;
+      if (notifiedVentures.has(row.venture_id)) continue;
+      notifiedVentures.add(row.venture_id);
+
+      const description = typeof data.task === "string" ? data.task : "";
 
       const { data: ventureMembers } = await supabase
         .from("profiles")
         .select("id")
-        .eq("venture_id", task.venture_id);
+        .eq("venture_id", row.venture_id);
 
       for (const member of ventureMembers || []) {
         const { data: existingNotif } = await supabase
@@ -273,7 +234,7 @@ export async function GET(request: Request) {
           .select("id")
           .eq("user_id", member.id)
           .eq("type", "task")
-          .eq("link", "/tasks")
+          .eq("link", "/workbook?sheet=tasks")
           .gte("created_at", today)
           .limit(1)
           .single();
@@ -283,8 +244,8 @@ export async function GET(request: Request) {
             user_id: member.id,
             type: "task",
             title: "משימת מיזם באיחור",
-            body: task.description.slice(0, 100),
-            link: "/tasks",
+            body: description.slice(0, 100),
+            link: "/workbook?sheet=tasks",
           });
         }
       }

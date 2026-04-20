@@ -178,8 +178,8 @@ export default function AdminVenturesPage() {
       .delete()
       .eq("venture_id", ventureId);
 
-    // Delete venture tasks
-    await supabase.from("tasks").delete().eq("venture_id", ventureId);
+    // Workbook entries cascade via ON DELETE CASCADE on venture_id, but be explicit
+    await supabase.from("workbook_entries").delete().eq("venture_id", ventureId);
 
     // Delete sessions and their feedback
     const { data: sessions } = await supabase

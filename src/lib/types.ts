@@ -103,18 +103,6 @@ export interface VentureChapterEntry {
   updated_at: string;
 }
 
-export interface Task {
-  id: string;
-  candidate_id: string | null;
-  venture_id: string | null;
-  description: string;
-  owner: string;
-  deadline: string | null;
-  completed: boolean;
-  created_at: string;
-  created_by: string;
-}
-
 export interface Notification {
   id: string;
   user_id: string;

@@ -108,28 +108,30 @@ export default async function AdminDashboard() {
     feedbackBySession.get(f.session_id)!.add(f.submitted_by);
   });
 
-  // Recent completed tasks
-  const { data: recentTasks } = await supabase
-    .from("tasks")
-    .select("id, description, completed, created_at, deadline, owner, candidate_id, venture_id")
-    .eq("completed", true)
-    .order("created_at", { ascending: false })
+  // Recent completed workbook tasks
+  const { data: recentTaskRows } = await supabase
+    .from("workbook_entries")
+    .select("id, data, updated_at, venture_id")
+    .eq("sheet_key", "tasks")
+    .eq("data->>done", "true")
+    .order("updated_at", { ascending: false })
     .limit(15);
 
-  // Get names for task owners
-  const taskCandidateIds = [...new Set((recentTasks || []).filter(t => t.candidate_id).map(t => t.candidate_id))];
-  const taskVentureIds = [...new Set((recentTasks || []).filter(t => t.venture_id).map(t => t.venture_id))];
-
-  const { data: taskProfiles } = taskCandidateIds.length > 0
-    ? await supabase.from("profiles").select("id, full_name").in("id", taskCandidateIds)
-    : { data: [] };
-
+  const taskVentureIds = [...new Set((recentTaskRows || []).map((t) => t.venture_id))];
   const { data: taskVentures } = taskVentureIds.length > 0
     ? await supabase.from("ventures").select("id, name").in("id", taskVentureIds)
     : { data: [] };
+  const ventureMap = new Map((taskVentures || []).map((v) => [v.id, v.name]));
 
-  const profileMap = new Map((taskProfiles || []).map(p => [p.id, p.full_name]));
-  const ventureMap = new Map((taskVentures || []).map(v => [v.id, v.name]));
+  const recentTasks = (recentTaskRows || []).map((row) => {
+    const data = (row.data || {}) as Record<string, unknown>;
+    return {
+      id: row.id,
+      description: typeof data.task === "string" ? data.task : "",
+      updated_at: row.updated_at,
+      venture_id: row.venture_id,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -362,11 +364,7 @@ export default async function AdminDashboard() {
               ) : (
                 <div className="space-y-2">
                   {recentTasks.map((task) => {
-                    const ownerName = task.candidate_id
-                      ? profileMap.get(task.candidate_id) || "יזם/ית"
-                      : task.venture_id
-                        ? ventureMap.get(task.venture_id) || "מיזם"
-                        : "—";
+                    const ownerName = ventureMap.get(task.venture_id) || "מיזם";
 
                     return (
                       <div key={task.id} className="flex items-start gap-2 rounded-lg px-3 py-2 bg-[#22c55e]/5">
@@ -375,7 +373,7 @@ export default async function AdminDashboard() {
                           <p className="text-xs text-[#1a2744] line-clamp-1">{task.description}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] text-gray-500">{ownerName}</span>
-                            <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
+                            <span className="text-[10px] text-gray-400">{formatDate(task.updated_at)}</span>
                           </div>
                         </div>
                       </div>

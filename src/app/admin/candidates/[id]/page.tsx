@@ -80,27 +80,35 @@ export default async function AdminCandidateDetailPage({
     .limit(1)
     .maybeSingle();
 
-  // Get personal tasks
-  const { data: personalTasks } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("candidate_id", candidateId)
-    .order("completed", { ascending: true })
-    .order("created_at", { ascending: false });
-
-  // Get venture tasks
-  let ventureTasks: typeof personalTasks = [];
+  // Get venture tasks (from the workbook)
+  type AdminTask = {
+    id: string;
+    description: string;
+    owner: string;
+    deadline: string;
+    completed: boolean;
+  };
+  let workbookTasks: AdminTask[] = [];
   if (ventureId) {
     const { data } = await supabase
-      .from("tasks")
-      .select("*")
+      .from("workbook_entries")
+      .select("id, data, position, created_at")
       .eq("venture_id", ventureId)
-      .order("completed", { ascending: true })
-      .order("created_at", { ascending: false });
-    ventureTasks = data || [];
+      .eq("sheet_key", "tasks")
+      .order("position", { ascending: true });
+    workbookTasks = (data || []).map((row) => {
+      const d = (row.data || {}) as Record<string, unknown>;
+      return {
+        id: row.id,
+        description: typeof d.task === "string" ? d.task : "",
+        owner: typeof d.assignee === "string" ? d.assignee : "",
+        deadline: typeof d.due_date === "string" ? d.due_date : "",
+        completed: d.done === true,
+      };
+    });
   }
 
-  const allTasks = [...(personalTasks || []), ...(ventureTasks || [])];
+  const allTasks = workbookTasks;
   const openTasks = allTasks.filter((t) => !t.completed);
   const completedTasks = allTasks.filter((t) => t.completed);
 
@@ -185,14 +193,7 @@ export default async function AdminCandidateDetailPage({
 
   const cohortName = (candidate.cohort as { name: string } | null)?.name;
 
-  const ownerLabel = (owner: string) => {
-    switch (owner) {
-      case "self": return "אני";
-      case "mentor": return "מנטור";
-      case "team": return "צוות";
-      default: return owner;
-    }
-  };
+  const ownerLabel = (owner: string) => owner || "—";
 
   return (
     <div className="space-y-6">
@@ -396,18 +397,11 @@ export default async function AdminCandidateDetailPage({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[#1a2744]">{task.description}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {ownerLabel(task.owner)}
-                      </Badge>
-                      <Badge
-                        className={`text-[10px] border-0 ${
-                          task.venture_id
-                            ? "bg-[#1a2744]/10 text-[#1a2744]"
-                            : "bg-[#22c55e]/10 text-[#22c55e]"
-                        }`}
-                      >
-                        {task.venture_id ? "מיזם" : "אישי"}
-                      </Badge>
+                      {task.owner && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ownerLabel(task.owner)}
+                        </Badge>
+                      )}
                       {task.deadline && (
                         <span className="text-xs text-gray-500">
                           {formatDate(task.deadline)}
@@ -434,9 +428,11 @@ export default async function AdminCandidateDetailPage({
                       {task.description}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {ownerLabel(task.owner)}
-                      </Badge>
+                      {task.owner && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ownerLabel(task.owner)}
+                        </Badge>
+                      )}
                       {task.deadline && (
                         <span className="text-xs text-gray-400">
                           {formatDate(task.deadline)}

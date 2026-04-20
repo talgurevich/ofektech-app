@@ -74,12 +74,9 @@ export async function DELETE(
     // Clean up venture chapter entries
     await adminClient.from("venture_chapter_entries").delete().eq("venture_id", userVentureId);
 
-    // Clean up venture tasks (venture tasks stay if other members exist)
-    await adminClient.from("tasks").delete().eq("venture_id", userVentureId);
+    // Clean up the venture's workbook (cascades via ON DELETE CASCADE, but be explicit)
+    await adminClient.from("workbook_entries").delete().eq("venture_id", userVentureId);
   }
-
-  // Delete personal tasks
-  await adminClient.from("tasks").delete().eq("candidate_id", id);
 
   await adminClient.from("checkins").delete().eq("candidate_id", id);
   await adminClient.from("lecture_feedback").delete().eq("candidate_id", id);

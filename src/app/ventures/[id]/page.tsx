@@ -73,38 +73,33 @@ export default async function VentureDetailPage({
     .eq("venture_id", ventureId)
     .order("full_name");
 
-  // Get venture tasks + personal tasks of all members
-  const memberIds = (members || []).map((m) => m.id);
+  // Venture tasks live in the workbook
   let allTasks: Array<{
     id: string;
-    candidate_id: string | null;
-    venture_id: string | null;
     description: string;
     owner: string;
     deadline: string | null;
     completed: boolean;
-    created_at: string;
   }> = [];
 
-  // Venture tasks
-  const { data: ventureTasks } = await supabase
-    .from("tasks")
-    .select("*")
+  // Venture tasks (from workbook)
+  const { data: workbookTaskRows } = await supabase
+    .from("workbook_entries")
+    .select("id, data, position")
     .eq("venture_id", ventureId)
-    .order("created_at", { ascending: false });
+    .eq("sheet_key", "tasks")
+    .order("position", { ascending: true });
 
-  if (ventureTasks) allTasks = [...ventureTasks];
-
-  // Personal tasks of members
-  if (memberIds.length > 0) {
-    const { data: personalTasks } = await supabase
-      .from("tasks")
-      .select("*")
-      .in("candidate_id", memberIds)
-      .is("venture_id", null)
-      .order("created_at", { ascending: false });
-    if (personalTasks) allTasks = [...allTasks, ...personalTasks];
-  }
+  allTasks = (workbookTaskRows || []).map((row) => {
+    const d = (row.data || {}) as Record<string, unknown>;
+    return {
+      id: row.id,
+      description: typeof d.task === "string" ? d.task : "",
+      owner: typeof d.assignee === "string" ? d.assignee : "",
+      deadline: typeof d.due_date === "string" && d.due_date ? (d.due_date as string) : null,
+      completed: d.done === true,
+    };
+  });
 
   const openTasks = allTasks.filter((t) => !t.completed);
   const completedTasks = allTasks.filter((t) => t.completed);
@@ -143,14 +138,7 @@ export default async function VentureDetailPage({
         .order("submitted_at", { ascending: false })
     : { data: [] };
 
-  const ownerLabel = (owner: string) => {
-    switch (owner) {
-      case "self": return "עצמי";
-      case "mentor": return "מנטור";
-      case "team": return "צוות";
-      default: return owner;
-    }
-  };
+  const ownerLabel = (owner: string) => owner || "—";
 
   return (
     <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
@@ -233,22 +221,11 @@ export default async function VentureDetailPage({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[#1a2744]">{task.description}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {ownerLabel(task.owner)}
-                      </Badge>
-                      <Badge
-                        className={`text-[10px] border-0 ${
-                          task.venture_id
-                            ? "bg-[#1a2744]/10 text-[#1a2744]"
-                            : "bg-[#22c55e]/10 text-[#22c55e]"
-                        }`}
-                      >
-                        {task.venture_id ? (
-                          <><Briefcase className="size-2.5 ml-0.5" /> מיזם</>
-                        ) : (
-                          <><User className="size-2.5 ml-0.5" /> אישי</>
-                        )}
-                      </Badge>
+                      {task.owner && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ownerLabel(task.owner)}
+                        </Badge>
+                      )}
                       {task.deadline && (
                         <span className="text-xs text-gray-500">
                           {formatDate(task.deadline)}
@@ -276,9 +253,11 @@ export default async function VentureDetailPage({
                       {task.description}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {ownerLabel(task.owner)}
-                      </Badge>
+                      {task.owner && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ownerLabel(task.owner)}
+                        </Badge>
+                      )}
                       {task.deadline && (
                         <span className="text-xs text-gray-400">
                           {formatDate(task.deadline)}
