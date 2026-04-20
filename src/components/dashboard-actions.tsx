@@ -7,7 +7,6 @@ import { WORKBOOK_SHEETS } from "@/lib/workbook";
 import {
   Mic2,
   BookOpen,
-  ListTodo,
   Table2,
   UserCircle,
 } from "lucide-react";
@@ -18,7 +17,6 @@ type Option = { href: string; label: string; icon: LucideIcon };
 const seeOptions: Option[] = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
-  { href: "/tasks", label: "משימות", icon: ListTodo },
   { href: "/workbook", label: "חוברת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
