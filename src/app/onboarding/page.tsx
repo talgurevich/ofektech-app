@@ -16,6 +16,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
 
 interface Step {
   title: string;
@@ -208,6 +209,7 @@ export default function OnboardingPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#f4f6f9] p-4">
+      <ProfileCompletionPrompt />
       <div className="w-full max-w-lg">
         {/* Skip link */}
         <div className="flex justify-start mb-4">

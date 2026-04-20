@@ -38,6 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
+import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
 
 type UserRole = "candidate" | "mentor" | "admin" | "visitor";
 
@@ -214,6 +215,7 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
         </header>
         <div className="flex-1">{children}</div>
         <Footer />
+        <ProfileCompletionPrompt />
       </SidebarInset>
     </SidebarProvider>
   );
