@@ -31,8 +31,8 @@ export function DashboardActions() {
   const [open, setOpen] = useState<"create" | "see" | null>(null);
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+      <div className="space-y-3">
         <ActionButton
           label="יצירה"
           sublabel="הוספת שורה לחוברת העבודה"
@@ -41,6 +41,11 @@ export function DashboardActions() {
           active={open === "create"}
           onClick={() => setOpen(open === "create" ? null : "create")}
         />
+        {open === "create" && (
+          <OptionsGrid title="לאיזה גיליון בחוברת העבודה?" options={createOptions} />
+        )}
+      </div>
+      <div className="space-y-3">
         <ActionButton
           label="תצוגה"
           sublabel="מעבר לסעיף בתפריט"
@@ -49,14 +54,10 @@ export function DashboardActions() {
           active={open === "see"}
           onClick={() => setOpen(open === "see" ? null : "see")}
         />
+        {open === "see" && (
+          <OptionsGrid title="לאן ללכת?" options={seeOptions} />
+        )}
       </div>
-
-      {open === "create" && (
-        <OptionsGrid title="לאיזה גיליון בחוברת העבודה?" options={createOptions} />
-      )}
-      {open === "see" && (
-        <OptionsGrid title="לאן ללכת?" options={seeOptions} />
-      )}
     </div>
   );
 }
@@ -103,7 +104,7 @@ function OptionsGrid({ title, options }: { title: string; options: Option[] }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium text-gray-500 mb-3">{title}</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {options.map((opt) => {
           const Icon = opt.icon;
           return (
