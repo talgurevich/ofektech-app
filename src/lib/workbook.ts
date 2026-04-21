@@ -17,7 +17,8 @@ export type WorkbookColumnType =
   | "url"
   | "email"
   | "phone"
-  | "select";
+  | "select"
+  | "select_creatable";
 
 export interface WorkbookColumn {
   key: string;
@@ -75,7 +76,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       {
         key: "type",
         label: "סוג פעילות",
-        type: "select",
+        type: "select_creatable",
         options: ["פיתוח עיסקי", "מוצר", "כללי"],
       },
       { key: "summary", label: "סיכום פגישה / חיבור / פעילות", type: "longtext", width: "minmax(300px,3fr)" },

@@ -29,6 +29,22 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
     [activeSheetKey]
   );
 
+  // Per-column suggestion lists for creatable dropdowns: built-in options
+  // unioned with every distinct non-empty value saved in this venture's rows.
+  const columnSuggestions = useMemo<Record<string, string[]>>(() => {
+    const result: Record<string, string[]> = {};
+    for (const col of activeSheet.columns) {
+      if (col.type !== "select_creatable") continue;
+      const values = new Set<string>(col.options ?? []);
+      for (const e of entries) {
+        const v = e.data[col.key];
+        if (typeof v === "string" && v.trim()) values.add(v.trim());
+      }
+      result[col.key] = Array.from(values);
+    }
+    return result;
+  }, [activeSheet, entries]);
+
   const loadEntries = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
@@ -165,6 +181,7 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
                         column={col}
                         value={entry.data[col.key]}
                         onChange={(v) => updateCell(entry.id, col.key, v)}
+                        suggestions={columnSuggestions[col.key]}
                       />
                     </td>
                   ))}
@@ -205,10 +222,12 @@ function CellEditor({
   column,
   value,
   onChange,
+  suggestions,
 }: {
   column: WorkbookColumn;
   value: unknown;
   onChange: (v: unknown) => void;
+  suggestions?: string[];
 }) {
   const base =
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
@@ -242,6 +261,28 @@ function CellEditor({
           </option>
         ))}
       </select>
+    );
+  }
+
+  if (column.type === "select_creatable") {
+    const listId = `wb-opts-${column.key}`;
+    const opts = suggestions ?? column.options ?? [];
+    return (
+      <>
+        <input
+          type="text"
+          list={listId}
+          defaultValue={strVal}
+          onBlur={(e) => onChange(e.target.value)}
+          className={base}
+          placeholder={column.placeholder ?? "בחר או הקלד..."}
+        />
+        <datalist id={listId}>
+          {opts.map((opt) => (
+            <option key={opt} value={opt} />
+          ))}
+        </datalist>
+      </>
     );
   }
 
