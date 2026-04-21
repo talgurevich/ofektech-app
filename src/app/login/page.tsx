@@ -241,6 +241,30 @@ export default function LoginPage() {
         </div>
       </section>
 
+      {/* Manuals */}
+      <section className="border-b border-white/5 bg-[#0b1428] py-14 px-6">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-center text-2xl font-bold text-white md:text-3xl">
+            מדריכי שימוש
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-gray-400">
+            הסבר קצר על איך להתחבר לפורטל, ליזמים ולמנטורים.
+          </p>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <ManualCard
+              href="/manual/entrepreneur"
+              title="מדריך ליזמים"
+              desc="איך להתחבר לפורטל כיזם/ת"
+            />
+            <ManualCard
+              href="/manual/mentor"
+              title="מדריך למנטורים"
+              desc="איך להתחבר לפורטל כמנטור/ית"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Screenshots */}
       <section className="py-16 px-6">
         <div className="mx-auto max-w-6xl">
@@ -344,6 +368,33 @@ function RoleCard({
         ))}
       </ul>
     </div>
+  );
+}
+
+function ManualCard({
+  href,
+  title,
+  desc,
+}: {
+  href: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-[#22c55e]/40 hover:bg-white/[0.06]"
+    >
+      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#22c55e]/15">
+        <BookOpen className="size-5 text-[#22c55e]" />
+      </div>
+      <div className="flex-1 text-right">
+        <p className="text-sm font-semibold text-white">{title}</p>
+        <p className="mt-0.5 text-xs text-gray-400">{desc}</p>
+      </div>
+    </a>
   );
 }
 
