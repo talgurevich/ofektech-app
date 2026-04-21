@@ -111,10 +111,6 @@ export default function LoginPage() {
     setLoading(false);
   }
 
-  function scrollToLogin() {
-    document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
   return (
     <main className="flex min-h-screen flex-col bg-[#0f1a33] text-white">
       {/* Sticky header */}
@@ -125,12 +121,6 @@ export default function LoginPage() {
               <img src="/logo.png" alt="OfekTech" className="h-7 w-auto object-contain" />
             </span>
           </a>
-          <button
-            onClick={scrollToLogin}
-            className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#16a34a]"
-          >
-            כניסה לפורטל
-          </button>
         </div>
       </header>
 
