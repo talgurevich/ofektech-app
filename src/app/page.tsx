@@ -511,7 +511,7 @@ async function MentorDashboard({
         {/* Venture cards */}
         {ventureStats.length > 0 ? (
           <AnimatedItem>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {ventureStats.map((venture) => {
                 const guidePercent = guideTotal
                   ? Math.round((venture.filledChapters / guideTotal) * 100)
