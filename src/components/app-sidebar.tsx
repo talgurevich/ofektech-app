@@ -119,7 +119,7 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
       >
         {/* Header with logo */}
         <SidebarHeader className="px-4 py-5">
-          <Link href="/" className="flex items-center" dir="ltr">
+          <Link href="/" className="flex items-center justify-end" dir="ltr">
             <span className="inline-flex items-center rounded-lg bg-white/95 px-3 py-2 shadow-sm ring-1 ring-white/10">
               <img
                 src="/logo.png"
