@@ -62,13 +62,7 @@ export function MentorDashboardActions({ ventures }: { ventures: VentureSummary[
   );
 
   function toggle(mode: Mode) {
-    if (open === mode) {
-      setOpen(null);
-      if (ventures.length > 1) setSelectedVentureId(null);
-    } else {
-      setOpen(mode);
-      if (ventures.length > 1) setSelectedVentureId(null);
-    }
+    setOpen(open === mode ? null : mode);
   }
 
   const hasVentures = ventures.length > 0;
