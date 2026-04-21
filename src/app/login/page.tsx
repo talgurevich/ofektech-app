@@ -13,6 +13,7 @@ import {
   Table2,
   BookOpen,
   MessageSquare,
+  CheckCircle2,
 } from "lucide-react";
 import { LoginFooter } from "@/components/footer";
 
@@ -126,12 +127,15 @@ export default function LoginPage() {
 
       {/* Hero */}
       <section id="top" className="relative overflow-hidden">
-        <img
-          src="/login-bg.jpg"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+        {/* Dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1a33]/85 via-[#0f1a33]/75 to-[#0f1a33]/95" />
         <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[#22c55e]/15 blur-[120px]" />
         <div className="absolute bottom-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-[#22c55e]/10 blur-[100px]" />
 
@@ -144,7 +148,15 @@ export default function LoginPage() {
             <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">
               המסע שלך ליזמות, חדשנות וטכנולוגיה
               <br />
-              <span className="text-[#22c55e]">מתחיל כאן.</span>
+              <span className="relative inline-block mt-1">
+                <span
+                  className="absolute inset-0 -skew-x-6 bg-[#22c55e]"
+                  aria-hidden
+                />
+                <span className="relative px-3 py-0.5 text-white">
+                  מתחיל כאן.
+                </span>
+              </span>
             </h1>
             <p className="mt-5 text-base text-gray-300 md:text-lg">
               פלטפורמה אחת שמלווה את משתתפי התוכנית לאורך כל המסע — דיווח
@@ -249,34 +261,58 @@ export default function LoginPage() {
       </section>
 
       {/* Screenshots */}
-      <section className="py-16 px-6">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-2xl font-bold text-white md:text-3xl">
-            הצצה לפורטל
-          </h2>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-sm leading-relaxed text-gray-400">
-            יזמים מדווחים על התקדמות שבועית, מדרגים הרצאות ומקבלים משוב
-            ממנטורים. מנטורים מתעדים פגישות, עוקבים אחרי ההתקדמות ונותנים משוב
-            מובנה. הכל במקום אחד, פשוט ונגיש.
-          </p>
-          <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <Shot
-              src="/screenshot-candidate.png"
+      <section className="relative overflow-hidden py-20 px-6">
+        <div
+          className="absolute inset-0 opacity-[0.25]"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        <div className="absolute bottom-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-[#22c55e]/10 blur-[120px]" />
+
+        <div className="relative mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-white md:text-3xl">
+              הצצה לפורטל
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">
+              יזמים מדווחים על התקדמות שבועית, מדרגים הרצאות ומקבלים משוב
+              ממנטורים. מנטורים מתעדים פגישות, עוקבים אחרי ההתקדמות ונותנים
+              משוב מובנה. הכל במקום אחד, פשוט ונגיש.
+            </p>
+          </div>
+
+          <ShotStack
+            main={{
+              src: "/screenshot-candidate.png",
+              alt: "דשבורד יזמים",
+            }}
+            back={{
+              src: "/screenshot-mentor.png",
+              alt: "דשבורד מנטורים",
+            }}
+            front={{
+              src: "/screenshot-checkin.png",
+              alt: "צ׳ק-אין שבועי",
+            }}
+            onOpen={setLightbox}
+          />
+
+          {/* Captions strip */}
+          <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 text-center sm:grid-cols-3">
+            <ShotCaption
               title="דשבורד יזמים"
-              desc="לוח הרצאות, פגישות מנטורינג, סטטיסטיקות ומעקב התקדמות"
-              onOpen={() => setLightbox("/screenshot-candidate.png")}
+              desc="לוח הרצאות, פגישות מנטורינג ומעקב התקדמות"
             />
-            <Shot
-              src="/screenshot-checkin.png"
+            <ShotCaption
               title="צ׳ק-אין שבועי"
-              desc="טופס שבועי קצר לדיווח על התקדמות, מצב רוח ויעדים"
-              onOpen={() => setLightbox("/screenshot-checkin.png")}
+              desc="דיווח קצר על התקדמות, מצב רוח ויעדים"
             />
-            <Shot
-              src="/screenshot-mentor.png"
+            <ShotCaption
               title="דשבורד מנטורים"
-              desc="ניהול פגישות, מעקב אחרי יזמים ומתן משוב מובנה"
-              onOpen={() => setLightbox("/screenshot-mentor.png")}
+              desc="ניהול פגישות, מעקב אחרי יזמים ומתן משוב"
             />
           </div>
         </div>
@@ -381,33 +417,92 @@ function ManualCard({
   );
 }
 
-function Shot({
-  src,
-  title,
-  desc,
+function ShotStack({
+  main,
+  back,
+  front,
   onOpen,
 }: {
-  src: string;
-  title: string;
-  desc: string;
-  onOpen: () => void;
+  main: { src: string; alt: string };
+  back: { src: string; alt: string };
+  front: { src: string; alt: string };
+  onOpen: (src: string) => void;
 }) {
   return (
-    <div className="group">
+    <div className="relative mx-auto w-full max-w-4xl md:[aspect-ratio:16/10]">
+      {/* Back screenshot — tilted, offset, dimmed */}
       <button
-        onClick={onOpen}
-        className="w-full cursor-zoom-in overflow-hidden rounded-xl border border-white/10 shadow-lg transition-transform group-hover:scale-[1.02]"
+        onClick={() => onOpen(back.src)}
+        aria-label={back.alt}
+        className="absolute top-[5%] right-[-4%] hidden w-[55%] cursor-zoom-in overflow-hidden rounded-xl border border-white/10 shadow-2xl transition-transform hover:scale-[1.02] md:block"
+        style={{ transform: "rotate(4deg)", opacity: 0.85 }}
       >
-        <img
-          src={src}
-          alt={title}
-          className="h-48 w-full object-cover object-top"
-        />
+        <img src={back.src} alt={back.alt} className="w-full object-cover object-top" />
       </button>
-      <div className="mt-3 text-center">
-        <p className="text-sm font-medium text-white">{title}</p>
-        <p className="mt-1 text-xs text-gray-400">{desc}</p>
+
+      {/* Front screenshot — other tilt, offset other way */}
+      <button
+        onClick={() => onOpen(front.src)}
+        aria-label={front.alt}
+        className="absolute bottom-[-6%] left-[-4%] hidden w-[48%] cursor-zoom-in overflow-hidden rounded-xl border border-white/10 shadow-2xl transition-transform hover:scale-[1.02] md:block"
+        style={{ transform: "rotate(-5deg)" }}
+      >
+        <img src={front.src} alt={front.alt} className="w-full object-cover object-top" />
+      </button>
+
+      {/* Main screenshot — center, slight tilt (desktop) / stacked on mobile */}
+      <button
+        onClick={() => onOpen(main.src)}
+        aria-label={main.alt}
+        className="relative z-10 mx-auto block w-full max-w-[700px] cursor-zoom-in overflow-hidden rounded-2xl border border-white/15 shadow-[0_30px_80px_-20px_rgba(34,197,94,0.25)] ring-1 ring-white/5 transition-transform hover:scale-[1.02] md:w-[78%] md:[transform:rotate(-1.5deg)]"
+      >
+        <img src={main.src} alt={main.alt} className="w-full object-cover object-top" />
+      </button>
+
+      {/* Mobile-only: show the other two stacked below the main */}
+      <div className="mt-6 grid grid-cols-2 gap-3 md:hidden">
+        <button
+          onClick={() => onOpen(back.src)}
+          aria-label={back.alt}
+          className="overflow-hidden rounded-xl border border-white/10 shadow-lg"
+        >
+          <img src={back.src} alt={back.alt} className="w-full object-cover object-top" />
+        </button>
+        <button
+          onClick={() => onOpen(front.src)}
+          aria-label={front.alt}
+          className="overflow-hidden rounded-xl border border-white/10 shadow-lg"
+        >
+          <img src={front.src} alt={front.alt} className="w-full object-cover object-top" />
+        </button>
       </div>
+
+      {/* Floating notification card */}
+      <div
+        className="absolute z-20 hidden rounded-xl bg-white px-4 py-3 shadow-2xl ring-1 ring-[#22c55e]/20 md:block"
+        style={{ top: "14%", right: "8%", transform: "rotate(-2deg)" }}
+      >
+        <div className="flex items-center gap-3" dir="rtl">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#22c55e]/15">
+            <CheckCircle2 className="size-5 text-[#22c55e]" />
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-[#1a2744]">
+              צ׳ק-אין שבועי הושלם
+            </p>
+            <p className="text-[11px] text-gray-500">שבוע 7 · יעד הושג</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShotCaption({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-white">{title}</p>
+      <p className="mt-1 text-xs text-gray-400">{desc}</p>
     </div>
   );
 }
