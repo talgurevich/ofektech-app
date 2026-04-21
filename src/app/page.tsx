@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -598,22 +597,6 @@ async function MentorDashboard({
                           פעילות אחרונה
                         </p>
                         <VentureActivityFeed items={venture.activity} />
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <Link
-                          href={`/ventures/${venture.id}`}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1a2744] px-4 py-2 text-sm font-medium text-white hover:bg-[#1a2744]/90 transition-colors"
-                        >
-                          צפייה בפרטים
-                        </Link>
-                        <Link
-                          href={`/workbook?venture=${venture.id}`}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
-                        >
-                          חוברת עבודה
-                        </Link>
                       </div>
                     </CardContent>
                   </Card>
