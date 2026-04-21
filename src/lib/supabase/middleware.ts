@@ -8,6 +8,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/not-registered" ||
     request.nextUrl.pathname.startsWith("/manual") ||
+    request.nextUrl.pathname === "/terms" ||
+    request.nextUrl.pathname === "/privacy" ||
     request.nextUrl.pathname === "/api/check-email" ||
     request.nextUrl.pathname === "/api/login-event"
   ) {
