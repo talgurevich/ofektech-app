@@ -1,4 +1,5 @@
 import { Globe, Linkedin } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 export function Footer() {
   return (
@@ -6,6 +7,8 @@ export function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-gray-400">
           OfekTech — יזמות, חדשנות וטכנולוגיה
+          <span className="mx-2 text-gray-300">·</span>
+          <span className="text-gray-400">v{APP_VERSION}</span>
         </p>
         <div className="flex items-center gap-4">
           <a
@@ -38,6 +41,8 @@ export function LoginFooter() {
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
           OfekTech — יזמות, חדשנות וטכנולוגיה
+          <span className="mx-2 text-gray-600">·</span>
+          <span className="text-gray-500">v{APP_VERSION}</span>
         </p>
         <div className="flex items-center gap-4">
           <a

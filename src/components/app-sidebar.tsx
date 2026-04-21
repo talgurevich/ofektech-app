@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
 import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
+import { APP_VERSION } from "@/lib/version";
 
 type UserRole = "candidate" | "mentor" | "admin" | "visitor";
 
@@ -119,11 +120,13 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
         {/* Header with logo */}
         <SidebarHeader className="px-4 py-5">
           <Link href="/" className="flex items-center" dir="ltr">
-            <img
-              src="/logo.png"
-              alt="OfekTech"
-              className="h-9 w-auto object-contain"
-            />
+            <span className="inline-flex items-center rounded-lg bg-white/95 px-3 py-2 shadow-sm ring-1 ring-white/10">
+              <img
+                src="/logo.png"
+                alt="OfekTech"
+                className="h-8 w-auto object-contain"
+              />
+            </span>
           </Link>
           {fullName && (
             <div className="mt-3 px-1 flex items-center justify-between">
@@ -200,6 +203,9 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
               <span>התנתקות</span>
             </button>
           </form>
+          <p className="px-2 pt-2 text-[11px] text-sidebar-foreground/40" dir="ltr">
+            v{APP_VERSION}
+          </p>
         </SidebarFooter>
       </Sidebar>
 
