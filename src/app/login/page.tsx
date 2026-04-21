@@ -157,23 +157,6 @@ export default function LoginPage() {
               <FeaturePill icon={BookOpen} label="מדריך התוכנית" />
               <FeaturePill icon={MessageSquare} label="משוב מנטורינג" />
             </div>
-
-            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
-              <a
-                href="/manual/entrepreneur"
-                target="_blank"
-                className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm text-gray-200 transition-colors hover:bg-white/10"
-              >
-                מדריך ליזמים
-              </a>
-              <a
-                href="/manual/mentor"
-                target="_blank"
-                className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm text-gray-200 transition-colors hover:bg-white/10"
-              >
-                מדריך למנטורים
-              </a>
-            </div>
           </div>
 
           {/* Login card */}
