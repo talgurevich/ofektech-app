@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +10,39 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { GuideChapter, VentureChapterEntry } from "@/lib/types";
 
 export default function GuidePage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <GuidePageInner />
+    </Suspense>
+  );
+}
+
+function LoadingState() {
+  return (
+    <main className="max-w-4xl mx-auto p-4 md:p-8">
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#22c55e] border-t-transparent" />
+      </div>
+    </main>
+  );
+}
+
+function GuidePageInner() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const ventureParam = searchParams.get("venture");
   const [chapters, setChapters] = useState<GuideChapter[]>([]);
   const [entries, setEntries] = useState<Record<string, VentureChapterEntry>>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [ventureId, setVentureId] = useState<string | null>(null);
+  const [ventureName, setVentureName] = useState<string | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [noVenture, setNoVenture] = useState(false);
+  const [notAuthorized, setNotAuthorized] = useState(false);
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
@@ -29,33 +53,68 @@ export default function GuidePage() {
       if (!user) return;
       setUserId(user.id);
 
-      // Get user's venture_id
       const { data: profile } = await supabase
         .from("profiles")
-        .select("venture_id")
+        .select("role, venture_id")
         .eq("id", user.id)
         .single();
 
-      if (!profile?.venture_id) {
+      let targetVentureId: string | null = null;
+      let isReadOnly = false;
+
+      if (profile?.role === "mentor") {
+        if (!ventureParam) {
+          setNotAuthorized(true);
+          setLoading(false);
+          return;
+        }
+        const { data: assignment } = await supabase
+          .from("mentor_assignments")
+          .select("id")
+          .eq("mentor_id", user.id)
+          .eq("venture_id", ventureParam)
+          .maybeSingle();
+        if (!assignment) {
+          setNotAuthorized(true);
+          setLoading(false);
+          return;
+        }
+        targetVentureId = ventureParam;
+        isReadOnly = true;
+      } else if (profile?.role === "admin" && ventureParam) {
+        targetVentureId = ventureParam;
+      } else {
+        targetVentureId = profile?.venture_id || null;
+      }
+
+      if (!targetVentureId) {
         setNoVenture(true);
         setLoading(false);
         return;
       }
 
-      setVentureId(profile.venture_id);
+      setVentureId(targetVentureId);
+      setReadOnly(isReadOnly);
 
-      const [{ data: chaptersData }, { data: entriesData }] = await Promise.all([
-        supabase
-          .from("guide_chapters")
-          .select("*")
-          .order("chapter_number", { ascending: true }),
-        supabase
-          .from("venture_chapter_entries")
-          .select("*")
-          .eq("venture_id", profile.venture_id),
-      ]);
+      const [{ data: chaptersData }, { data: entriesData }, { data: ventureData }] =
+        await Promise.all([
+          supabase
+            .from("guide_chapters")
+            .select("*")
+            .order("chapter_number", { ascending: true }),
+          supabase
+            .from("venture_chapter_entries")
+            .select("*")
+            .eq("venture_id", targetVentureId),
+          supabase
+            .from("ventures")
+            .select("name")
+            .eq("id", targetVentureId)
+            .maybeSingle(),
+        ]);
 
       setChapters(chaptersData || []);
+      setVentureName(ventureData?.name || null);
 
       const entriesMap: Record<string, VentureChapterEntry> = {};
       (entriesData || []).forEach((e: VentureChapterEntry) => {
@@ -66,7 +125,7 @@ export default function GuidePage() {
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ventureParam]);
 
   const filledCount = chapters.filter(
     (ch) => entries[ch.id] && entries[ch.id].content.trim().length > 0
@@ -245,6 +304,24 @@ export default function GuidePage() {
     );
   }
 
+  if (notAuthorized) {
+    return (
+      <main className="max-w-4xl mx-auto p-4 md:p-8">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-12 text-center">
+            <AlertCircle className="size-10 mx-auto text-amber-400 mb-3" />
+            <p className="text-lg font-semibold text-[#1a2744] mb-2">
+              יש לבחור מיזם
+            </p>
+            <p className="text-sm text-gray-500">
+              גשו לפורטל המנטורים ובחרו מיזם כדי לצפות במדריך שלו
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   const progressPercent =
     chapters.length > 0 ? (filledCount / chapters.length) * 100 : 0;
 
@@ -262,12 +339,25 @@ export default function GuidePage() {
             <BookOpen className="size-6" />
             מדריך התוכנית
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            מדריך משותף למיזם -- כתבו את תוכן המיזם שלכם בכל פרק
-          </p>
-          <Badge className="mt-2 bg-[#1a2744]/10 text-[#1a2744] border-0 text-xs">
-            כל חברי המיזם רואים ועורכים את אותו התוכן
-          </Badge>
+          {readOnly ? (
+            <>
+              <p className="text-sm text-gray-500 mt-1">
+                {ventureName ? `מדריך המיזם — ${ventureName}` : "מדריך המיזם"}
+              </p>
+              <Badge className="mt-2 bg-[#1a2744]/10 text-[#1a2744] border-0 text-xs">
+                תצוגה בלבד
+              </Badge>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 mt-1">
+                מדריך משותף למיזם -- כתבו את תוכן המיזם שלכם בכל פרק
+              </p>
+              <Badge className="mt-2 bg-[#1a2744]/10 text-[#1a2744] border-0 text-xs">
+                כל חברי המיזם רואים ועורכים את אותו התוכן
+              </Badge>
+            </>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -381,17 +471,29 @@ export default function GuidePage() {
                               )}
                             </div>
                           </div>
-                          <textarea
-                            className="w-full min-h-[140px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-[#1a2744] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/30 focus:border-[#22c55e] transition-colors resize-y"
-                            placeholder="כתבו כאן את התוכן של המיזם עבור פרק זה..."
-                            value={entry?.content || ""}
-                            onChange={(e) =>
-                              handleChange(chapter.id, e.target.value)
-                            }
-                            onBlur={(e) =>
-                              handleBlur(chapter.id, e.target.value)
-                            }
-                          />
+                          {readOnly ? (
+                            <div className="min-h-[60px] rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-[#1a2744] whitespace-pre-wrap leading-relaxed">
+                              {entry?.content?.trim() ? (
+                                entry.content
+                              ) : (
+                                <span className="text-gray-400 italic">
+                                  טרם מולא על ידי המיזם
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <textarea
+                              className="w-full min-h-[140px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-[#1a2744] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/30 focus:border-[#22c55e] transition-colors resize-y"
+                              placeholder="כתבו כאן את התוכן של המיזם עבור פרק זה..."
+                              value={entry?.content || ""}
+                              onChange={(e) =>
+                                handleChange(chapter.id, e.target.value)
+                              }
+                              onBlur={(e) =>
+                                handleBlur(chapter.id, e.target.value)
+                              }
+                            />
+                          )}
                         </div>
                       </div>
                     </motion.div>

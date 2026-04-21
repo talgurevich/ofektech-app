@@ -21,9 +21,8 @@ import {
   Users,
   Plus,
   Briefcase,
-  User,
+  Table2,
 } from "lucide-react";
-import { MentorTaskAdder } from "@/components/mentor-task-adder";
 
 export default async function VentureDetailPage({
   params,
@@ -195,7 +194,23 @@ export default async function VentureDetailPage({
         </div>
       </div>
 
-      {/* Section 1: Tasks */}
+      {/* Workbook CTA */}
+      <Link
+        href={`/workbook?venture=${ventureId}`}
+        className="flex items-center gap-4 rounded-2xl bg-gradient-to-l from-[#22c55e] to-[#16a34a] p-5 text-white shadow-sm transition-all hover:shadow-md"
+      >
+        <div className="flex size-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm shrink-0">
+          <Table2 className="size-6" />
+        </div>
+        <div className="flex-1 min-w-0 text-right">
+          <p className="text-lg font-bold">פתח חוברת עבודה של המיזם</p>
+          <p className="text-xs text-white/80 mt-0.5">
+            משימות, לקוחות, מתחרים, משקיעים, שוק ועוד
+          </p>
+        </div>
+      </Link>
+
+      {/* Section 1: Tasks (read-only snapshot) */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[#1a2744]">
@@ -203,11 +218,10 @@ export default async function VentureDetailPage({
             משימות
           </CardTitle>
           <CardDescription>
-            {openTasks.length} פתוחות, {completedTasks.length} הושלמו
+            {openTasks.length} פתוחות, {completedTasks.length} הושלמו — לעריכה, פתחו את חוברת העבודה
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <MentorTaskAdder ventureId={ventureId} mentorId={user.id} />
           {/* Open tasks */}
           {openTasks.length > 0 && (
             <div className="space-y-2">

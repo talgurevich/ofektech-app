@@ -33,9 +33,9 @@ import {
   AnimatedContainer,
   AnimatedItem,
 } from "@/components/dashboard-shell";
-import { MentorTaskAdder } from "@/components/mentor-task-adder";
 import { VentureKpiCard } from "@/components/venture-kpi-card";
 import { DashboardActions } from "@/components/dashboard-actions";
+import { MentorDashboardActions } from "@/components/mentor-dashboard-actions";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -456,6 +456,13 @@ async function MentorDashboard({
           </div>
         </AnimatedItem>
 
+        {/* Quick-action buttons */}
+        <AnimatedItem>
+          <MentorDashboardActions
+            ventures={ventureStats.map((v) => ({ id: v.id, name: v.name }))}
+          />
+        </AnimatedItem>
+
         {/* Stats row */}
         <AnimatedItem>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -584,13 +591,12 @@ async function MentorDashboard({
                           צפייה בפרטים
                         </Link>
                         <Link
-                          href={`/sessions/new?venture=${venture.id}`}
+                          href={`/workbook?venture=${venture.id}`}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
                         >
-                          הוסף משוב
+                          חוברת עבודה
                         </Link>
                       </div>
-                      <MentorTaskAdder ventureId={venture.id} mentorId={userId} />
                     </CardContent>
                   </Card>
                 );

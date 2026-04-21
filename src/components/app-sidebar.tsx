@@ -59,6 +59,7 @@ const candidateLinks = [
 
 const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
+  { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 

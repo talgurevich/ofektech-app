@@ -6,9 +6,9 @@ import { WORKBOOK_SHEETS } from "@/lib/workbook";
 export default async function WorkbookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sheet?: string }>;
+  searchParams: Promise<{ sheet?: string; venture?: string }>;
 }) {
-  const { sheet } = await searchParams;
+  const { sheet, venture: ventureParam } = await searchParams;
   const initialSheet = WORKBOOK_SHEETS.some((s) => s.key === sheet)
     ? sheet
     : WORKBOOK_SHEETS[0].key;
@@ -25,13 +25,30 @@ export default async function WorkbookPage({
 
   if (!profile) redirect("/login");
 
-  // Entrepreneurs and admins use this page for their venture's workbook.
-  // Entrepreneurs without a venture get a friendly message.
-  if (profile.role !== "candidate" && profile.role !== "admin") {
+  let resolvedVentureId: string | null = null;
+
+  if (profile.role === "mentor") {
+    if (!ventureParam) redirect("/");
+    const { data: assignment } = await supabase
+      .from("mentor_assignments")
+      .select("id")
+      .eq("mentor_id", user.id)
+      .eq("venture_id", ventureParam)
+      .maybeSingle();
+    if (!assignment) redirect("/");
+    resolvedVentureId = ventureParam;
+  } else if (profile.role === "candidate" || profile.role === "admin") {
+    // Admins can view any venture via ?venture=; candidates use their own.
+    if (profile.role === "admin" && ventureParam) {
+      resolvedVentureId = ventureParam;
+    } else {
+      resolvedVentureId = profile.venture_id || null;
+    }
+  } else {
     redirect("/");
   }
 
-  if (!profile.venture_id) {
+  if (!resolvedVentureId) {
     return (
       <div className="mx-auto max-w-3xl p-6 text-center">
         <h1 className="text-2xl font-bold text-[#1a2744] mb-3">חוברת עבודה</h1>
@@ -45,12 +62,12 @@ export default async function WorkbookPage({
   const { data: venture } = await supabase
     .from("ventures")
     .select("id, name")
-    .eq("id", profile.venture_id)
+    .eq("id", resolvedVentureId)
     .single();
 
   return (
     <WorkbookClient
-      ventureId={profile.venture_id}
+      ventureId={resolvedVentureId}
       ventureName={venture?.name || ""}
       initialSheetKey={initialSheet!}
     />
