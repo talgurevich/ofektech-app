@@ -36,6 +36,8 @@ import {
 import { VentureKpiCard } from "@/components/venture-kpi-card";
 import { DashboardActions } from "@/components/dashboard-actions";
 import { MentorDashboardActions } from "@/components/mentor-dashboard-actions";
+import { VentureActivityFeed } from "@/components/venture-activity-feed";
+import type { VentureActivity } from "@/lib/types";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -388,12 +390,13 @@ async function MentorDashboard({
         .select("id, full_name, email, avatar_url, venture_role")
         .eq("venture_id", venture.id);
 
-      // Get venture tasks (from workbook) + chapter + session stats
+      // Get venture tasks (from workbook) + chapter + session stats + activity
       const [
         { count: totalTasks },
         { count: completedTasks },
         { count: filledChapters },
         { data: latestSession },
+        { data: activityRows },
       ] = await Promise.all([
         supabase
           .from("workbook_entries")
@@ -418,6 +421,12 @@ async function MentorDashboard({
           .eq("mentor_id", userId)
           .order("session_date", { ascending: false })
           .limit(1),
+        supabase
+          .from("venture_activity")
+          .select("*, actor:actor_id(id, full_name, avatar_url)")
+          .eq("venture_id", venture.id)
+          .order("created_at", { ascending: false })
+          .limit(5),
       ]);
       const openTasks = (totalTasks || 0) - (completedTasks || 0);
 
@@ -430,6 +439,7 @@ async function MentorDashboard({
         completedTasks: completedTasks || 0,
         filledChapters: filledChapters || 0,
         lastSessionDate: latestSession?.[0]?.session_date || null,
+        activity: (activityRows as VentureActivity[]) || [],
       };
     })
   );
@@ -580,6 +590,14 @@ async function MentorDashboard({
                             ? `פגישה אחרונה: ${formatDate(venture.lastSessionDate)}`
                             : "אין פגישות"}
                         </span>
+                      </div>
+
+                      {/* Recent activity */}
+                      <div className="rounded-lg bg-gray-50/60 p-3">
+                        <p className="text-xs font-medium text-gray-500 mb-2">
+                          פעילות אחרונה
+                        </p>
+                        <VentureActivityFeed items={venture.activity} />
                       </div>
 
                       {/* Actions */}

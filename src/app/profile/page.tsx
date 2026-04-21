@@ -23,6 +23,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
+import { logActivity } from "@/lib/activity";
 
 interface ProfileData {
   phone: string;
@@ -57,7 +58,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [openingCheckinDone, setOpeningCheckinDone] = useState(true);
+  const [ventureId, setVentureId] = useState<string | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const activityTimer = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,7 +74,7 @@ export default function ProfilePage() {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "role, full_name, phone, motto, linkedin_url, bio, venture_role, company, expertise, avatar_url"
+          "role, full_name, venture_id, phone, motto, linkedin_url, bio, venture_role, company, expertise, avatar_url"
         )
         .eq("id", user.id)
         .single();
@@ -79,6 +82,7 @@ export default function ProfilePage() {
       if (data) {
         setRole(data.role as UserRole);
         setFullName(data.full_name || "");
+        setVentureId(data.venture_id || null);
         setProfile({
           phone: data.phone || "",
           motto: data.motto || "",
@@ -120,8 +124,19 @@ export default function ProfilePage() {
       setSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+
+      if (ventureId) {
+        if (activityTimer.current) clearTimeout(activityTimer.current);
+        activityTimer.current = setTimeout(() => {
+          logActivity(supabase, {
+            ventureId,
+            kind: "profile_updated",
+            summary: "עדכן פרטי פרופיל",
+          });
+        }, 5000);
+      }
     },
-    [userId, supabase]
+    [userId, supabase, ventureId]
   );
 
   const handleChange = useCallback(

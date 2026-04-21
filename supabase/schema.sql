@@ -141,6 +141,18 @@ create table mentor_assignments (
   unique (mentor_id, venture_id)
 );
 
+-- Venture activity feed (timeline of notable actions inside a venture)
+create table venture_activity (
+  id uuid primary key default gen_random_uuid(),
+  venture_id uuid not null references ventures(id) on delete cascade,
+  actor_id uuid references profiles(id) on delete set null,
+  kind text not null,
+  summary text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index venture_activity_venture_idx on venture_activity (venture_id, created_at desc);
+
 -- Workbook entries (per-venture structured "spreadsheet" rows)
 create table workbook_entries (
   id uuid primary key default gen_random_uuid(),
@@ -207,6 +219,7 @@ alter table mentor_assignments enable row level security;
 alter table notifications enable row level security;
 alter table checkins enable row level security;
 alter table workbook_entries enable row level security;
+alter table venture_activity enable row level security;
 
 -- Helper: get current user's role
 create or replace function get_user_role()
@@ -382,6 +395,41 @@ create policy "Venture members and assigned mentors manage workbook"
   );
 create policy "Admin manages all workbook entries"
   on workbook_entries for all using (get_user_role() = 'admin');
+
+-- Venture activity (timeline)
+create policy "Venture members and assigned mentors read activity"
+  on venture_activity for select using (
+    get_user_role() = 'admin'
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.venture_id = venture_activity.venture_id
+    )
+    or exists (
+      select 1 from mentor_assignments
+      where mentor_assignments.mentor_id = auth.uid()
+      and mentor_assignments.venture_id = venture_activity.venture_id
+    )
+  );
+create policy "Authenticated users insert own activity"
+  on venture_activity for insert with check (
+    actor_id = auth.uid()
+    and (
+      get_user_role() = 'admin'
+      or exists (
+        select 1 from profiles
+        where profiles.id = auth.uid()
+        and profiles.venture_id = venture_activity.venture_id
+      )
+      or exists (
+        select 1 from mentor_assignments
+        where mentor_assignments.mentor_id = auth.uid()
+        and mentor_assignments.venture_id = venture_activity.venture_id
+      )
+    )
+  );
+create policy "Admin manages all activity"
+  on venture_activity for all using (get_user_role() = 'admin');
 
 -- Check-ins (personal)
 create policy "Candidates see own checkins"

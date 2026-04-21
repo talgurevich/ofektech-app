@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import type { Venture } from "@/lib/types";
+import { logActivity } from "@/lib/activity";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ArrowLeft, Send, CalendarDays, Briefcase } from "lucide-react";
@@ -111,6 +112,13 @@ function NewSessionForm() {
 
     // Track event
     fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "mentor_feedback", description: "משוב חדש על פגישת מנטורינג" }) });
+
+    logActivity(supabase, {
+      ventureId,
+      kind: "session_feedback",
+      summary: "הגיש משוב על פגישת מנטורינג",
+      metadata: { session_id: session.id, session_date: sessionDate },
+    });
 
     // Notify venture members
     const { data: members } = await supabase

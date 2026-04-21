@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Lecture } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { logActivity } from "@/lib/activity";
 
 export default function LectureFeedbackPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,6 +71,27 @@ export default function LectureFeedbackPage() {
 
     // Email admin
     fetch("/api/email-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "candidate_feedback" }) });
+
+    // Log to the venture's activity feed (only if the candidate belongs to one)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("venture_id")
+      .eq("id", user.id)
+      .single();
+    if (profile?.venture_id) {
+      logActivity(supabase, {
+        ventureId: profile.venture_id,
+        kind: "lecture_feedback",
+        summary: lecture?.title
+          ? `הגיש משוב על ההרצאה "${lecture.title}"`
+          : "הגיש משוב על הרצאה",
+        metadata: {
+          lecture_id: id,
+          lecture_title: lecture?.title,
+          lecture_number: lecture?.lecture_number,
+        },
+      });
+    }
 
     router.push("/");
     router.refresh();

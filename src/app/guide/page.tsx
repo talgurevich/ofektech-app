@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Check, ChevronDown, Save, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { GuideChapter, VentureChapterEntry } from "@/lib/types";
+import { logActivity } from "@/lib/activity";
 
 export default function GuidePage() {
   return (
@@ -153,8 +154,19 @@ function GuidePageInner() {
       setSaving((prev) => ({ ...prev, [chapterId]: false }));
 
       if (!error && data) {
+        const chapterTitle = chapters.find((c) => c.id === chapterId)?.title || "";
+
         // Fire-and-forget event tracking for chapter save
-        fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "guide", description: `פרק "${chapters.find(c => c.id === chapterId)?.title}" עודכן` }) });
+        fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "guide", description: `פרק "${chapterTitle}" עודכן` }) });
+
+        logActivity(supabase, {
+          ventureId,
+          kind: "guide_updated",
+          summary: chapterTitle
+            ? `עדכן את הפרק "${chapterTitle}" במדריך`
+            : "עדכן פרק במדריך",
+          metadata: { chapter_id: chapterId, chapter_title: chapterTitle },
+        });
 
         setEntries((prev) => {
           const updated = { ...prev, [chapterId]: data };

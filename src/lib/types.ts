@@ -123,6 +123,28 @@ export interface MentorAssignment {
   mentor?: Profile;
 }
 
+export type ActivityKind =
+  | "workbook_added"
+  | "workbook_updated"
+  | "workbook_deleted"
+  | "workbook_task_done"
+  | "workbook_task_reopened"
+  | "profile_updated"
+  | "guide_updated"
+  | "lecture_feedback"
+  | "session_feedback";
+
+export interface VentureActivity {
+  id: string;
+  venture_id: string;
+  actor_id: string | null;
+  kind: ActivityKind;
+  summary: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  actor?: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
+}
+
 export interface WorkbookEntry {
   id: string;
   venture_id: string;

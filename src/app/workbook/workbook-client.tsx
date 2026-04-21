@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry } from "@/lib/types";
+import { logActivity } from "@/lib/activity";
 import { Plus, Trash2, Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
   const [entries, setEntries] = useState<WorkbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const updateLogTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const activeSheet = useMemo<WorkbookSheet>(
     () => WORKBOOK_SHEETS.find((s) => s.key === activeSheetKey)!,
@@ -79,21 +81,37 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
       .single();
     if (error) return;
     setEntries((prev) => [...prev, data as WorkbookEntry]);
+    logActivity(supabase, {
+      ventureId,
+      kind: "workbook_added",
+      summary: `הוסיף שורה ב"${activeSheet.label}"`,
+      metadata: { sheet_key: activeSheetKey, row_id: (data as WorkbookEntry).id },
+    });
   }
 
   async function deleteRow(id: string) {
     if (!confirm("למחוק את השורה הזו?")) return;
+    const removed = entries.find((e) => e.id === id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
     await supabase.from("workbook_entries").delete().eq("id", id);
+    logActivity(supabase, {
+      ventureId,
+      kind: "workbook_deleted",
+      summary: `מחק שורה מ"${activeSheet.label}"`,
+      metadata: {
+        sheet_key: activeSheetKey,
+        row_label: rowLabel(removed?.data, activeSheet),
+      },
+    });
   }
 
   async function updateCell(id: string, key: string, value: unknown) {
+    const before = entries.find((e) => e.id === id);
     setEntries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, data: { ...e.data, [key]: value } } : e))
     );
     setSavingIds((s) => new Set(s).add(id));
-    const entry = entries.find((e) => e.id === id);
-    const nextData = { ...(entry?.data || {}), [key]: value };
+    const nextData = { ...(before?.data || {}), [key]: value };
     await supabase
       .from("workbook_entries")
       .update({ data: nextData, updated_at: new Date().toISOString() })
@@ -103,6 +121,41 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
       n.delete(id);
       return n;
     });
+
+    // Activity logging: tasks.done gets its own events; other edits are
+    // debounced per row so a burst of cell edits becomes one event.
+    const prevValue = before?.data?.[key];
+    if (activeSheetKey === "tasks" && key === "done" && prevValue !== value) {
+      logActivity(supabase, {
+        ventureId,
+        kind: value ? "workbook_task_done" : "workbook_task_reopened",
+        summary: value
+          ? `סימן משימה כבוצעה`
+          : `החזיר משימה למצב פתוח`,
+        metadata: {
+          sheet_key: activeSheetKey,
+          row_id: id,
+          row_label: rowLabel(nextData, activeSheet),
+        },
+      });
+      return;
+    }
+
+    const existing = updateLogTimers.current[id];
+    if (existing) clearTimeout(existing);
+    updateLogTimers.current[id] = setTimeout(() => {
+      delete updateLogTimers.current[id];
+      logActivity(supabase, {
+        ventureId,
+        kind: "workbook_updated",
+        summary: `עדכן שורה ב"${activeSheet.label}"`,
+        metadata: {
+          sheet_key: activeSheetKey,
+          row_id: id,
+          row_label: rowLabel(nextData, activeSheet),
+        },
+      });
+    }, 5000);
   }
 
   return (
@@ -216,6 +269,19 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
       </button>
     </div>
   );
+}
+
+function rowLabel(
+  data: Record<string, unknown> | undefined,
+  sheet: WorkbookSheet
+): string {
+  if (!data) return "";
+  for (const col of sheet.columns) {
+    if (col.type === "boolean" || col.type === "date" || col.type === "number") continue;
+    const v = data[col.key];
+    if (typeof v === "string" && v.trim()) return v.trim().slice(0, 80);
+  }
+  return "";
 }
 
 function CellEditor({
