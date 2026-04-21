@@ -127,9 +127,16 @@ export default function LoginPage() {
 
       {/* Hero */}
       <section id="top" className="relative overflow-hidden">
-        {/* Dot grid */}
+        {/* Background photo + navy overlay */}
+        <img
+          src="/login-bg.jpg"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1a33]/85 via-[#0f1a33]/75 to-[#0f1a33]/95" />
+        {/* Dot grid overlay */}
         <div
-          className="absolute inset-0 opacity-[0.35]"
+          className="absolute inset-0 opacity-[0.25]"
           style={{
             backgroundImage:
               "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
