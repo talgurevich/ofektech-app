@@ -13,6 +13,7 @@ import {
   Mic2,
   CalendarDays,
   CheckCircle2,
+  Circle,
   XCircle,
   ChevronLeft,
   ClipboardCheck,
@@ -111,12 +112,11 @@ export default async function AdminDashboard() {
     feedbackBySession.get(f.session_id)!.add(f.submitted_by);
   });
 
-  // Recent completed workbook tasks
+  // Recent workbook tasks across all ventures (open + done)
   const { data: recentTaskRows } = await supabase
     .from("workbook_entries")
     .select("id, data, updated_at, venture_id")
     .eq("sheet_key", "tasks")
-    .eq("data->>done", "true")
     .order("updated_at", { ascending: false })
     .limit(15);
 
@@ -131,6 +131,9 @@ export default async function AdminDashboard() {
     return {
       id: row.id,
       description: typeof data.task === "string" ? data.task : "",
+      assignee: typeof data.assignee === "string" ? data.assignee : "",
+      due_date: typeof data.due_date === "string" && data.due_date ? data.due_date : null,
+      done: data.done === true,
       updated_at: row.updated_at,
       venture_id: row.venture_id,
     };
@@ -383,30 +386,67 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Recent completed tasks */}
+          {/* Recent workbook tasks (open + done) */}
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
-                <ListTodo className="size-5" />
-                משימות שהושלמו לאחרונה
-              </CardTitle>
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                  <ListTodo className="size-5" />
+                  משימות מחוברת העבודה
+                </CardTitle>
+                <Badge variant="secondary" className="text-[10px]">
+                  {recentTasks.length} אחרונות
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               {!recentTasks || recentTasks.length === 0 ? (
-                <p className="text-gray-400 text-sm py-4 text-center">אין משימות שהושלמו</p>
+                <p className="text-gray-400 text-sm py-4 text-center">
+                  אין משימות בחוברת העבודה
+                </p>
               ) : (
                 <div className="space-y-2">
                   {recentTasks.map((task) => {
-                    const ownerName = ventureMap.get(task.venture_id) || "מיזם";
+                    const ventureName = ventureMap.get(task.venture_id) || "מיזם";
 
                     return (
-                      <div key={task.id} className="flex items-start gap-2 rounded-lg px-3 py-2 bg-[#22c55e]/5">
-                        <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0 mt-0.5" />
+                      <div
+                        key={task.id}
+                        className={`flex items-start gap-2 rounded-lg px-3 py-2 ${
+                          task.done ? "bg-[#22c55e]/5" : "bg-gray-50/60"
+                        }`}
+                      >
+                        {task.done ? (
+                          <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0 mt-0.5" />
+                        ) : (
+                          <Circle className="size-3.5 text-gray-400 shrink-0 mt-0.5" />
+                        )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-[#1a2744] line-clamp-1">{task.description}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-gray-500">{ownerName}</span>
-                            <span className="text-[10px] text-gray-400">{formatDate(task.updated_at)}</span>
+                          <p
+                            className={`text-xs line-clamp-1 ${
+                              task.done ? "text-gray-500 line-through" : "text-[#1a2744]"
+                            }`}
+                          >
+                            {task.description || "—"}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#1a2744]/5 px-1.5 py-0.5 text-[10px] text-[#1a2744]">
+                              <Briefcase className="size-2.5" />
+                              {ventureName}
+                            </span>
+                            {task.assignee && (
+                              <span className="text-[10px] text-gray-500">
+                                {task.assignee}
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span className="text-[10px] text-gray-400">
+                                יעד: {formatDate(task.due_date)}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-gray-300">
+                              · עודכן {formatDate(task.updated_at)}
+                            </span>
                           </div>
                         </div>
                       </div>
