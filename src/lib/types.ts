@@ -143,6 +143,7 @@ export interface VentureActivity {
   metadata: Record<string, unknown>;
   created_at: string;
   actor?: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
+  venture?: Pick<Venture, "id" | "name"> | null;
 }
 
 export interface WorkbookEntry {

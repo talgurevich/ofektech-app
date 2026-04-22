@@ -1,5 +1,6 @@
 import {
   Activity,
+  Briefcase,
   CheckCircle2,
   Circle,
   FileText,
@@ -40,9 +41,11 @@ const KIND_TINT: Record<ActivityKind, string> = {
 export function VentureActivityFeed({
   items,
   emptyLabel = "אין פעילות אחרונה",
+  showVenture = false,
 }: {
   items: VentureActivity[];
   emptyLabel?: string;
+  showVenture?: boolean;
 }) {
   if (items.length === 0) {
     return (
@@ -59,9 +62,11 @@ export function VentureActivityFeed({
         const Icon = KIND_ICON[item.kind] || Activity;
         const tint = KIND_TINT[item.kind] || "text-gray-500";
         const actorName = item.actor?.full_name || "חבר מיזם";
-        const rowLabel = typeof item.metadata?.row_label === "string"
-          ? (item.metadata.row_label as string)
-          : null;
+        const rowLabel =
+          typeof item.metadata?.row_label === "string"
+            ? (item.metadata.row_label as string)
+            : null;
+        const ventureName = showVenture ? item.venture?.name : null;
         return (
           <li key={item.id} className="flex items-start gap-2.5 text-xs">
             <Icon className={`size-4 shrink-0 mt-0.5 ${tint}`} />
@@ -73,9 +78,17 @@ export function VentureActivityFeed({
                   <span className="text-gray-400">{` — ${rowLabel}`}</span>
                 )}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                {formatRelativeHe(item.created_at)}
-              </p>
+              <div className="mt-0.5 flex items-center gap-2">
+                <p className="text-[10px] text-gray-400">
+                  {formatRelativeHe(item.created_at)}
+                </p>
+                {ventureName && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#1a2744]/5 px-1.5 py-0.5 text-[10px] text-[#1a2744]">
+                    <Briefcase className="size-2.5" />
+                    {ventureName}
+                  </span>
+                )}
+              </div>
             </div>
           </li>
         );

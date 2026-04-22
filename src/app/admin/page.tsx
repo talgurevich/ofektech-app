@@ -21,7 +21,10 @@ import {
   Briefcase,
   Star,
   UserCheck,
+  Activity,
 } from "lucide-react";
+import { VentureActivityFeed } from "@/components/venture-activity-feed";
+import type { VentureActivity } from "@/lib/types";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -133,6 +136,16 @@ export default async function AdminDashboard() {
     };
   });
 
+  // Cross-venture activity feed
+  const { data: activityRows } = await supabase
+    .from("venture_activity")
+    .select(
+      "*, actor:actor_id(id, full_name, avatar_url), venture:venture_id(id, name)"
+    )
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const activity = (activityRows as VentureActivity[]) || [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[#1a2744]">סקירה כללית</h1>
@@ -144,6 +157,26 @@ export default async function AdminDashboard() {
         <StatCard label="מיזמים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} />
         <StatCard label="הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} />
       </div>
+
+      {/* Cross-venture activity feed */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+              <Activity className="size-5" />
+              פעילות אחרונה — כל המיזמים
+            </CardTitle>
+            <Badge variant="secondary" className="text-[10px]">
+              {activity.length} אירועים
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-[420px] overflow-y-auto pr-1">
+            <VentureActivityFeed items={activity} showVenture />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
