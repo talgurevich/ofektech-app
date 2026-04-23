@@ -12,6 +12,7 @@ export default function LectureFeedbackPage() {
   const router = useRouter();
   const supabase = createClient();
   const [lecture, setLecture] = useState<Lecture | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +23,11 @@ export default function LectureFeedbackPage() {
         .from("lectures")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
+      if (!data) {
+        setNotFound(true);
+        return;
+      }
       setLecture(data);
 
       const {
@@ -95,6 +100,20 @@ export default function LectureFeedbackPage() {
 
     router.push("/");
     router.refresh();
+  }
+
+  if (notFound) {
+    return (
+      <main className="max-w-3xl mx-auto p-4 md:p-8 w-full text-center">
+        <h1 className="text-xl font-bold text-[#1a2744] mb-2">ההרצאה לא נמצאה</h1>
+        <p className="text-sm text-gray-500 mb-4">
+          ייתכן שההרצאה שייכת למחזור אחר או שהיא הוסרה.
+        </p>
+        <a href="/lectures" className="text-[#22c55e] hover:underline text-sm">
+          חזרה לסילבוס
+        </a>
+      </main>
+    );
   }
 
   if (!lecture) {

@@ -30,23 +30,61 @@ export default async function LecturesPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, cohort_id")
     .eq("id", user.id)
     .single();
 
   if (!profile) redirect("/not-registered");
 
-  // Only show lectures UI for candidates and visitors (mentors/admins don't need it here)
-  if (profile.role !== "candidate" && profile.role !== "visitor") {
-    redirect("/");
-  }
+  // Admins manage lectures elsewhere.
+  if (profile.role === "admin") redirect("/admin/lectures");
 
   const today = new Date().toISOString().split("T")[0];
 
-  const { data: lectures } = await supabase
+  // Determine which cohort(s) to show:
+  //   - visitor: all cohorts (global)
+  //   - candidate: own cohort
+  //   - mentor: any cohort they have a venture assignment in
+  let lecturesQuery = supabase
     .from("lectures")
     .select("*")
     .order("scheduled_date", { ascending: true });
+
+  if (profile.role === "candidate") {
+    if (!profile.cohort_id) {
+      // No cohort = no lectures (RLS would block anyway).
+      lecturesQuery = lecturesQuery.eq("cohort_id", "00000000-0000-0000-0000-000000000000");
+    } else {
+      lecturesQuery = lecturesQuery.eq("cohort_id", profile.cohort_id);
+    }
+  } else if (profile.role === "mentor") {
+    const { data: assignments } = await supabase
+      .from("mentor_assignments")
+      .select("venture:ventures(cohort_id)")
+      .eq("mentor_id", user.id);
+    const cohortIds = Array.from(
+      new Set(
+        (assignments || [])
+          .map((a) => {
+            const v = a.venture as
+              | { cohort_id: string | null }
+              | { cohort_id: string | null }[]
+              | null;
+            if (!v) return null;
+            if (Array.isArray(v)) return v[0]?.cohort_id ?? null;
+            return v.cohort_id ?? null;
+          })
+          .filter((c): c is string => !!c)
+      )
+    );
+    if (cohortIds.length === 0) {
+      lecturesQuery = lecturesQuery.eq("cohort_id", "00000000-0000-0000-0000-000000000000");
+    } else {
+      lecturesQuery = lecturesQuery.in("cohort_id", cohortIds);
+    }
+  }
+
+  const { data: lectures } = await lecturesQuery;
 
   const { data: lectureFeedback } = await supabase
     .from("lecture_feedback")

@@ -48,7 +48,7 @@ create table profiles (
 -- invite API (/api/invite). This prevents unauthorized users from
 -- getting access by self-registering via Google OAuth or magic link.
 
--- Lectures table
+-- Lectures table (cohort-scoped)
 create table lectures (
   id uuid primary key default gen_random_uuid(),
   lecture_number int not null,
@@ -61,9 +61,14 @@ create table lectures (
   lecturer text,
   recording_url text,
   presentation_url text,
+  cohort_id uuid not null references cohorts(id),
   created_by uuid not null references profiles(id),
   created_at timestamptz not null default now()
 );
+
+-- At most one cohort can be active at a time.
+create unique index cohorts_only_one_active_idx
+  on cohorts (is_active) where is_active = true;
 
 -- Mentor sessions table (per venture)
 create table mentor_sessions (
@@ -247,9 +252,23 @@ create policy "Users can update own profile"
 create policy "Admin can update any profile"
   on profiles for update using (get_user_role() = 'admin');
 
--- Lectures
-create policy "Anyone can read lectures"
-  on lectures for select using (true);
+-- Lectures (cohort-scoped reads)
+create policy "Cohort-scoped lecture reads"
+  on lectures for select using (
+    get_user_role() in ('admin', 'visitor')
+    or exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role = 'candidate'
+      and profiles.cohort_id = lectures.cohort_id
+    )
+    or exists (
+      select 1 from mentor_assignments ma
+      join ventures v on v.id = ma.venture_id
+      where ma.mentor_id = auth.uid()
+      and v.cohort_id = lectures.cohort_id
+    )
+  );
 create policy "Admin can manage lectures"
   on lectures for all using (get_user_role() = 'admin');
 

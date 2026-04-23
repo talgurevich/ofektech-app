@@ -70,6 +70,7 @@ const visitorLinks = [
 
 const adminLinks = [
   { href: "/admin", label: "סקירה", icon: BarChart3 },
+  { href: "/admin/cohorts", label: "מחזורים", icon: GraduationCap },
   { href: "/admin/users", label: "משתמשים", icon: Users },
   { href: "/admin/candidates", label: "חניכים", icon: GraduationCap },
   { href: "/admin/ventures", label: "מיזמים", icon: Briefcase },

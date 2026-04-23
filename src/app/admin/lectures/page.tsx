@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import type { Lecture } from "@/lib/types";
+import type { Lecture, Cohort } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import {
   Card,
@@ -25,7 +25,9 @@ import {
 
 export default function AdminLecturesPage() {
   const supabase = createClient();
-  const [lectures, setLectures] = useState<Lecture[]>([]);
+  const [lectures, setLectures] = useState<(Lecture & { cohort?: { name: string } | null })[]>([]);
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [filterCohortId, setFilterCohortId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,16 +36,36 @@ export default function AdminLecturesPage() {
   const [newForm, setNewForm] = useState<Partial<Lecture>>({ location: "זום" });
 
   useEffect(() => {
+    loadCohorts();
     loadLectures();
   }, []);
+
+  async function loadCohorts() {
+    const { data } = await supabase
+      .from("cohorts")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (data) {
+      setCohorts(data);
+      // Default new-lecture form to the active cohort.
+      const active = data.find((c) => c.is_active);
+      if (active) {
+        setNewForm((prev) => ({ ...prev, cohort_id: prev.cohort_id ?? active.id }));
+      }
+    }
+  }
 
   async function loadLectures() {
     const { data } = await supabase
       .from("lectures")
-      .select("*")
+      .select("*, cohort:cohorts(name)")
       .order("lecture_number", { ascending: true });
-    if (data) setLectures(data);
+    if (data) setLectures(data as (Lecture & { cohort?: { name: string } | null })[]);
   }
+
+  const visibleLectures = filterCohortId
+    ? lectures.filter((l) => l.cohort_id === filterCohortId)
+    : lectures;
 
   async function handleDelete(id: string, title: string) {
     if (!confirm(`למחוק את "${title}"?`)) return;
@@ -64,6 +86,7 @@ export default function AdminLecturesPage() {
       lecturer: lecture.lecturer,
       recording_url: lecture.recording_url || "",
       presentation_url: lecture.presentation_url || "",
+      cohort_id: lecture.cohort_id,
     });
   }
 
@@ -90,6 +113,7 @@ export default function AdminLecturesPage() {
         lecturer: editForm.lecturer || null,
         recording_url: editForm.recording_url || null,
         presentation_url: editForm.presentation_url || null,
+        cohort_id: editForm.cohort_id,
       })
       .eq("id", id);
 
@@ -140,6 +164,10 @@ export default function AdminLecturesPage() {
       setError("שם ותאריך הם שדות חובה");
       return;
     }
+    if (!newForm.cohort_id) {
+      setError("יש לבחור מחזור");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -157,6 +185,7 @@ export default function AdminLecturesPage() {
       lecturer: newForm.lecturer || null,
       recording_url: newForm.recording_url || null,
       presentation_url: newForm.presentation_url || null,
+      cohort_id: newForm.cohort_id,
       created_by: user.id,
     });
 
@@ -166,7 +195,8 @@ export default function AdminLecturesPage() {
       return;
     }
 
-    setNewForm({ location: "זום" });
+    const activeCohortId = cohorts.find((c) => c.is_active)?.id;
+    setNewForm({ location: "זום", cohort_id: activeCohortId });
     setShowNew(false);
     setLoading(false);
     loadLectures();
@@ -189,16 +219,32 @@ export default function AdminLecturesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-[#1a2744]">ניהול הרצאות</h1>
-        {!showNew && (
-          <button
-            onClick={() => setShowNew(true)}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-gray-500">מחזור:</label>
+          <select
+            value={filterCohortId}
+            onChange={(e) => setFilterCohortId(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
           >
-            + הרצאה חדשה
-          </button>
-        )}
+            <option value="">כל המחזורים</option>
+            {cohorts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.is_active ? " · פעיל" : ""}
+              </option>
+            ))}
+          </select>
+          {!showNew && (
+            <button
+              onClick={() => setShowNew(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a] transition-colors"
+            >
+              + הרצאה חדשה
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -215,6 +261,22 @@ export default function AdminLecturesPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">מחזור *</label>
+                <select
+                  value={newForm.cohort_id ?? ""}
+                  onChange={(e) => setNewForm({ ...newForm, cohort_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                >
+                  <option value="">בחרו מחזור</option>
+                  {cohorts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.is_active ? " · פעיל" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">מספר</label>
                 <input
                   type="number"
@@ -224,7 +286,7 @@ export default function AdminLecturesPage() {
                   dir="ltr"
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">שם ההרצאה *</label>
                 <input
                   type="text"
@@ -338,11 +400,36 @@ export default function AdminLecturesPage() {
       )}
 
       <div className="space-y-3">
-        {lectures.map((l) =>
+        {visibleLectures.length === 0 && lectures.length > 0 && (
+          <p className="text-center text-sm text-gray-400 py-6">
+            אין הרצאות במחזור שנבחר
+          </p>
+        )}
+        {visibleLectures.map((l) =>
           editingId === l.id ? (
             <Card key={l.id} className="border-0 shadow-sm ring-2 ring-[#22c55e]/30">
               <CardContent className="pt-0 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      מחזור
+                    </label>
+                    <select
+                      value={editForm.cohort_id ?? ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, cohort_id: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+                    >
+                      <option value="">בחרו מחזור</option>
+                      {cohorts.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                          {c.is_active ? " · פעיל" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
                       מספר
@@ -357,7 +444,7 @@ export default function AdminLecturesPage() {
                       dir="ltr"
                     />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
                       שם ההרצאה
                     </label>
@@ -514,7 +601,14 @@ export default function AdminLecturesPage() {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[#1a2744]">{l.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-[#1a2744]">{l.title}</p>
+                    {l.cohort?.name && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {l.cohort.name}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-xs text-gray-500">
                       {formatDate(l.scheduled_date)}

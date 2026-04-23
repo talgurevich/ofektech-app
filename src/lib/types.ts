@@ -52,8 +52,10 @@ export interface Lecture {
   lecturer: string | null;
   recording_url: string | null;
   presentation_url: string | null;
+  cohort_id: string;
   created_by: string;
   created_at: string;
+  cohort?: Cohort | null;
 }
 
 export interface MentorSession {
