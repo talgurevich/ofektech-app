@@ -5,7 +5,7 @@
 
 do $$
 declare
-  v_cohort_name text := 'מחזור א׳';  -- EDIT: which cohort to seed into
+  v_cohort_name text := 'מחזור א';  -- EDIT: which cohort to seed into
   v_cohort uuid;
   v_admin uuid;
 begin

@@ -7,8 +7,8 @@
 
 do $$
 declare
-  from_name text := 'מחזור ב׳';  -- EDIT: the cohort currently holding the lectures
-  to_name   text := 'מחזור א׳';  -- EDIT: the cohort where they should live
+  from_name text := 'מחזור ב';  -- EDIT: the cohort currently holding the lectures
+  to_name   text := 'מחזור א';  -- EDIT: the cohort where they should live
   from_id   uuid;
   to_id     uuid;
   moved     int;
