@@ -1,16 +1,17 @@
--- Seed the syllabus for the currently active cohort.
+-- Seed the syllabus into a specific cohort (by exact name).
 -- Safe to re-run: each lecture is guarded by (cohort_id, scheduled_date, title).
--- Requires: exactly one cohort flagged is_active = true, and at least one admin
--- profile (used for created_by).
+-- Requires: the named cohort to exist, and at least one admin profile (used
+-- for created_by). Edit v_cohort_name below to target a different cohort.
 
 do $$
 declare
+  v_cohort_name text := 'מחזור א׳';  -- EDIT: which cohort to seed into
   v_cohort uuid;
   v_admin uuid;
 begin
-  select id into v_cohort from cohorts where is_active = true;
+  select id into v_cohort from cohorts where name = v_cohort_name;
   if v_cohort is null then
-    raise exception 'No active cohort. Set one cohort is_active = true before running.';
+    raise exception 'Cohort "%" not found. Check names with: select name from cohorts;', v_cohort_name;
   end if;
 
   select id into v_admin from profiles where role = 'admin' order by created_at limit 1;
