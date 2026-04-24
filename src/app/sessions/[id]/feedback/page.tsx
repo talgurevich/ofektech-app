@@ -90,6 +90,10 @@ export default function SessionFeedbackPage() {
         .select("role")
         .eq("id", user.id)
         .single();
+      if (profile?.role === "visitor") {
+        router.replace("/");
+        return;
+      }
       if (profile) setMyRole(profile.role);
 
       const { data: sess } = await supabase

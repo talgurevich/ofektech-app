@@ -54,6 +54,17 @@ function NewSessionForm() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role !== "mentor" && profile?.role !== "admin") {
+        router.replace("/");
+        return;
+      }
+
       setUserId(user.id);
 
       const { data: assignments } = await supabase
@@ -69,7 +80,7 @@ function NewSessionForm() {
       }
     }
     load();
-  }, [supabase]);
+  }, [supabase, router]);
 
   async function handleSubmit() {
     if (!ventureId || !sessionDate) return;

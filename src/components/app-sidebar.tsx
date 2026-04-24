@@ -66,6 +66,7 @@ const mentorLinks = [
 
 const visitorLinks = [
   { href: "/", label: "הרצאות", icon: Mic2 },
+  { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const adminLinks = [

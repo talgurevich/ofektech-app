@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ function LoadingState() {
 function GuidePageInner() {
   const supabase = createClient();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const ventureParam = searchParams.get("venture");
   const [chapters, setChapters] = useState<GuideChapter[]>([]);
   const [entries, setEntries] = useState<Record<string, VentureChapterEntry>>({});
@@ -59,6 +60,12 @@ function GuidePageInner() {
         .select("role, venture_id")
         .eq("id", user.id)
         .single();
+
+      // Visitors don't get the guide.
+      if (profile?.role === "visitor") {
+        router.replace("/");
+        return;
+      }
 
       let targetVentureId: string | null = null;
       let isReadOnly = false;
