@@ -17,7 +17,7 @@ type Option = { href: string; label: string; icon: LucideIcon };
 
 const seeOptions: Option[] = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
-  { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
+  { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];

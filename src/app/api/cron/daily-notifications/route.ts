@@ -185,7 +185,7 @@ export async function GET(request: Request) {
             .select("id")
             .eq("user_id", member.id)
             .eq("type", "guide")
-            .eq("title", "התחילו למלא את מדריך התוכנית")
+            .eq("title", "התחילו למלא את חוברת המיזם")
             .gte("created_at", today)
             .limit(1)
             .single();
@@ -194,7 +194,7 @@ export async function GET(request: Request) {
             notifications.push({
               user_id: member.id,
               type: "guide",
-              title: "התחילו למלא את מדריך התוכנית",
+              title: "התחילו למלא את חוברת המיזם",
               body: "13 פרקים שיעזרו לכם לבנות מצגת משקיעים",
               link: "/guide",
             });

@@ -19,8 +19,10 @@ import {
   FileText,
   ExternalLink,
   Paperclip,
+  PencilLine,
 } from "lucide-react";
 import { LectureResourcesSection } from "@/components/lecture-resources-section";
+import { LectureNotes } from "@/components/lecture-notes";
 
 export default async function LecturesPage() {
   const supabase = await createClient();
@@ -190,6 +192,15 @@ export default async function LecturesPage() {
                         </summary>
                         <div className="mt-2">
                           <LectureResourcesSection lectureId={lecture.id} />
+                        </div>
+                      </details>
+                      <details className="mt-1 group">
+                        <summary className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1a2744] cursor-pointer list-none">
+                          <PencilLine className="size-3" />
+                          ההערות שלי
+                        </summary>
+                        <div className="mt-2">
+                          <LectureNotes lectureId={lecture.id} />
                         </div>
                       </details>
                     </div>

@@ -171,7 +171,7 @@ export default function LoginPage() {
 
             <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
               <FeaturePill icon={Table2} label="טבלת עבודה" />
-              <FeaturePill icon={BookOpen} label="מדריך התוכנית" />
+              <FeaturePill icon={BookOpen} label="חוברת מיזם" />
               <FeaturePill icon={MessageSquare} label="משוב מנטורינג" />
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function LoginPage() {
               intro="הפורטל האישי שלכם לאורך כל התוכנית."
               bullets={[
                 "טבלת עבודה משותפת למיזם",
-                "מדריך התוכנית לכל פרק",
+                "חוברת מיזם לכל פרק",
                 "מפגשי מנטורינג ומשוב מובנה",
                 "דירוג הרצאות התוכנית",
               ]}

@@ -53,7 +53,7 @@ interface AppSidebarProps {
 const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
-  { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
+  { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];

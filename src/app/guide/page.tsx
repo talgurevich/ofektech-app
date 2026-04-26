@@ -191,7 +191,7 @@ function GuidePageInner() {
               body: JSON.stringify({
                 roles: ["admin"],
                 type: "guide",
-                title: "מיזם השלים את מדריך התוכנית!",
+                title: "מיזם השלים את חוברת המיזם!",
                 body: "",
                 link: "/admin/candidates",
               }),
@@ -216,7 +216,7 @@ function GuidePageInner() {
                           targetUserId: member.id,
                           type: "guide",
                           title: "המדריך הושלם!",
-                          body: "כל פרקי מדריך התוכנית הושלמו",
+                          body: "כל פרקי החוברת הושלמו",
                           link: "/guide",
                         }),
                       });
@@ -238,7 +238,7 @@ function GuidePageInner() {
                         body: JSON.stringify({
                           targetUserId: ma.mentor_id,
                           type: "guide",
-                          title: "מיזם השלים את מדריך התוכנית!",
+                          title: "מיזם השלים את חוברת המיזם!",
                           body: "",
                           link: "/",
                         }),
@@ -356,12 +356,12 @@ function GuidePageInner() {
         <div>
           <h1 className="text-2xl font-bold text-[#1a2744] flex items-center gap-2">
             <BookOpen className="size-6" />
-            מדריך התוכנית
+            חוברת מיזם
           </h1>
           {readOnly ? (
             <>
               <p className="text-sm text-gray-500 mt-1">
-                {ventureName ? `מדריך המיזם — ${ventureName}` : "מדריך המיזם"}
+                {ventureName ? `חוברת המיזם — ${ventureName}` : "חוברת המיזם"}
               </p>
               <Badge className="mt-2 bg-[#1a2744]/10 text-[#1a2744] border-0 text-xs">
                 תצוגה בלבד

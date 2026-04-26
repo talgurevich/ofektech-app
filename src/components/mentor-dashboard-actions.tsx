@@ -37,7 +37,7 @@ function createOptionsFor(ventureId: string): Option[] {
 function seeOptionsFor(ventureId: string): Option[] {
   return [
     { href: `/workbook?venture=${ventureId}`, label: "טבלת עבודה של המיזם", icon: Table2 },
-    { href: `/guide?venture=${ventureId}`, label: "מדריך המיזם", icon: BookOpen },
+    { href: `/guide?venture=${ventureId}`, label: "חוברת המיזם", icon: BookOpen },
     { href: `/ventures/${ventureId}`, label: "פרטי המיזם", icon: Briefcase },
   ];
 }

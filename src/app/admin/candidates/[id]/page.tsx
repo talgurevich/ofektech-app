@@ -466,7 +466,7 @@ export default async function AdminCandidateDetailPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[#1a2744]">
             <BookOpen className="size-5" />
-            מדריך התוכנית
+            חוברת מיזם
             {ventureName && (
               <Badge className="text-[10px] bg-[#1a2744]/10 text-[#1a2744] border-0 mr-2">
                 משותף למיזם

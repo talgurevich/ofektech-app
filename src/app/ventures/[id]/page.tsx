@@ -310,7 +310,7 @@ export default async function VentureDetailPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[#1a2744]">
             <BookOpen className="size-5" />
-            מדריך התוכנית
+            חוברת מיזם
           </CardTitle>
           <CardDescription>
             {entries?.filter((e) => e.content).length || 0} מתוך{" "}
