@@ -18,7 +18,8 @@ export type WorkbookColumnType =
   | "email"
   | "phone"
   | "select"
-  | "select_creatable";
+  | "select_creatable"
+  | "member";
 
 export interface WorkbookColumn {
   key: string;
@@ -53,7 +54,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
         options: ["מוצר", "עיסקי"],
         placeholder: "בחר או הוסף קטגוריה...",
       },
-      { key: "assignee", label: "אחראי ביצוע", type: "text" },
+      { key: "assignee", label: "אחראי ביצוע", type: "member" },
       { key: "date", label: "תאריך פתיחה", type: "date" },
       { key: "due_date", label: "תאריך לביצוע", type: "date" },
       { key: "done", label: "בוצע", type: "boolean", width: "90px" },
@@ -111,6 +112,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "משקיעים",
     icon: Wallet,
     description: "רשימת משקיעים פוטנציאליים",
+    tbd: true,
     columns: [
       { key: "name", label: "שם משקיע", type: "text" },
       { key: "website", label: "אתר", type: "url" },

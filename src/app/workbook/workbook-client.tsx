@@ -12,6 +12,7 @@ interface Props {
   ventureId: string;
   ventureName: string;
   initialSheetKey?: string;
+  members?: { id: string; name: string }[];
 }
 
 function lastSeenKey(ventureId: string, sheetKey: string) {
@@ -29,7 +30,7 @@ function writeLastSeen(ventureId: string, sheetKey: string, ts: number) {
   window.localStorage.setItem(lastSeenKey(ventureId, sheetKey), String(ts));
 }
 
-export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Props) {
+export function WorkbookClient({ ventureId, ventureName, initialSheetKey, members = [] }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [activeSheetKey, setActiveSheetKey] = useState<string>(
     initialSheetKey && WORKBOOK_SHEETS.some((s) => s.key === initialSheetKey)
@@ -303,6 +304,7 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
                           value={entry.data[col.key]}
                           onChange={(v) => updateCell(entry.id, col.key, v)}
                           suggestions={columnSuggestions[col.key]}
+                          members={members}
                         />
                       </div>
                     </td>
@@ -361,11 +363,13 @@ function CellEditor({
   value,
   onChange,
   suggestions,
+  members = [],
 }: {
   column: WorkbookColumn;
   value: unknown;
   onChange: (v: unknown) => void;
   suggestions?: string[];
+  members?: { id: string; name: string }[];
 }) {
   const base =
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
@@ -398,6 +402,28 @@ function CellEditor({
             {opt}
           </option>
         ))}
+      </select>
+    );
+  }
+
+  if (column.type === "member") {
+    const names = members.map((m) => m.name).filter(Boolean);
+    const knownValue = names.includes(strVal) ? strVal : "";
+    return (
+      <select
+        value={knownValue}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(base, "cursor-pointer")}
+      >
+        <option value="">—</option>
+        {names.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+        {strVal && !knownValue && (
+          <option value={strVal}>{strVal} (לא חבר/ת מיזם)</option>
+        )}
       </select>
     );
   }

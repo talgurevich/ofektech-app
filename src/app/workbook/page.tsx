@@ -65,11 +65,23 @@ export default async function WorkbookPage({
     .eq("id", resolvedVentureId)
     .single();
 
+  const { data: memberRows } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("venture_id", resolvedVentureId)
+    .order("full_name");
+
+  const members = (memberRows || []).map((m) => ({
+    id: m.id,
+    name: (m.full_name && m.full_name.trim()) || m.email || "",
+  }));
+
   return (
     <WorkbookClient
       ventureId={resolvedVentureId}
       ventureName={venture?.name || ""}
       initialSheetKey={initialSheet!}
+      members={members}
     />
   );
 }
