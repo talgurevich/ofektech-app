@@ -36,6 +36,7 @@ import { VentureKpiCard } from "@/components/venture-kpi-card";
 import { DashboardActions } from "@/components/dashboard-actions";
 import { MentorDashboardActions } from "@/components/mentor-dashboard-actions";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
+import { TaskCategoryPie } from "@/components/task-category-pie";
 import type { VentureActivity } from "@/lib/types";
 
 export default async function Dashboard() {
@@ -234,6 +235,19 @@ async function CandidateDashboard({
     ventureMembers = members || [];
   }
 
+  // Get this venture's tasks for the category pie
+  let candidateTaskRows: { data: Record<string, unknown> }[] = [];
+  if (ventureId) {
+    const { data: rows } = await supabase
+      .from("workbook_entries")
+      .select("data")
+      .eq("venture_id", ventureId)
+      .eq("sheet_key", "tasks");
+    candidateTaskRows = (rows || []).map((r) => ({
+      data: (r.data || {}) as Record<string, unknown>,
+    }));
+  }
+
   // Get assigned mentor (via venture)
   let mentorName: string | null = null;
   let mentorAvatar: string | null = null;
@@ -326,6 +340,13 @@ async function CandidateDashboard({
           <DashboardActions />
         </AnimatedItem>
 
+        {/* Task category breakdown */}
+        {ventureId && (
+          <AnimatedItem>
+            <TaskCategoryPie tasks={candidateTaskRows} />
+          </AnimatedItem>
+        )}
+
 
         {/* Contact — always last */}
         <AnimatedItem>
@@ -396,6 +417,7 @@ async function MentorDashboard({
         { count: filledChapters },
         { data: latestSession },
         { data: activityRows },
+        { data: taskRows },
       ] = await Promise.all([
         supabase
           .from("workbook_entries")
@@ -426,8 +448,16 @@ async function MentorDashboard({
           .eq("venture_id", venture.id)
           .order("created_at", { ascending: false })
           .limit(5),
+        supabase
+          .from("workbook_entries")
+          .select("data")
+          .eq("venture_id", venture.id)
+          .eq("sheet_key", "tasks"),
       ]);
       const openTasks = (totalTasks || 0) - (completedTasks || 0);
+      const taskRowsForPie = (taskRows || []).map((r) => ({
+        data: (r.data || {}) as Record<string, unknown>,
+      }));
 
       return {
         id: venture.id,
@@ -439,6 +469,7 @@ async function MentorDashboard({
         filledChapters: filledChapters || 0,
         lastSessionDate: latestSession?.[0]?.session_date || null,
         activity: (activityRows as VentureActivity[]) || [],
+        taskRows: taskRowsForPie,
       };
     })
   );
@@ -564,6 +595,10 @@ async function MentorDashboard({
                           {venture.openTasks} פתוחות, {venture.completedTasks} הושלמו
                         </span>
                       </div>
+
+                      {/* Tasks-by-category pie */}
+                      <TaskCategoryPie tasks={venture.taskRows} />
+
 
                       {/* Guide progress */}
                       <div>

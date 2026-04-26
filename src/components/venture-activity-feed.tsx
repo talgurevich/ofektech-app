@@ -24,6 +24,7 @@ const KIND_ICON: Record<ActivityKind, LucideIcon> = {
   guide_updated: FileText,
   lecture_feedback: Mic2,
   session_feedback: MessageSquare,
+  meeting_summary_submitted: FileText,
 };
 
 const KIND_TINT: Record<ActivityKind, string> = {
@@ -36,6 +37,7 @@ const KIND_TINT: Record<ActivityKind, string> = {
   guide_updated: "text-indigo-500",
   lecture_feedback: "text-sky-500",
   session_feedback: "text-[#22c55e]",
+  meeting_summary_submitted: "text-emerald-500",
 };
 
 export function VentureActivityFeed({

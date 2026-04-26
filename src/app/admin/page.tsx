@@ -392,7 +392,7 @@ export default async function AdminDashboard() {
               <div className="flex items-center justify-between w-full">
                 <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
                   <ListTodo className="size-5" />
-                  משימות מחוברת העבודה
+                  משימות מטבלת העבודה
                 </CardTitle>
                 <Badge variant="secondary" className="text-[10px]">
                   {recentTasks.length} אחרונות
@@ -402,7 +402,7 @@ export default async function AdminDashboard() {
             <CardContent>
               {!recentTasks || recentTasks.length === 0 ? (
                 <p className="text-gray-400 text-sm py-4 text-center">
-                  אין משימות בחוברת העבודה
+                  אין משימות בטבלת העבודה
                 </p>
               ) : (
                 <div className="space-y-2">

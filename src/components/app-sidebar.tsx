@@ -54,7 +54,7 @@ const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
-  { href: "/workbook", label: "חוברת עבודה", icon: Table2 },
+  { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
@@ -76,6 +76,7 @@ const adminLinks = [
   { href: "/admin/candidates", label: "חניכים", icon: GraduationCap },
   { href: "/admin/ventures", label: "מיזמים", icon: Briefcase },
   { href: "/admin/assignments", label: "שיבוצים", icon: UserCheck },
+  { href: "/admin/tasks", label: "משימות למיזמים", icon: ListTodo },
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
   { href: "/admin/checkins", label: "צ׳ק-אין", icon: ClipboardCheck },

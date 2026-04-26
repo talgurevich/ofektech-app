@@ -19,10 +19,10 @@ import {
   Circle,
   CalendarDays,
   Users,
-  Plus,
   Briefcase,
   Table2,
 } from "lucide-react";
+import { TaskCategoryPie } from "@/components/task-category-pie";
 
 export default async function VentureDetailPage({
   params,
@@ -89,6 +89,10 @@ export default async function VentureDetailPage({
     .eq("sheet_key", "tasks")
     .order("position", { ascending: true });
 
+  const taskRowsForPie = (workbookTaskRows || []).map((row) => ({
+    data: (row.data || {}) as Record<string, unknown>,
+  }));
+
   allTasks = (workbookTaskRows || []).map((row) => {
     const d = (row.data || {}) as Record<string, unknown>;
     return {
@@ -118,24 +122,30 @@ export default async function VentureDetailPage({
     (entries || []).map((e) => [e.chapter_id, e.content])
   );
 
-  // Get sessions for this venture
+  // Get sessions (with meeting summaries) for this venture
   const { data: sessions } = await supabase
     .from("mentor_sessions")
-    .select("*")
+    .select(
+      "id, session_date, meeting_summary, summary_submitted_at, summary_submitted_by"
+    )
     .eq("mentor_id", user.id)
     .eq("venture_id", ventureId)
     .order("session_date", { ascending: false });
 
-  // Get feedback for those sessions
   const sessionIds = sessions?.map((s) => s.id) || [];
-  const { data: feedback } = sessionIds.length > 0
+
+  // Mentor feedback per session (used to show "ממתין למשוב" badges)
+  const { data: mentorFeedbackRows } = sessionIds.length > 0
     ? await supabase
         .from("session_feedback")
-        .select("*, session:mentor_sessions(session_date)")
+        .select("session_id, content, submitted_at")
         .in("session_id", sessionIds)
         .eq("role", "mentor")
-        .order("submitted_at", { ascending: false })
     : { data: [] };
+
+  const feedbackBySession = new Map(
+    (mentorFeedbackRows || []).map((f) => [f.session_id, f])
+  );
 
   const ownerLabel = (owner: string) => owner || "—";
 
@@ -203,12 +213,15 @@ export default async function VentureDetailPage({
           <Table2 className="size-6" />
         </div>
         <div className="flex-1 min-w-0 text-right">
-          <p className="text-lg font-bold">פתח חוברת עבודה של המיזם</p>
+          <p className="text-lg font-bold">פתח טבלת עבודה של המיזם</p>
           <p className="text-xs text-white/80 mt-0.5">
             משימות, לקוחות, מתחרים, משקיעים, שוק ועוד
           </p>
         </div>
       </Link>
+
+      {/* Tasks-by-category pie */}
+      <TaskCategoryPie tasks={taskRowsForPie} />
 
       {/* Section 1: Tasks (read-only snapshot) */}
       <Card className="border-0 shadow-sm">
@@ -218,7 +231,7 @@ export default async function VentureDetailPage({
             משימות
           </CardTitle>
           <CardDescription>
-            {openTasks.length} פתוחות, {completedTasks.length} הושלמו — לעריכה, פתחו את חוברת העבודה
+            {openTasks.length} פתוחות, {completedTasks.length} הושלמו — לעריכה, פתחו את טבלת העבודה
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -345,73 +358,60 @@ export default async function VentureDetailPage({
         </CardContent>
       </Card>
 
-      {/* Section 3: Session Feedback */}
+      {/* Section 3: Meeting summaries */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-[#1a2744]">
-                <MessageSquare className="size-5" />
-                משובי מנטורינג
-              </CardTitle>
-              <CardDescription>
-                {feedback?.length || 0} משובים
-              </CardDescription>
-            </div>
-            <Link
-              href={`/sessions/new?venture=${ventureId}`}
-              className="inline-flex items-center gap-1 rounded-md bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#16a34a] transition-colors"
-            >
-              <Plus className="size-3.5" />
-              משוב חדש
-            </Link>
-          </div>
+          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+            <MessageSquare className="size-5" />
+            סיכומי פגישות
+          </CardTitle>
+          <CardDescription>
+            {sessions?.length || 0} פגישות — לחצו על סיכום כדי להגיב/לערוך משוב
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {(feedback || []).map((fb) => {
-            const sessionDate = (
-              fb.session as { session_date: string } | null
-            )?.session_date;
+          {(sessions || []).map((s) => {
+            const fb = feedbackBySession.get(s.id);
+            const summary = (s.meeting_summary || "").trim();
+            const preview = summary.length > 220 ? summary.slice(0, 220) + "…" : summary;
 
             return (
-              <div key={fb.id} className="rounded-lg p-3 bg-gray-50/50">
+              <Link
+                key={s.id}
+                href={`/sessions/${s.id}/feedback`}
+                className="block rounded-lg border border-gray-100 bg-gray-50/50 p-3 transition-colors hover:bg-[#22c55e]/5 hover:border-[#22c55e]/40"
+              >
                 <div className="flex items-center gap-2 mb-2">
                   <CalendarDays className="size-4 text-gray-400" />
                   <span className="text-xs text-gray-500">
-                    {sessionDate ? formatDate(sessionDate) : "---"}
+                    {formatDate(s.session_date)}
                   </span>
-                  {fb.rating_focus && (
-                    <div className="flex gap-1 mr-auto">
-                      {[
-                        { key: "rating_focus", label: "מיקוד" },
-                        { key: "rating_progress", label: "התקדמות" },
-                        { key: "rating_preparedness", label: "מוכנות" },
-                        { key: "rating_initiative", label: "יוזמה" },
-                        { key: "rating_followthrough", label: "יישום" },
-                      ].map((r) => {
-                        const val = fb[r.key as keyof typeof fb] as number | null;
-                        if (!val) return null;
-                        return (
-                          <Badge key={r.key} variant="secondary" className="text-[10px]">
-                            {r.label}: {val}/5
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <span className="mr-auto">
+                    {fb ? (
+                      <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px]">
+                        ניתן משוב
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px]">
+                        ממתין למשוב
+                      </Badge>
+                    )}
+                  </span>
                 </div>
-                {fb.content && (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-                    {fb.content}
+                {summary ? (
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {preview}
                   </p>
+                ) : (
+                  <p className="text-xs text-gray-400">אין סיכום עדיין</p>
                 )}
-              </div>
+              </Link>
             );
           })}
 
-          {(!feedback || feedback.length === 0) && (
+          {(!sessions || sessions.length === 0) && (
             <p className="text-sm text-gray-400 text-center py-4">
-              אין משובים עדיין
+              אין סיכומי פגישות עדיין
             </p>
           )}
         </CardContent>

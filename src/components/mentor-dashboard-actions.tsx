@@ -11,8 +11,6 @@ import {
   Mic2,
   BookOpen,
   Table2,
-  MessageSquare,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { WORKBOOK_SHEETS } from "@/lib/workbook";
@@ -28,11 +26,6 @@ function createOptionsFor(ventureId: string): Option[] {
       label: "משימה חדשה",
       icon: WORKBOOK_SHEETS.find((s) => s.key === "tasks")!.icon,
     },
-    {
-      href: `/sessions/new?venture=${ventureId}`,
-      label: "משוב אחרי פגישה",
-      icon: MessageSquare,
-    },
     ...WORKBOOK_SHEETS.filter((s) => s.key !== "tasks").map((s) => ({
       href: `/workbook?venture=${ventureId}&sheet=${s.key}`,
       label: s.label,
@@ -43,7 +36,7 @@ function createOptionsFor(ventureId: string): Option[] {
 
 function seeOptionsFor(ventureId: string): Option[] {
   return [
-    { href: `/workbook?venture=${ventureId}`, label: "חוברת עבודה של המיזם", icon: Table2 },
+    { href: `/workbook?venture=${ventureId}`, label: "טבלת עבודה של המיזם", icon: Table2 },
     { href: `/guide?venture=${ventureId}`, label: "מדריך המיזם", icon: BookOpen },
     { href: `/ventures/${ventureId}`, label: "פרטי המיזם", icon: Briefcase },
   ];

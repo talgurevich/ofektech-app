@@ -35,6 +35,7 @@ export interface WorkbookSheet {
   icon: LucideIcon;
   description?: string;
   columns: WorkbookColumn[];
+  tbd?: boolean;
 }
 
 export const WORKBOOK_SHEETS: WorkbookSheet[] = [
@@ -45,6 +46,13 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     description: "משימות לביצוע של הצוות, עם אחריות ותאריכי יעד",
     columns: [
       { key: "task", label: "משימה", type: "longtext", width: "minmax(200px,2fr)" },
+      {
+        key: "category",
+        label: "קטגוריה",
+        type: "select_creatable",
+        options: ["מוצר", "עיסקי"],
+        placeholder: "בחר או הוסף קטגוריה...",
+      },
       { key: "assignee", label: "אחראי ביצוע", type: "text" },
       { key: "date", label: "תאריך פתיחה", type: "date" },
       { key: "due_date", label: "תאריך לביצוע", type: "date" },
@@ -56,6 +64,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "לקוחות",
     icon: Users,
     description: "לקוחות פוטנציאליים ופעילים",
+    tbd: true,
     columns: [
       { key: "name", label: "שם לקוח", type: "text" },
       { key: "website", label: "אתר", type: "url" },
@@ -71,6 +80,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "תיעוד פעילות",
     icon: Activity,
     description: "תיעוד פגישות, חיבורים ופעילות עסקית",
+    tbd: true,
     columns: [
       { key: "date", label: "תאריך", type: "date" },
       {
@@ -87,6 +97,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "מתחרים",
     icon: Swords,
     description: "מחקר מתחרים בשוק",
+    tbd: true,
     columns: [
       { key: "name", label: "שם חברה", type: "text" },
       { key: "description", label: "מה החברה עושה", type: "longtext", width: "minmax(200px,2fr)" },
@@ -120,6 +131,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "מחקר גודל שוק",
     icon: LineChart,
     description: "מחקר גודל השוק: TAM / SAM / SOM",
+    tbd: true,
     columns: [
       { key: "source", label: "שם מקור מידע", type: "text" },
       { key: "segment_name", label: "שם פלח השוק", type: "text" },

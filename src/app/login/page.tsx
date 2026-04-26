@@ -167,12 +167,12 @@ export default function LoginPage() {
             </h1>
             <p className="mt-5 text-base text-gray-300 md:text-lg">
               פלטפורמה אחת שמלווה את משתתפי התוכנית לאורך כל המסע — דיווח
-              שבועי, חוברת עבודה, מדריך מובנה, מנטורינג ומעקב יעדים.
+              שבועי, טבלת עבודה, מדריך מובנה, מנטורינג ומעקב יעדים.
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
               <FeaturePill icon={ClipboardCheck} label="צ׳ק-אין שבועי" />
-              <FeaturePill icon={Table2} label="חוברת עבודה" />
+              <FeaturePill icon={Table2} label="טבלת עבודה" />
               <FeaturePill icon={BookOpen} label="מדריך התוכנית" />
               <FeaturePill icon={MessageSquare} label="משוב מנטורינג" />
             </div>
@@ -213,7 +213,7 @@ export default function LoginPage() {
               intro="הפורטל האישי שלכם לאורך כל התוכנית."
               bullets={[
                 "דיווח שבועי וחודשי על ההתקדמות",
-                "חוברת עבודה משותפת למיזם",
+                "טבלת עבודה משותפת למיזם",
                 "מדריך התוכנית לכל פרק",
                 "דירוג הרצאות ומפגשי מנטורינג",
               ]}

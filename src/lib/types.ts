@@ -63,10 +63,29 @@ export interface MentorSession {
   venture_id: string;
   mentor_id: string;
   session_date: string;
+  meeting_summary: string;
+  summary_submitted_at: string | null;
+  summary_submitted_by: string | null;
   created_by: string;
   created_at: string;
   venture?: Venture;
   mentor?: Profile;
+}
+
+export type LectureResourceKind = "file" | "link";
+
+export interface LectureResource {
+  id: string;
+  lecture_id: string;
+  kind: LectureResourceKind;
+  title: string;
+  url: string;
+  storage_path: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  position: number;
+  created_by: string;
+  created_at: string;
 }
 
 export interface LectureFeedback {
@@ -134,7 +153,8 @@ export type ActivityKind =
   | "profile_updated"
   | "guide_updated"
   | "lecture_feedback"
-  | "session_feedback";
+  | "session_feedback"
+  | "meeting_summary_submitted";
 
 export interface VentureActivity {
   id: string;

@@ -9,6 +9,7 @@ import {
   BookOpen,
   Table2,
   UserCircle,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,15 +18,18 @@ type Option = { href: string; label: string; icon: LucideIcon };
 const seeOptions: Option[] = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "מדריך התוכנית", icon: BookOpen },
-  { href: "/workbook", label: "חוברת עבודה", icon: Table2 },
+  { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
-const createOptions: Option[] = WORKBOOK_SHEETS.map((s) => ({
-  href: `/workbook?sheet=${s.key}`,
-  label: s.label,
-  icon: s.icon,
-}));
+const createOptions: Option[] = [
+  { href: "/sessions/new", label: "סיכום פגישת מנטורינג", icon: MessageSquare },
+  ...WORKBOOK_SHEETS.map((s) => ({
+    href: `/workbook?sheet=${s.key}`,
+    label: s.label,
+    icon: s.icon,
+  })),
+];
 
 export function DashboardActions() {
   const [open, setOpen] = useState<"create" | "see" | null>(null);
@@ -35,14 +39,14 @@ export function DashboardActions() {
       <div className="space-y-3">
         <ActionButton
           label="יצירה"
-          sublabel="הוספת שורה לחוברת העבודה"
+          sublabel="הוספת שורה לטבלת העבודה"
           icon={Plus}
           color="green"
           active={open === "create"}
           onClick={() => setOpen(open === "create" ? null : "create")}
         />
         {open === "create" && (
-          <OptionsGrid title="לאיזה גיליון בחוברת העבודה?" options={createOptions} />
+          <OptionsGrid title="לאיזה גיליון בטבלת העבודה?" options={createOptions} />
         )}
       </div>
       <div className="space-y-3">

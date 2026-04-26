@@ -51,9 +51,9 @@ export default async function WorkbookPage({
   if (!resolvedVentureId) {
     return (
       <div className="mx-auto max-w-3xl p-6 text-center">
-        <h1 className="text-2xl font-bold text-[#1a2744] mb-3">חוברת עבודה</h1>
+        <h1 className="text-2xl font-bold text-[#1a2744] mb-3">טבלת עבודה</h1>
         <p className="text-gray-600">
-          חוברת העבודה זמינה לאחר שיבוץ למיזם. פנו לצוות התוכנית כדי להשלים את השיבוץ.
+          טבלת העבודה זמינה לאחר שיבוץ למיזם. פנו לצוות התוכנית כדי להשלים את השיבוץ.
         </p>
       </div>
     );

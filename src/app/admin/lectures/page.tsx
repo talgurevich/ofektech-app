@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LectureResourcesSection } from "@/components/lecture-resources-section";
 import {
   Mic2,
   Pencil,
@@ -571,6 +572,12 @@ export default function AdminLecturesPage() {
                       placeholder="https://..."
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2">
+                    חומרים נוספים (קבצים וקישורים)
+                  </label>
+                  <LectureResourcesSection lectureId={l.id} editable />
                 </div>
                 <div className="flex items-center gap-2 justify-end">
                   <button

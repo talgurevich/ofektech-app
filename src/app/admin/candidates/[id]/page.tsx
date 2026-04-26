@@ -27,6 +27,7 @@ import {
   Phone,
   ExternalLink,
 } from "lucide-react";
+import { TaskCategoryPie } from "@/components/task-category-pie";
 
 export default async function AdminCandidateDetailPage({
   params,
@@ -89,6 +90,7 @@ export default async function AdminCandidateDetailPage({
     completed: boolean;
   };
   let workbookTasks: AdminTask[] = [];
+  let taskRowsForPie: { data: Record<string, unknown> }[] = [];
   if (ventureId) {
     const { data } = await supabase
       .from("workbook_entries")
@@ -106,6 +108,9 @@ export default async function AdminCandidateDetailPage({
         completed: d.done === true,
       };
     });
+    taskRowsForPie = (data || []).map((row) => ({
+      data: (row.data || {}) as Record<string, unknown>,
+    }));
   }
 
   const allTasks = workbookTasks;
@@ -372,6 +377,9 @@ export default async function AdminCandidateDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Tasks-by-category pie */}
+      {ventureId && <TaskCategoryPie tasks={taskRowsForPie} />}
 
       {/* Section 3: Tasks */}
       <Card className="border-0 shadow-sm">

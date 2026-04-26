@@ -5,13 +5,28 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
   ventureId: string;
   ventureName: string;
   initialSheetKey?: string;
+}
+
+function lastSeenKey(ventureId: string, sheetKey: string) {
+  return `workbook_last_seen:${ventureId}:${sheetKey}`;
+}
+
+function readLastSeen(ventureId: string, sheetKey: string): number {
+  if (typeof window === "undefined") return 0;
+  const v = window.localStorage.getItem(lastSeenKey(ventureId, sheetKey));
+  return v ? Number(v) || 0 : 0;
+}
+
+function writeLastSeen(ventureId: string, sheetKey: string, ts: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(lastSeenKey(ventureId, sheetKey), String(ts));
 }
 
 export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Props) {
@@ -25,6 +40,7 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
   const [loading, setLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const updateLogTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [lastSeen, setLastSeen] = useState<number>(0);
 
   const activeSheet = useMemo<WorkbookSheet>(
     () => WORKBOOK_SHEETS.find((s) => s.key === activeSheetKey)!,
@@ -64,16 +80,31 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
     loadEntries();
   }, [loadEntries]);
 
+  // Snapshot the user's "last seen" timestamp for this sheet at mount,
+  // then promote it to "now" after a short read delay so the dot stays
+  // visible long enough to notice.
+  useEffect(() => {
+    setLastSeen(readLastSeen(ventureId, activeSheetKey));
+    const timer = setTimeout(() => {
+      writeLastSeen(ventureId, activeSheetKey, Date.now());
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [ventureId, activeSheetKey]);
+
   async function addRow() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const maxPos = entries.reduce((m, e) => Math.max(m, e.position), -1);
+    const initialData: Record<string, unknown> =
+      activeSheetKey === "tasks"
+        ? { date: new Date().toISOString().slice(0, 10) }
+        : {};
     const { data, error } = await supabase
       .from("workbook_entries")
       .insert({
         venture_id: ventureId,
         sheet_key: activeSheetKey,
-        data: {},
+        data: initialData,
         position: maxPos + 1,
         created_by: user.id,
       })
@@ -161,7 +192,7 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
   return (
     <div className="mx-auto max-w-[1400px] p-4 md:p-6">
       <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744]">חוברת עבודה</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744]">טבלת עבודה</h1>
         {ventureName && (
           <p className="text-sm text-gray-500 mt-1">{ventureName}</p>
         )}
@@ -185,6 +216,11 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
             >
               <Icon className="size-4" />
               <span>{s.label}</span>
+              {s.tbd && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  TBD
+                </span>
+              )}
             </button>
           );
         })}
@@ -195,6 +231,20 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
         <p className="mb-3 text-sm text-gray-500">{activeSheet.description}</p>
       )}
 
+      {activeSheet.tbd ? (
+        <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-8 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+            TBD
+          </span>
+          <p className="mt-3 text-base font-semibold text-[#1a2744]">
+            הסעיף הזה סגור כרגע
+          </p>
+          <p className="mt-1 text-sm text-gray-600">
+            התוכן עבור &quot;{activeSheet.label}&quot; יתווסף בהמשך.
+          </p>
+        </div>
+      ) : (
+      <>
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full min-w-[700px] text-sm" dir="rtl">
@@ -226,16 +276,35 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
                 </td>
               </tr>
             ) : (
-              entries.map((entry) => (
-                <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                  {activeSheet.columns.map((col) => (
+              entries.map((entry) => {
+                const createdAt = entry.created_at
+                  ? new Date(entry.created_at).getTime()
+                  : 0;
+                const isUnseen = lastSeen > 0 && createdAt > lastSeen;
+                return (
+                <tr
+                  key={entry.id}
+                  className={cn(
+                    "border-b border-gray-100 hover:bg-gray-50/50",
+                    isUnseen && "bg-red-50/30"
+                  )}
+                >
+                  {activeSheet.columns.map((col, idx) => (
                     <td key={col.key} className="align-top p-1.5">
-                      <CellEditor
-                        column={col}
-                        value={entry.data[col.key]}
-                        onChange={(v) => updateCell(entry.id, col.key, v)}
-                        suggestions={columnSuggestions[col.key]}
-                      />
+                      <div className="relative">
+                        {idx === 0 && isUnseen && (
+                          <span
+                            className="absolute -right-1 top-1 size-2 rounded-full bg-red-500 ring-2 ring-white"
+                            title="חדש — טרם נצפה"
+                          />
+                        )}
+                        <CellEditor
+                          column={col}
+                          value={entry.data[col.key]}
+                          onChange={(v) => updateCell(entry.id, col.key, v)}
+                          suggestions={columnSuggestions[col.key]}
+                        />
+                      </div>
                     </td>
                   ))}
                   <td className="p-1.5 text-center">
@@ -253,7 +322,8 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -267,6 +337,8 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey }: Prop
         <Plus className="size-4" />
         הוסף שורה
       </button>
+      </>
+      )}
     </div>
   );
 }
@@ -376,15 +448,7 @@ function CellEditor({
   }
 
   if (column.type === "longtext") {
-    return (
-      <textarea
-        defaultValue={strVal}
-        onBlur={(e) => onChange(e.target.value)}
-        rows={2}
-        className={cn(base, "resize-y min-h-[38px]")}
-        placeholder={column.placeholder}
-      />
-    );
+    return <LongTextCell column={column} value={strVal} onChange={onChange} />;
   }
 
   if (column.type === "url" && strVal) {
@@ -424,5 +488,111 @@ function CellEditor({
       dir={ltr ? "ltr" : undefined}
       placeholder={column.placeholder}
     />
+  );
+}
+
+function LongTextCell({
+  column,
+  value,
+  onChange,
+}: {
+  column: WorkbookColumn;
+  value: string;
+  onChange: (v: unknown) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  function openModal() {
+    setDraft(value);
+    setOpen(true);
+  }
+
+  function save() {
+    if (draft !== value) onChange(draft);
+    setOpen(false);
+  }
+
+  function cancel() {
+    setDraft(value);
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={openModal}
+        className={cn(
+          "group flex w-full items-start justify-between gap-2 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-right text-sm text-gray-800 outline-none transition-colors hover:bg-white hover:border-gray-200 focus:border-[#22c55e] focus:bg-white",
+          !value && "text-gray-400"
+        )}
+      >
+        <span className="line-clamp-2 whitespace-pre-wrap break-words flex-1 min-w-0">
+          {value || column.placeholder || "לחצו לעריכה..."}
+        </span>
+        <Maximize2 className="size-3.5 shrink-0 text-gray-300 transition-colors group-hover:text-gray-500" />
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={cancel}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="text-lg font-semibold text-[#1a2744]">{column.label}</h3>
+              <button
+                type="button"
+                onClick={cancel}
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                aria-label="סגור"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                autoFocus
+                rows={12}
+                className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e]"
+                placeholder={column.placeholder}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    cancel();
+                  } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    save();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
+              <button
+                type="button"
+                onClick={cancel}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16a34a]"
+              >
+                שמור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

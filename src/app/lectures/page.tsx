@@ -18,7 +18,9 @@ import {
   MapPin,
   FileText,
   ExternalLink,
+  Paperclip,
 } from "lucide-react";
+import { LectureResourcesSection } from "@/components/lecture-resources-section";
 
 export default async function LecturesPage() {
   const supabase = await createClient();
@@ -181,6 +183,15 @@ export default async function LecturesPage() {
                           </a>
                         )}
                       </div>
+                      <details className="mt-2 group">
+                        <summary className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1a2744] cursor-pointer list-none">
+                          <Paperclip className="size-3" />
+                          חומרים נוספים
+                        </summary>
+                        <div className="mt-2">
+                          <LectureResourcesSection lectureId={lecture.id} />
+                        </div>
+                      </details>
                     </div>
                     <div className="shrink-0">
                       {isCandidate && hasSubmitted ? (
