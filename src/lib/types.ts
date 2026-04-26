@@ -179,20 +179,6 @@ export interface WorkbookEntry {
   updated_at: string;
 }
 
-export interface WeeklyCheckin {
-  id: string;
-  candidate_id: string;
-  week_start: string;
-  hours_invested: number | null;
-  hours_mentoring: number | null;
-  mood: number | null;
-  progress_feeling: string | null;
-  key_accomplishment: string | null;
-  biggest_blocker: string | null;
-  hit_last_goal: GoalStatus | null;
-  goal_next_week: string | null;
-  lecture_usefulness: number | null;
-  mentor_usefulness: number | null;
-  submitted_at: string;
-  candidate?: Profile;
-}
+// WeeklyCheckin removed — feature deprecated. The opening (entry)
+// checkin is still served by Profile + the `checkins` table where
+// `type = "opening"`.

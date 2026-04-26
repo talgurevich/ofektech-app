@@ -79,7 +79,7 @@ const adminLinks = [
   { href: "/admin/tasks", label: "משימות למיזמים", icon: ListTodo },
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
-  { href: "/admin/checkins", label: "צ׳ק-אין", icon: ClipboardCheck },
+  { href: "/admin/checkins", label: "שאלוני פתיחה", icon: ClipboardCheck },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 

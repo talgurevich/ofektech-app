@@ -9,7 +9,6 @@ import {
   Lightbulb,
   Users,
   Eye,
-  ClipboardCheck,
   Table2,
   BookOpen,
   MessageSquare,
@@ -166,12 +165,11 @@ export default function LoginPage() {
               </span>
             </h1>
             <p className="mt-5 text-base text-gray-300 md:text-lg">
-              פלטפורמה אחת שמלווה את משתתפי התוכנית לאורך כל המסע — דיווח
-              שבועי, טבלת עבודה, מדריך מובנה, מנטורינג ומעקב יעדים.
+              פלטפורמה אחת שמלווה את משתתפי התוכנית לאורך כל המסע — טבלת
+              עבודה, מדריך מובנה, מנטורינג ומעקב יעדים.
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
-              <FeaturePill icon={ClipboardCheck} label="צ׳ק-אין שבועי" />
               <FeaturePill icon={Table2} label="טבלת עבודה" />
               <FeaturePill icon={BookOpen} label="מדריך התוכנית" />
               <FeaturePill icon={MessageSquare} label="משוב מנטורינג" />
@@ -212,10 +210,10 @@ export default function LoginPage() {
               title="יזמים"
               intro="הפורטל האישי שלכם לאורך כל התוכנית."
               bullets={[
-                "דיווח שבועי וחודשי על ההתקדמות",
                 "טבלת עבודה משותפת למיזם",
                 "מדריך התוכנית לכל פרק",
-                "דירוג הרצאות ומפגשי מנטורינג",
+                "מפגשי מנטורינג ומשוב מובנה",
+                "דירוג הרצאות התוכנית",
               ]}
             />
             <RoleCard
@@ -285,9 +283,9 @@ export default function LoginPage() {
               הצצה לפורטל
             </h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">
-              יזמים מדווחים על התקדמות שבועית, מדרגים הרצאות ומקבלים משוב
-              ממנטורים. מנטורים מתעדים פגישות, עוקבים אחרי ההתקדמות ונותנים
-              משוב מובנה. הכל במקום אחד, פשוט ונגיש.
+              יזמים מתעדים את ההתקדמות בטבלת העבודה, מדרגים הרצאות ומקבלים
+              משוב ממנטורים. מנטורים מתעדים פגישות, עוקבים אחרי ההתקדמות
+              ונותנים משוב מובנה. הכל במקום אחד, פשוט ונגיש.
             </p>
           </div>
 
@@ -302,7 +300,7 @@ export default function LoginPage() {
             }}
             front={{
               src: "/screenshot-checkin.png",
-              alt: "צ׳ק-אין שבועי",
+              alt: "טבלת עבודה",
             }}
             onOpen={setLightbox}
           />
@@ -314,8 +312,8 @@ export default function LoginPage() {
               desc="לוח הרצאות, פגישות מנטורינג ומעקב התקדמות"
             />
             <ShotCaption
-              title="צ׳ק-אין שבועי"
-              desc="דיווח קצר על התקדמות, מצב רוח ויעדים"
+              title="טבלת עבודה"
+              desc="משימות, סיכומי פגישות ופעילות שוטפת"
             />
             <ShotCaption
               title="דשבורד מנטורים"
@@ -495,9 +493,9 @@ function ShotStack({
           </div>
           <div className="text-right">
             <p className="text-sm font-semibold text-[#1a2744]">
-              צ׳ק-אין שבועי הושלם
+              שאלון פתיחה הושלם
             </p>
-            <p className="text-[11px] text-gray-500">שבוע 7 · יעד הושג</p>
+            <p className="text-[11px] text-gray-500">מוכן לתחילת התוכנית</p>
           </div>
         </div>
       </div>
