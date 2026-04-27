@@ -5,7 +5,7 @@ import { formatRelativeHe } from "@/lib/utils";
 import { GitCommit, GitBranch, ExternalLink, Sparkles, Loader2 } from "lucide-react";
 
 const REPO = "talgurevich/ofektech-app";
-const ENDPOINT = `https://api.github.com/repos/${REPO}/commits?per_page=12`;
+const ENDPOINT = `https://api.github.com/repos/${REPO}/commits?per_page=5`;
 // Re-fetch while the page is open: every 4 hours.
 const REFRESH_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
@@ -113,7 +113,7 @@ export function DevActivityFeed() {
       </div>
 
       <div className="p-5">
-        <ol className="relative border-r border-white/10 pr-4 space-y-3 max-h-[420px] overflow-y-auto">
+        <ol className="relative border-r border-white/10 pr-4 space-y-3">
           {commits.map((c) => {
             const subject = commitSubject(c.commit.message);
             const body = commitBody(c.commit.message);
