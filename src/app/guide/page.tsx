@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,7 +45,9 @@ function GuidePageInner() {
   const [loading, setLoading] = useState(true);
   const [noVenture, setNoVenture] = useState(false);
   const [notAuthorized, setNotAuthorized] = useState(false);
-  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  // Per-chapter local draft text. Persists only when the user clicks the V
+  // button (or hits Cmd/Ctrl+Enter); not on keystroke or blur.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function load() {
@@ -125,10 +127,13 @@ function GuidePageInner() {
       setVentureName(ventureData?.name || null);
 
       const entriesMap: Record<string, VentureChapterEntry> = {};
+      const draftsMap: Record<string, string> = {};
       (entriesData || []).forEach((e: VentureChapterEntry) => {
         entriesMap[e.chapter_id] = e;
+        draftsMap[e.chapter_id] = e.content || "";
       });
       setEntries(entriesMap);
+      setDrafts(draftsMap);
       setLoading(false);
     }
     load();
@@ -260,39 +265,18 @@ function GuidePageInner() {
     [ventureId, supabase, chapters]
   );
 
-  const handleChange = useCallback(
+  const handleDraftChange = useCallback(
     (chapterId: string, content: string) => {
-      setEntries((prev) => ({
-        ...prev,
-        [chapterId]: {
-          ...(prev[chapterId] || {
-            id: "",
-            venture_id: ventureId || "",
-            chapter_id: chapterId,
-            updated_at: new Date().toISOString(),
-          }),
-          content,
-        },
-      }));
-
-      if (debounceTimers.current[chapterId]) {
-        clearTimeout(debounceTimers.current[chapterId]);
-      }
-      debounceTimers.current[chapterId] = setTimeout(() => {
-        saveEntry(chapterId, content);
-      }, 1000);
+      setDrafts((prev) => ({ ...prev, [chapterId]: content }));
     },
-    [ventureId, saveEntry]
+    []
   );
 
-  const handleBlur = useCallback(
-    (chapterId: string, content: string) => {
-      if (debounceTimers.current[chapterId]) {
-        clearTimeout(debounceTimers.current[chapterId]);
-      }
-      saveEntry(chapterId, content);
+  const handleSaveClick = useCallback(
+    (chapterId: string) => {
+      saveEntry(chapterId, drafts[chapterId] ?? "");
     },
-    [saveEntry]
+    [drafts, saveEntry]
   );
 
   if (loading) {
@@ -500,19 +484,64 @@ function GuidePageInner() {
                                 </span>
                               )}
                             </div>
-                          ) : (
-                            <textarea
-                              className="w-full min-h-[140px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-[#1a2744] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/30 focus:border-[#22c55e] transition-colors resize-y"
-                              placeholder="כתבו כאן את התוכן של המיזם עבור פרק זה..."
-                              value={entry?.content || ""}
-                              onChange={(e) =>
-                                handleChange(chapter.id, e.target.value)
-                              }
-                              onBlur={(e) =>
-                                handleBlur(chapter.id, e.target.value)
-                              }
-                            />
-                          )}
+                          ) : (() => {
+                            const draftValue = drafts[chapter.id] ?? entry?.content ?? "";
+                            const savedValue = entry?.content ?? "";
+                            const dirty = draftValue !== savedValue;
+                            return (
+                              <div className="space-y-2">
+                                <textarea
+                                  className="w-full min-h-[140px] rounded-lg border border-gray-200 bg-white p-3 text-sm text-[#1a2744] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/30 focus:border-[#22c55e] transition-colors resize-y"
+                                  placeholder="כתבו כאן את התוכן של המיזם עבור פרק זה..."
+                                  value={draftValue}
+                                  onChange={(e) =>
+                                    handleDraftChange(chapter.id, e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (
+                                      (e.metaKey || e.ctrlKey) &&
+                                      e.key === "Enter" &&
+                                      dirty
+                                    ) {
+                                      e.preventDefault();
+                                      handleSaveClick(chapter.id);
+                                    }
+                                  }}
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  {dirty && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDraftChange(chapter.id, savedValue)
+                                      }
+                                      className="text-xs text-gray-500 hover:text-[#1a2744] transition-colors"
+                                    >
+                                      בטל שינויים
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveClick(chapter.id)}
+                                    disabled={!dirty || !!saving[chapter.id]}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#22c55e] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#16a34a] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {saving[chapter.id] ? (
+                                      <>
+                                        <span className="size-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                                        שומר...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="size-3.5" />
+                                        שמור פרק
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </motion.div>

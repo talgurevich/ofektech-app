@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -428,28 +428,6 @@ function CellEditor({
     );
   }
 
-  if (column.type === "select_creatable") {
-    const listId = `wb-opts-${column.key}`;
-    const opts = suggestions ?? column.options ?? [];
-    return (
-      <>
-        <input
-          type="text"
-          list={listId}
-          defaultValue={strVal}
-          onBlur={(e) => onChange(e.target.value)}
-          className={base}
-          placeholder={column.placeholder ?? "בחר או הקלד..."}
-        />
-        <datalist id={listId}>
-          {opts.map((opt) => (
-            <option key={opt} value={opt} />
-          ))}
-        </datalist>
-      </>
-    );
-  }
-
   if (column.type === "date") {
     return (
       <input
@@ -462,34 +440,110 @@ function CellEditor({
     );
   }
 
-  if (column.type === "number") {
-    return (
-      <input
-        type="number"
-        defaultValue={strVal}
-        onBlur={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        className={base}
-      />
-    );
-  }
-
   if (column.type === "longtext") {
     return <LongTextCell column={column} value={strVal} onChange={onChange} />;
   }
 
-  if (column.type === "url" && strVal) {
-    return (
-      <div className="flex items-center gap-1">
-        <input
-          type="url"
-          defaultValue={strVal}
-          onBlur={(e) => onChange(e.target.value)}
-          className={base}
-          dir="ltr"
-          placeholder={column.placeholder}
-        />
+  // text-style inputs (text/email/phone/url/number/select_creatable):
+  // explicit save via V button, Enter to save, Escape to revert.
+  return (
+    <EditableInput
+      column={column}
+      value={strVal}
+      onChange={onChange}
+      suggestions={suggestions}
+    />
+  );
+}
+
+function EditableInput({
+  column,
+  value,
+  onChange,
+  suggestions,
+}: {
+  column: WorkbookColumn;
+  value: string;
+  onChange: (v: unknown) => void;
+  suggestions?: string[];
+}) {
+  const [draft, setDraft] = useState(value);
+
+  // Sync external value back into the input if it changes from outside
+  // (e.g. row reload), but only when the user isn't mid-edit.
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const dirty = draft !== value;
+
+  const inputType =
+    column.type === "email"
+      ? "email"
+      : column.type === "phone"
+        ? "tel"
+        : column.type === "url"
+          ? "url"
+          : column.type === "number"
+            ? "number"
+            : "text";
+  const ltr =
+    column.type === "email" || column.type === "phone" || column.type === "url";
+
+  function commit() {
+    if (!dirty) return;
+    if (column.type === "number") {
+      onChange(draft === "" ? null : Number(draft));
+    } else {
+      onChange(draft);
+    }
+  }
+
+  function revert() {
+    setDraft(value);
+  }
+
+  const listId =
+    column.type === "select_creatable" ? `wb-opts-${column.key}` : undefined;
+  const opts =
+    column.type === "select_creatable" ? (suggestions ?? column.options ?? []) : [];
+
+  const baseInput =
+    "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type={inputType}
+        list={listId}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            revert();
+          }
+        }}
+        className={baseInput}
+        dir={ltr ? "ltr" : undefined}
+        placeholder={
+          column.placeholder ??
+          (column.type === "select_creatable" ? "בחר או הקלד..." : undefined)
+        }
+      />
+      {listId && (
+        <datalist id={listId}>
+          {opts.map((opt) => (
+            <option key={opt} value={opt} />
+          ))}
+        </datalist>
+      )}
+      {column.type === "url" && value && !dirty && (
         <a
-          href={strVal.startsWith("http") ? strVal : `https://${strVal}`}
+          href={value.startsWith("http") ? value : `https://${value}`}
           target="_blank"
           rel="noreferrer"
           className="shrink-0 rounded p-1 text-gray-400 hover:text-[#22c55e]"
@@ -497,23 +551,18 @@ function CellEditor({
         >
           <ExternalLink className="size-3.5" />
         </a>
-      </div>
-    );
-  }
-
-  const inputType =
-    column.type === "email" ? "email" : column.type === "phone" ? "tel" : column.type === "url" ? "url" : "text";
-  const ltr = column.type === "email" || column.type === "phone" || column.type === "url";
-
-  return (
-    <input
-      type={inputType}
-      defaultValue={strVal}
-      onBlur={(e) => onChange(e.target.value)}
-      className={base}
-      dir={ltr ? "ltr" : undefined}
-      placeholder={column.placeholder}
-    />
+      )}
+      {dirty && (
+        <button
+          type="button"
+          onClick={commit}
+          title="שמור"
+          className="shrink-0 rounded-md bg-[#22c55e] p-1 text-white transition-colors hover:bg-[#16a34a]"
+        >
+          <Check className="size-3.5" />
+        </button>
+      )}
+    </div>
   );
 }
 
