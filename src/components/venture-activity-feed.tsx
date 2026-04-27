@@ -40,6 +40,28 @@ const KIND_TINT: Record<ActivityKind, string> = {
   meeting_summary_submitted: "text-emerald-500",
 };
 
+// Collapse consecutive activities from the same actor with the same kind on
+// the same venture (e.g. a burst of profile edits) into a single row showing
+// the most recent timestamp and a "×N" badge.
+function dedupe(items: VentureActivity[]): (VentureActivity & { repeats?: number })[] {
+  const out: (VentureActivity & { repeats?: number })[] = [];
+  for (const item of items) {
+    const last = out[out.length - 1];
+    if (
+      last &&
+      last.kind === item.kind &&
+      last.actor_id === item.actor_id &&
+      last.venture_id === item.venture_id &&
+      last.summary === item.summary
+    ) {
+      last.repeats = (last.repeats ?? 1) + 1;
+      continue;
+    }
+    out.push({ ...item });
+  }
+  return out;
+}
+
 export function VentureActivityFeed({
   items,
   emptyLabel = "אין פעילות אחרונה",
@@ -58,9 +80,11 @@ export function VentureActivityFeed({
     );
   }
 
+  const collapsed = dedupe(items);
+
   return (
     <ul className="space-y-2">
-      {items.map((item) => {
+      {collapsed.map((item) => {
         const Icon = KIND_ICON[item.kind] || Activity;
         const tint = KIND_TINT[item.kind] || "text-gray-500";
         const actorName = item.actor?.full_name || "חבר מיזם";
@@ -78,6 +102,9 @@ export function VentureActivityFeed({
                 <span className="text-gray-600">{item.summary}</span>
                 {rowLabel && (
                   <span className="text-gray-400">{` — ${rowLabel}`}</span>
+                )}
+                {item.repeats && item.repeats > 1 && (
+                  <span className="text-gray-400">{` × ${item.repeats}`}</span>
                 )}
               </p>
               <div className="mt-0.5 flex items-center gap-2">

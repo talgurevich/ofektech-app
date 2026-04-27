@@ -126,6 +126,8 @@ export default function ProfilePage() {
       setTimeout(() => setSaved(false), 2000);
 
       if (ventureId) {
+        // 60-second debounce: a typical profile-editing session produces
+        // a single "profile_updated" event, not one per field.
         if (activityTimer.current) clearTimeout(activityTimer.current);
         activityTimer.current = setTimeout(() => {
           logActivity(supabase, {
@@ -133,7 +135,7 @@ export default function ProfilePage() {
             kind: "profile_updated",
             summary: "עדכן פרטי פרופיל",
           });
-        }, 5000);
+        }, 60000);
       }
     },
     [userId, supabase, ventureId]
