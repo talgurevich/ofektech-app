@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { LoginFooter } from "@/components/footer";
+import { DevActivityFeed } from "@/components/dev-activity-feed";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -319,6 +320,11 @@ export default function LoginPage() {
               title="דשבורד מנטורים"
               desc="ניהול פגישות, מעקב אחרי יזמים ומתן משוב"
             />
+          </div>
+
+          {/* Live GitHub dev feed */}
+          <div className="mx-auto mt-12 max-w-3xl">
+            <DevActivityFeed />
           </div>
         </div>
       </section>
