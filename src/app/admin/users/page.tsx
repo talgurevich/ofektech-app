@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Trash2, X, Check, Upload, FileSpreadsheet, Send } from "lucide-react";
 import Link from "next/link";
+import { ProfileAvatar } from "@/components/profile-avatar";
 
 export default function AdminUsersPage() {
   const supabase = createClient();
@@ -482,9 +483,13 @@ export default function AdminUsersPage() {
                 <Card key={p.id} className="border-0 shadow-sm">
                   <CardContent className="flex items-center justify-between pt-0">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-[#22c55e]/10">
-                        <Users className="size-3.5 text-[#22c55e]" />
-                      </div>
+                      <ProfileAvatar
+                        fullName={p.full_name}
+                        email={p.email}
+                        avatarUrl={p.avatar_url}
+                        size={32}
+                        tone="green"
+                      />
                       <div>
                         <Link href={`/admin/candidates/${p.id}`} className="hover:underline">
                           <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
@@ -540,9 +545,13 @@ export default function AdminUsersPage() {
             <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center justify-between pt-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a2744]/10">
-                    <Users className="size-3.5 text-[#1a2744]" />
-                  </div>
+                  <ProfileAvatar
+                    fullName={p.full_name}
+                    email={p.email}
+                    avatarUrl={p.avatar_url}
+                    size={32}
+                    tone="navy"
+                  />
                   <div>
                     <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
                     <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
@@ -584,9 +593,13 @@ export default function AdminUsersPage() {
             <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center justify-between pt-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a2744]/10">
-                    <Users className="size-3.5 text-[#1a2744]" />
-                  </div>
+                  <ProfileAvatar
+                    fullName={p.full_name}
+                    email={p.email}
+                    avatarUrl={p.avatar_url}
+                    size={32}
+                    tone="navy"
+                  />
                   <div>
                     <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
                     <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>
@@ -628,9 +641,13 @@ export default function AdminUsersPage() {
             {admins.map((p) => (
               <Card key={p.id} className="border-0 shadow-sm">
                 <CardContent className="flex items-center gap-3 pt-0">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-gray-100">
-                    <Users className="size-3.5 text-gray-500" />
-                  </div>
+                  <ProfileAvatar
+                    fullName={p.full_name}
+                    email={p.email}
+                    avatarUrl={p.avatar_url}
+                    size={32}
+                    tone="gray"
+                  />
                   <div>
                     <p className="text-sm font-medium text-[#1a2744]">{p.full_name || "—"}</p>
                     <p className="text-xs text-gray-500" dir="ltr">{p.email}</p>

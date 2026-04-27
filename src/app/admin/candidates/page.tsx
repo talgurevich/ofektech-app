@@ -5,7 +5,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Eye, Users, Briefcase } from "lucide-react";
+import { GraduationCap, Eye, Briefcase } from "lucide-react";
+import { ProfileAvatar } from "@/components/profile-avatar";
 
 export default async function AdminCandidatesPage() {
   const supabase = await createClient();
@@ -33,9 +34,13 @@ export default async function AdminCandidatesPage() {
             <Card key={c.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center justify-between pt-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-[#22c55e]/10">
-                    <Users className="size-4 text-[#22c55e]" />
-                  </div>
+                  <ProfileAvatar
+                    fullName={c.full_name}
+                    email={c.email}
+                    avatarUrl={c.avatar_url}
+                    size={36}
+                    tone="green"
+                  />
                   <div>
                     <p className="text-sm font-medium text-[#1a2744]">
                       {c.full_name || "---"}
