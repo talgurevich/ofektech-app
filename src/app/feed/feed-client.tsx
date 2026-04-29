@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Post, PostComment, Profile } from "@/lib/types";
 import { ProfileAvatar } from "@/components/profile-avatar";
@@ -44,6 +45,108 @@ function roleLabel(role: string | undefined | null): string {
     default:
       return "";
   }
+}
+
+function OnlinePresence({
+  members,
+  viewerId,
+}: {
+  members: FeedMember[];
+  viewerId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  if (members.length === 0) return null;
+  const others = members.filter((m) => m.id !== viewerId);
+  const stack = members.slice(0, 4);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-2 rounded-full bg-[#22c55e]/10 px-2.5 py-1 text-xs font-medium text-[#16a34a] hover:bg-[#22c55e]/20 transition-colors"
+        title="לחצו לרשימה מלאה"
+      >
+        <span className="relative flex size-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-60" />
+          <span className="relative inline-flex size-2 rounded-full bg-[#22c55e]" />
+        </span>
+        <span className="tabular-nums">{members.length} מחוברים כעת</span>
+        <div className="flex -space-x-1.5 -space-x-reverse">
+          {stack.map((m) => (
+            <ProfileAvatar
+              key={m.id}
+              fullName={m.full_name}
+              email={m.email}
+              avatarUrl={m.avatar_url}
+              size={18}
+              className="ring-2 ring-white"
+            />
+          ))}
+        </div>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 left-0 max-h-80 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+          <p className="px-2 py-1 text-[11px] font-semibold text-gray-500">
+            מחוברים כעת ({members.length})
+          </p>
+          <ul className="space-y-1">
+            {members.map((m) => {
+              const isMe = m.id === viewerId;
+              return (
+                <li key={m.id}>
+                  <Link
+                    href={isMe ? "/profile" : `/profile/${m.id}`}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[#22c55e]/5 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    <ProfileAvatar
+                      fullName={m.full_name}
+                      email={m.email}
+                      avatarUrl={m.avatar_url}
+                      size={24}
+                    />
+                    <span className="text-sm text-[#1a2744] truncate flex-1 min-w-0">
+                      {m.full_name || m.email}
+                      {isMe && (
+                        <span className="text-[10px] text-gray-400"> (אתם)</span>
+                      )}
+                    </span>
+                    <span className="size-1.5 rounded-full bg-[#22c55e]" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          {others.length === 0 && (
+            <p className="px-2 py-2 text-[11px] text-gray-400">
+              רק אתם מחוברים כרגע
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Wraps the avatar/name with a link to the author's profile, except when the
+// viewer is the author themselves — that goes to the editor at /profile.
+function ProfileLink({
+  authorId,
+  viewerId,
+  className,
+  children,
+}: {
+  authorId: string;
+  viewerId: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const href = authorId === viewerId ? "/profile" : `/profile/${authorId}`;
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
 }
 
 function roleBadgeClass(role: string | undefined | null): string {
@@ -124,6 +227,7 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [members, setMembers] = useState<FeedMember[]>([]);
+  const [onlineMembers, setOnlineMembers] = useState<FeedMember[]>([]);
 
   // Composer state
   const [composerBody, setComposerBody] = useState("");
@@ -139,6 +243,48 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
       .eq("id", currentUser.id)
       .then(() => {});
   }, [supabase, currentUser.id]);
+
+  // Realtime presence — track who's currently viewing /feed.
+  useEffect(() => {
+    const channel = supabase.channel("feed-presence", {
+      config: { presence: { key: currentUser.id } },
+    });
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState() as Record<
+          string,
+          { user?: FeedMember }[]
+        >;
+        const seen = new Set<string>();
+        const list: FeedMember[] = [];
+        for (const presences of Object.values(state)) {
+          for (const p of presences) {
+            const u = p.user;
+            if (u && !seen.has(u.id)) {
+              seen.add(u.id);
+              list.push(u);
+            }
+          }
+        }
+        setOnlineMembers(list);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            user: {
+              id: currentUser.id,
+              full_name: currentUser.full_name,
+              email: currentUser.email,
+              avatar_url: currentUser.avatar_url,
+              role: currentUser.role,
+            },
+          });
+        }
+      });
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [supabase, currentUser]);
 
   // Load member directory once for mentions and authorship lookups.
   useEffect(() => {
@@ -333,9 +479,10 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Sparkles className="size-6 text-[#22c55e]" />
           <h1 className="text-2xl font-bold text-[#1a2744]">פיד הקהילה</h1>
+          <OnlinePresence members={onlineMembers} viewerId={currentUser.id} />
         </div>
         <p className="text-sm text-gray-500 mt-1">
           שתפו עדכונים, שאלות והצלחות עם שאר חברי התוכנית
@@ -689,17 +836,23 @@ function PostCard({
         </div>
       )}
       <div className="flex items-start gap-3">
-        <ProfileAvatar
-          fullName={author?.full_name}
-          email={author?.email}
-          avatarUrl={author?.avatar_url}
-          size={40}
-        />
+        <ProfileLink authorId={post.author_id} viewerId={currentUser.id}>
+          <ProfileAvatar
+            fullName={author?.full_name}
+            email={author?.email}
+            avatarUrl={author?.avatar_url}
+            size={40}
+          />
+        </ProfileLink>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-[#1a2744]">
+            <ProfileLink
+              authorId={post.author_id}
+              viewerId={currentUser.id}
+              className="text-sm font-semibold text-[#1a2744] hover:text-[#22c55e] transition-colors"
+            >
               {author?.full_name || author?.email || "משתמש/ת"}
-            </p>
+            </ProfileLink>
             {author?.role && (
               <span
                 className={cn(
@@ -1023,17 +1176,23 @@ function CommentThread({
               c.author_id === currentUser.id || currentUser.role === "admin";
             return (
               <li key={c.id} className="flex items-start gap-2">
-                <ProfileAvatar
-                  fullName={a?.full_name}
-                  email={a?.email}
-                  avatarUrl={a?.avatar_url}
-                  size={28}
-                />
+                <ProfileLink authorId={c.author_id} viewerId={currentUser.id}>
+                  <ProfileAvatar
+                    fullName={a?.full_name}
+                    email={a?.email}
+                    avatarUrl={a?.avatar_url}
+                    size={28}
+                  />
+                </ProfileLink>
                 <div className="flex-1 min-w-0 rounded-lg bg-gray-50 px-3 py-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xs font-semibold text-[#1a2744]">
+                    <ProfileLink
+                      authorId={c.author_id}
+                      viewerId={currentUser.id}
+                      className="text-xs font-semibold text-[#1a2744] hover:text-[#22c55e] transition-colors"
+                    >
                       {a?.full_name || a?.email || "משתמש/ת"}
-                    </p>
+                    </ProfileLink>
                     {a?.role && (
                       <span
                         className={cn(
