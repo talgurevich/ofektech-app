@@ -72,6 +72,26 @@ export interface MentorSession {
   mentor?: Profile;
 }
 
+export interface Post {
+  id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  author?: Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "role">;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  deleted_at: string | null;
+  author?: Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "role">;
+}
+
 export type LectureResourceKind = "file" | "link";
 
 export interface LectureResource {

@@ -19,6 +19,7 @@ import {
   Briefcase,
   UserCircle,
   Table2,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,7 @@ interface AppSidebarProps {
 
 const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
+  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
@@ -60,17 +62,20 @@ const candidateLinks = [
 
 const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
+  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const visitorLinks = [
   { href: "/", label: "הרצאות", icon: Mic2 },
+  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const adminLinks = [
   { href: "/admin", label: "סקירה", icon: BarChart3 },
+  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/admin/cohorts", label: "מחזורים", icon: GraduationCap },
   { href: "/admin/users", label: "משתמשים", icon: Users },
   { href: "/admin/candidates", label: "חניכים", icon: GraduationCap },
