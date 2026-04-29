@@ -47,7 +47,7 @@ for (const a of args) {
 
 const resend = new Resend(RESEND_API_KEY);
 
-const SUBJECT = "מה חדש בפורטל OfekTech — התעדכנו לפני תחילת התוכנית";
+const SUBJECT = "חדש בפורטל: פיד הקהילה — מקום לכם לדבר איתנו ובינכם";
 const FROM = "OfekTech <send@ofektech-portal.co.il>";
 const PORTAL_URL = "https://ofektech-portal.co.il";
 
@@ -72,38 +72,37 @@ function emailHtml(fullName: string | null) {
           <td style="padding:40px;">
             <h2 style="margin:0 0 8px;font-size:22px;color:#1a2744;">שלום${greetingName} 👋</h2>
             <p style="margin:0 0 20px;font-size:16px;color:#555;line-height:1.7;">
-              אנחנו עובדים בקצב מטורף על הפורטל לקראת תחילת התוכנית — והכנו עבורכם עדכון קצר על מה חדש ועל מה אפשר לעשות עוד היום.
+              הוספנו לפורטל פיצ'ר חדש — <strong>פיד הקהילה</strong>. זה מקום לכם לדבר איתנו, להעלות פידבק על הפורטל, לפרסם משהו מעניין שראיתם, לשאול שאלה או פשוט לעדכן את שאר הקהילה במה שאתם עושים.
             </p>
 
             <div style="background:#f8f9fb;border-right:4px solid #22c55e;border-radius:8px;padding:16px 18px;margin:0 0 24px;">
-              <p style="margin:0;font-size:14px;color:#1a2744;line-height:1.6;">
-                <strong>חשוב לדעת:</strong> כשהתוכנית תיפתח רשמית — תקבלו <strong>הדרכה מסודרת</strong> על איך להשתמש בכל הפיצ'רים. אין צורך להבין הכול עכשיו 🙂
+              <p style="margin:0;font-size:14px;color:#1a2744;line-height:1.7;">
+                <strong>איך משתמשים?</strong>
+                <br>תיכנסו לפורטל ולחצו על <strong>פיד הקהילה</strong> בתפריט הצד.
+                שם תוכלו לפרסם פוסט (כולל תמונה אם בא לכם), להגיב לאחרים, ולהגיב עם 👍 ❤️ 👏 🎉.
+                אפשר גם לאזכר חבר קהילה דרך @ והם יקבלו התראה.
               </p>
             </div>
 
-            <h3 style="margin:0 0 12px;font-size:17px;color:#1a2744;">מה התווסף לאחרונה</h3>
-            <ul style="margin:0 0 28px;padding:0 20px 0 0;font-size:15px;color:#555;line-height:1.9;">
-              <li><strong>טבלת עבודה</strong> — ניהול משימות לכל מיזם, עם קטגוריות (מוצר/עיסקי), אחראי ביצוע, ותאריכי יעד.</li>
-              <li><strong>חוברת מיזם</strong> — 13 פרקים מובנים לבניית מצגת משקיעים שתמלאו לאורך התוכנית.</li>
-              <li><strong>סיכומי פגישות מנטורינג</strong> — אתם כותבים סיכום אחרי כל פגישה, והמנטור/ית מגיב/ה עם משוב מובנה.</li>
-              <li><strong>חומרים נוספים בכל הרצאה</strong> — מצגות, קישורים וקבצים שאפשר להוריד.</li>
-              <li><strong>הערות אישיות לכל הרצאה</strong> — מקום פרטי משלכם לרשום הערות תוך כדי הרצאה.</li>
-              <li><strong>פיד פעילות פיתוח</strong> בעמוד הבית — שקוף לחלוטין על מה אנחנו עובדים בכל רגע נתון.</li>
+            <h3 style="margin:0 0 12px;font-size:17px;color:#1a2744;">למה הוספנו את זה?</h3>
+            <ul style="margin:0 0 24px;padding:0 20px 0 0;font-size:15px;color:#555;line-height:1.9;">
+              <li><strong>פידבק על הפורטל</strong> — מה עובד? מה לא? מה חסר? אנחנו כאן בשבילכם, כל הצעה תיענה.</li>
+              <li><strong>היכרות בין חברי הקהילה</strong> — תוכלו להציג את עצמכם, לשתף את המיזם שלכם, ולמצוא חיבורים.</li>
+              <li><strong>שאלות והצלחות</strong> — שתפו אתגרים, רעיונות, ניצחונות. מישהו אחר בטח יתחבר.</li>
             </ul>
 
-            <h3 style="margin:0 0 12px;font-size:17px;color:#1a2744;">מה אפשר לעשות בינתיים</h3>
+            <h3 style="margin:0 0 12px;font-size:17px;color:#1a2744;">תזכורת — מה כדאי להספיק לפני שהתוכנית מתחילה</h3>
             <ul style="margin:0 0 28px;padding:0 20px 0 0;font-size:15px;color:#555;line-height:1.9;">
-              <li>🧑 <strong>להשלים את הפרופיל</strong> — תמונה, ביוגרפיה קצרה, קישור ל-LinkedIn ותפקיד במיזם.</li>
-              <li>📋 <strong>למלא את שאלון הפתיחה</strong> אם עוד לא — זה עוזר לנו להכיר אתכם לפני התוכנית.</li>
-              <li>🎤 <strong>להציץ בסילבוס ההרצאות</strong> ולראות מה צפוי לכם בשבועות הקרובים.</li>
-              <li>💬 <strong>להתחבר עם הצוות</strong> דרך פרטי הקשר בעמוד הבית של הפורטל.</li>
+              <li>🧑 <strong>להשלים את הפרופיל</strong> — תמונה, ביוגרפיה קצרה, קישור ל-LinkedIn ותפקיד במיזם. הפרופיל שלכם נראה לשאר חברי הקהילה כשאתם מפרסמים.</li>
+              <li>📋 <strong>למלא את שאלון הפתיחה</strong> אם עוד לא — זה עוזר לנו להכיר אתכם לפני שמתחילים.</li>
+              <li>🎤 <strong>להציץ בסילבוס</strong> ולראות מה מחכה לכם בשבועות הקרובים.</li>
             </ul>
 
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td align="center">
-                  <a href="${PORTAL_URL}/login" style="display:inline-block;background-color:#22c55e;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 40px;border-radius:10px;">
-                    כניסה לפורטל
+                  <a href="${PORTAL_URL}/feed" style="display:inline-block;background-color:#22c55e;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 40px;border-radius:10px;">
+                    כניסה לפיד הקהילה
                   </a>
                 </td>
               </tr>

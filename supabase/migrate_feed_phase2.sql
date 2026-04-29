@@ -81,7 +81,7 @@ create or replace function enforce_admin_pin()
 returns trigger as $$
 begin
   if (new.pinned_at is distinct from old.pinned_at)
-     and coalesce(get_user_role(), '') <> 'admin' then
+     and (get_user_role() is distinct from 'admin'::user_role) then
     raise exception 'Only admins can pin or unpin posts';
   end if;
   return new;

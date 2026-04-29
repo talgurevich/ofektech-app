@@ -57,10 +57,26 @@ export async function logActivity(
     .limit(1);
   if (recent && recent.length > 0) return;
 
-  await supabase.from("posts").insert({
-    author_id: user.id,
-    body: broadcastBody,
-    kind: "system",
-    metadata: { activity_kind: args.kind, venture_id: args.ventureId },
-  });
+  const { data: inserted } = await supabase
+    .from("posts")
+    .insert({
+      author_id: user.id,
+      body: broadcastBody,
+      kind: "system",
+      metadata: { activity_kind: args.kind, venture_id: args.ventureId },
+    })
+    .select("id")
+    .single();
+
+  if (inserted?.id) {
+    fetch("/api/feed/slack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "system_post",
+        postId: inserted.id,
+        text: broadcastBody,
+      }),
+    });
+  }
 }

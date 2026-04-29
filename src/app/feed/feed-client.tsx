@@ -60,25 +60,53 @@ function roleBadgeClass(role: string | undefined | null): string {
   }
 }
 
-// Render a body with @mentions highlighted.
+const ALL_TOKENS = ["all", "כולם"] as const;
+
+function detectMentions(body: string, members: FeedMember[]): {
+  names: string[];
+  all: boolean;
+} {
+  if (!body.includes("@")) return { names: [], all: false };
+  const all = ALL_TOKENS.some((token) =>
+    new RegExp(`@${token}\\b`, "i").test(body)
+  );
+  const names = new Set<string>();
+  for (const m of members) {
+    const name = (m.full_name || "").trim();
+    if (!name) continue;
+    const re = new RegExp(
+      `@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`
+    );
+    if (re.test(body)) names.add(name);
+  }
+  return { names: Array.from(names), all };
+}
+
+// Render a body with @mentions and @all/@כולם highlighted.
 function renderBodyWithMentions(body: string, members: FeedMember[]): React.ReactNode {
-  if (!members.length || !body.includes("@")) return body;
+  if (!body.includes("@")) return body;
   const names = members
     .map((m) => (m.full_name || "").trim())
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
-  if (names.length === 0) return body;
-  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(`@(${escaped.join("|")})`, "g");
+  const tokens = [...ALL_TOKENS, ...names];
+  if (tokens.length === 0) return body;
+  const escaped = tokens.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`@(${escaped.join("|")})\\b`, "g");
   const parts: React.ReactNode[] = [];
   let last = 0;
   for (const m of body.matchAll(re)) {
     const start = m.index ?? 0;
     if (start > last) parts.push(body.slice(last, start));
+    const isAll = ALL_TOKENS.includes(m[1] as (typeof ALL_TOKENS)[number]);
     parts.push(
       <span
         key={start}
-        className="rounded bg-[#22c55e]/10 px-1 text-[#16a34a] font-medium"
+        className={
+          isAll
+            ? "rounded bg-amber-100 px-1 text-amber-700 font-medium"
+            : "rounded bg-[#22c55e]/10 px-1 text-[#16a34a] font-medium"
+        }
       >
         @{m[1]}
       </span>
@@ -186,27 +214,18 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   }
 
   async function notifyMentions(body: string, postId: string) {
-    if (!members.length || !body.includes("@")) return;
-    const matched = new Set<string>();
-    for (const m of members) {
-      const name = (m.full_name || "").trim();
-      if (!name) continue;
-      const re = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-      if (re.test(body) && m.id !== currentUser.id) matched.add(m.id);
-    }
-    for (const targetId of matched) {
-      fetch("/api/notifications/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetUserId: targetId,
-          type: "feedback",
-          title: "אוזכרת בפיד הקהילה",
-          body: body.slice(0, 120),
-          link: `/feed#post-${postId}`,
-        }),
-      });
-    }
+    const { names, all } = detectMentions(body, members);
+    if (!all && names.length === 0) return;
+    fetch("/api/feed/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId,
+        body,
+        mentionedNames: names,
+        mentionAll: all,
+      }),
+    });
   }
 
   async function submitPost() {
@@ -241,17 +260,37 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
 
     setPosts((prev) => [data as Post, ...prev]);
     if (body) notifyMentions(body, data.id);
+    fetch("/api/feed/slack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "post",
+        postId: data.id,
+        text: body,
+        imageUrl: image_url || undefined,
+      }),
+    });
     setComposerBody("");
     pickImage(null);
   }
 
   async function deletePost(post: Post) {
     if (!confirm("למחוק את הפוסט?")) return;
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from("posts")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", post.id);
-    if (error) return;
+      .eq("id", post.id)
+      .select("id");
+    if (error) {
+      alert(`שגיאה במחיקה: ${error.message}`);
+      return;
+    }
+    if (!data || data.length === 0) {
+      alert(
+        "המחיקה נחסמה ע\"י הרשאות. ודאו שהמשתמש מחובר כמנהל או כיוצר/ת הפוסט."
+      );
+      return;
+    }
     if (post.image_path) {
       supabase.storage.from(POST_MEDIA_BUCKET).remove([post.image_path]);
     }
@@ -443,33 +482,46 @@ function Composer({
 
           {mentionState.open && mentionState.suggestions.length > 0 && (
             <ul className="absolute z-20 mt-1 max-h-56 w-72 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-              {mentionState.suggestions.map((m) => (
-                <li key={m.id}>
-                  <button
-                    type="button"
-                    onClick={() => applyMention(m.full_name || m.email || "")}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-[#22c55e]/5"
-                  >
-                    <ProfileAvatar
-                      fullName={m.full_name}
-                      email={m.email}
-                      avatarUrl={m.avatar_url}
-                      size={24}
-                    />
-                    <span className="text-[#1a2744] truncate">
-                      {m.full_name || m.email}
-                    </span>
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
-                        roleBadgeClass(m.role)
-                      )}
+              {mentionState.suggestions.map((m) => {
+                const isAll = m.id === "__all__";
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyMention(isAll ? "all" : m.full_name || m.email || "")
+                      }
+                      className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-[#22c55e]/5"
                     >
-                      {roleLabel(m.role)}
-                    </span>
-                  </button>
-                </li>
-              ))}
+                      {isAll ? (
+                        <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+                          @
+                        </span>
+                      ) : (
+                        <ProfileAvatar
+                          fullName={m.full_name}
+                          email={m.email}
+                          avatarUrl={m.avatar_url}
+                          size={24}
+                        />
+                      )}
+                      <span className="text-[#1a2744] truncate">
+                        {isAll ? "כל הקהילה" : m.full_name || m.email}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
+                          isAll
+                            ? "bg-amber-100 text-amber-700"
+                            : roleBadgeClass(m.role)
+                        )}
+                      >
+                        {isAll ? "@all" : roleLabel(m.role)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -557,12 +609,22 @@ function useMentionAutocomplete(
   const suggestions = useMemo(() => {
     if (!open) return [];
     const q = query.trim().toLowerCase();
-    return members
-      .filter((m) => {
-        const name = (m.full_name || m.email || "").toLowerCase();
-        return q === "" ? true : name.includes(q);
-      })
-      .slice(0, 6);
+    const list: FeedMember[] = [];
+    // Pin "@all" pseudo-member at the top when the query matches.
+    if (q === "" || "all".startsWith(q) || "כולם".startsWith(q)) {
+      list.push({
+        id: "__all__",
+        full_name: "all",
+        email: "",
+        avatar_url: null,
+        role: "admin",
+      });
+    }
+    for (const m of members) {
+      const name = (m.full_name || m.email || "").toLowerCase();
+      if (q === "" || name.includes(q)) list.push(m);
+    }
+    return list.slice(0, 6);
   }, [open, query, members]);
 
   return {
@@ -865,28 +927,20 @@ function CommentThread({
     };
   }, [supabase, postId, onCountChange]);
 
-  async function notifyMentions(text: string) {
-    if (!members.length || !text.includes("@")) return;
-    const matched = new Set<string>();
-    for (const m of members) {
-      const name = (m.full_name || "").trim();
-      if (!name) continue;
-      const re = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-      if (re.test(text) && m.id !== currentUser.id) matched.add(m.id);
-    }
-    for (const targetId of matched) {
-      fetch("/api/notifications/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetUserId: targetId,
-          type: "feedback",
-          title: "אוזכרת בתגובה לפוסט",
-          body: text.slice(0, 120),
-          link: `/feed#post-${postId}`,
-        }),
-      });
-    }
+  async function notifyMentions(text: string, commentId: string) {
+    const { names, all } = detectMentions(text, members);
+    if (!all && names.length === 0) return;
+    fetch("/api/feed/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId,
+        commentId,
+        body: text,
+        mentionedNames: names,
+        mentionAll: all,
+      }),
+    });
   }
 
   async function submitComment() {
@@ -908,7 +962,17 @@ function CommentThread({
     onCountChange(next.length);
     setBody("");
 
-    notifyMentions(trimmed);
+    notifyMentions(trimmed, (data as PostComment).id);
+
+    fetch("/api/feed/slack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "comment",
+        postId,
+        text: trimmed,
+      }),
+    });
 
     if (postAuthorId !== currentUser.id) {
       fetch("/api/notifications/create", {
@@ -927,15 +991,22 @@ function CommentThread({
 
   async function deleteComment(commentId: string) {
     if (!confirm("למחוק את התגובה?")) return;
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from("post_comments")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", commentId);
-    if (!error) {
-      const next = comments.filter((c) => c.id !== commentId);
-      setComments(next);
-      onCountChange(next.length);
+      .eq("id", commentId)
+      .select("id");
+    if (error) {
+      alert(`שגיאה במחיקה: ${error.message}`);
+      return;
     }
+    if (!data || data.length === 0) {
+      alert("המחיקה נחסמה ע\"י הרשאות.");
+      return;
+    }
+    const next = comments.filter((c) => c.id !== commentId);
+    setComments(next);
+    onCountChange(next.length);
   }
 
   return (
