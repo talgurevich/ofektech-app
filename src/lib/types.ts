@@ -35,6 +35,7 @@ export interface Profile {
   venture_role: string | null;
   company: string | null;
   expertise: string | null;
+  feed_last_seen_at: string | null;
   created_at: string;
   cohort?: Cohort | null;
   venture?: Venture | null;
@@ -72,10 +73,17 @@ export interface MentorSession {
   mentor?: Profile;
 }
 
+export type PostKind = "user" | "system";
+
 export interface Post {
   id: string;
   author_id: string;
   body: string;
+  image_url: string | null;
+  image_path: string | null;
+  kind: PostKind;
+  metadata: Record<string, unknown>;
+  pinned_at: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -90,6 +98,13 @@ export interface PostComment {
   created_at: string;
   deleted_at: string | null;
   author?: Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "role">;
+}
+
+export interface PostReaction {
+  post_id: string;
+  user_id: string;
+  kind: string;
+  created_at: string;
 }
 
 export type LectureResourceKind = "file" | "link";

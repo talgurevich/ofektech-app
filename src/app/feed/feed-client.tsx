@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Post, PostComment, Profile } from "@/lib/types";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { formatRelativeHe } from "@/lib/utils";
+import { formatRelativeHe, cn } from "@/lib/utils";
 import {
   MessageCircle,
   Send,
@@ -12,13 +18,20 @@ import {
   Trash2,
   Sparkles,
   ChevronDown,
+  Image as ImageIcon,
+  X,
+  Pin,
+  PinOff,
 } from "lucide-react";
 
 type CurrentUser = Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "role">;
+type FeedMember = Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "role">;
 
 const PAGE_SIZE = 15;
+const POST_MEDIA_BUCKET = "post-media";
+const REACTIONS = ["👍", "❤️", "👏", "🎉"] as const;
 
-function roleLabel(role: string | undefined): string {
+function roleLabel(role: string | undefined | null): string {
   switch (role) {
     case "candidate":
       return "יזם/ת";
@@ -33,7 +46,7 @@ function roleLabel(role: string | undefined): string {
   }
 }
 
-function roleBadgeClass(role: string | undefined): string {
+function roleBadgeClass(role: string | undefined | null): string {
   switch (role) {
     case "mentor":
       return "bg-[#1a2744]/10 text-[#1a2744]";
@@ -47,27 +60,103 @@ function roleBadgeClass(role: string | undefined): string {
   }
 }
 
+// Render a body with @mentions highlighted.
+function renderBodyWithMentions(body: string, members: FeedMember[]): React.ReactNode {
+  if (!members.length || !body.includes("@")) return body;
+  const names = members
+    .map((m) => (m.full_name || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  if (names.length === 0) return body;
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`@(${escaped.join("|")})`, "g");
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of body.matchAll(re)) {
+    const start = m.index ?? 0;
+    if (start > last) parts.push(body.slice(last, start));
+    parts.push(
+      <span
+        key={start}
+        className="rounded bg-[#22c55e]/10 px-1 text-[#16a34a] font-medium"
+      >
+        @{m[1]}
+      </span>
+    );
+    last = start + m[0].length;
+  }
+  if (last < body.length) parts.push(body.slice(last));
+  return parts;
+}
+
 export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   const supabase = useMemo(() => createClient(), []);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pinnedPosts, setPinnedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
+  const [members, setMembers] = useState<FeedMember[]>([]);
+
+  // Composer state
   const [composerBody, setComposerBody] = useState("");
+  const [composerImage, setComposerImage] = useState<File | null>(null);
+  const [composerPreview, setComposerPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+
+  // Bump feed_last_seen_at on mount so the sidebar badge clears.
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .update({ feed_last_seen_at: new Date().toISOString() })
+      .eq("id", currentUser.id)
+      .then(() => {});
+  }, [supabase, currentUser.id]);
+
+  // Load member directory once for mentions and authorship lookups.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url, role")
+        .order("full_name");
+      if (!cancelled) setMembers((data as FeedMember[]) || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   const loadPage = useCallback(
     async (offset: number, replace: boolean) => {
-      const { data } = await supabase
-        .from("posts")
-        .select(
-          "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
-        )
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-      const rows = (data as Post[]) || [];
-      setHasMore(rows.length === PAGE_SIZE);
-      setPosts((prev) => (replace ? rows : [...prev, ...rows]));
+      const [
+        { data: pinned },
+        { data: page },
+      ] = await Promise.all([
+        offset === 0
+          ? supabase
+              .from("posts")
+              .select(
+                "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
+              )
+              .is("deleted_at", null)
+              .not("pinned_at", "is", null)
+              .order("pinned_at", { ascending: false })
+          : Promise.resolve({ data: null }),
+        supabase
+          .from("posts")
+          .select(
+            "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
+          )
+          .is("deleted_at", null)
+          .is("pinned_at", null)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1),
+      ]);
+      const pageRows = (page as Post[]) || [];
+      setHasMore(pageRows.length === PAGE_SIZE);
+      setPosts((prev) => (replace ? pageRows : [...prev, ...pageRows]));
+      if (offset === 0) setPinnedPosts((pinned as Post[]) || []);
       setLoading(false);
     },
     [supabase]
@@ -77,30 +166,129 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
     loadPage(0, true);
   }, [loadPage]);
 
+  function pickImage(file: File | null) {
+    setComposerImage(file);
+    if (composerPreview) URL.revokeObjectURL(composerPreview);
+    setComposerPreview(file ? URL.createObjectURL(file) : null);
+  }
+
+  async function uploadImage(file: File): Promise<{ url: string; path: string } | null> {
+    if (!file.type.startsWith("image/")) return null;
+    if (file.size > 5 * 1024 * 1024) return null;
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `posts/${currentUser.id}/${Date.now()}-${safe}`;
+    const { error: upErr } = await supabase.storage
+      .from(POST_MEDIA_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) return null;
+    const { data: pub } = supabase.storage.from(POST_MEDIA_BUCKET).getPublicUrl(path);
+    return { url: pub.publicUrl, path };
+  }
+
+  async function notifyMentions(body: string, postId: string) {
+    if (!members.length || !body.includes("@")) return;
+    const matched = new Set<string>();
+    for (const m of members) {
+      const name = (m.full_name || "").trim();
+      if (!name) continue;
+      const re = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+      if (re.test(body) && m.id !== currentUser.id) matched.add(m.id);
+    }
+    for (const targetId of matched) {
+      fetch("/api/notifications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: targetId,
+          type: "feedback",
+          title: "אוזכרת בפיד הקהילה",
+          body: body.slice(0, 120),
+          link: `/feed#post-${postId}`,
+        }),
+      });
+    }
+  }
+
   async function submitPost() {
     const body = composerBody.trim();
-    if (!body || posting) return;
+    if ((!body && !composerImage) || posting) return;
     setPosting(true);
+
+    let image_url: string | null = null;
+    let image_path: string | null = null;
+    if (composerImage) {
+      const uploaded = await uploadImage(composerImage);
+      if (uploaded) {
+        image_url = uploaded.url;
+        image_path = uploaded.path;
+      }
+    }
+
     const { data, error } = await supabase
       .from("posts")
-      .insert({ author_id: currentUser.id, body })
+      .insert({
+        author_id: currentUser.id,
+        body: body || " ",
+        image_url,
+        image_path,
+      })
       .select(
         "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
       )
       .single();
     setPosting(false);
     if (error || !data) return;
+
     setPosts((prev) => [data as Post, ...prev]);
+    if (body) notifyMentions(body, data.id);
     setComposerBody("");
+    pickImage(null);
   }
 
-  async function deletePost(postId: string) {
+  async function deletePost(post: Post) {
     if (!confirm("למחוק את הפוסט?")) return;
     const { error } = await supabase
       .from("posts")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", postId);
-    if (!error) setPosts((prev) => prev.filter((p) => p.id !== postId));
+      .eq("id", post.id);
+    if (error) return;
+    if (post.image_path) {
+      supabase.storage.from(POST_MEDIA_BUCKET).remove([post.image_path]);
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    setPinnedPosts((prev) => prev.filter((p) => p.id !== post.id));
+  }
+
+  async function togglePin(post: Post) {
+    const next = post.pinned_at ? null : new Date().toISOString();
+    const { data, error } = await supabase
+      .from("posts")
+      .update({ pinned_at: next })
+      .eq("id", post.id)
+      .select(
+        "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
+      )
+      .single();
+    if (error || !data) {
+      alert("רק מנהל/ת יכול/ה להצמיד פוסטים");
+      return;
+    }
+    const updated = data as Post;
+    if (updated.pinned_at) {
+      setPosts((prev) => prev.filter((p) => p.id !== updated.id));
+      setPinnedPosts((prev) => [
+        updated,
+        ...prev.filter((p) => p.id !== updated.id),
+      ]);
+    } else {
+      setPinnedPosts((prev) => prev.filter((p) => p.id !== updated.id));
+      setPosts((prev) =>
+        [updated, ...prev.filter((p) => p.id !== updated.id)].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      );
+    }
   }
 
   return (
@@ -119,6 +307,10 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
         currentUser={currentUser}
         body={composerBody}
         setBody={setComposerBody}
+        members={members}
+        image={composerImage}
+        previewUrl={composerPreview}
+        onPickImage={pickImage}
         posting={posting}
         onSubmit={submitPost}
       />
@@ -127,7 +319,7 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
         <div className="flex items-center justify-center py-10">
           <Loader2 className="size-5 animate-spin text-gray-400" />
         </div>
-      ) : posts.length === 0 ? (
+      ) : posts.length === 0 && pinnedPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/40 px-6 py-12 text-center">
           <p className="text-sm text-gray-500">
             עדיין אין פוסטים. היו הראשונים לשתף משהו 🌱
@@ -135,13 +327,29 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
         </div>
       ) : (
         <>
+          {pinnedPosts.length > 0 && (
+            <ul className="space-y-4">
+              {pinnedPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  members={members}
+                  currentUser={currentUser}
+                  onDelete={() => deletePost(post)}
+                  onTogglePin={() => togglePin(post)}
+                />
+              ))}
+            </ul>
+          )}
           <ul className="space-y-4">
             {posts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
+                members={members}
                 currentUser={currentUser}
-                onDelete={() => deletePost(post.id)}
+                onDelete={() => deletePost(post)}
+                onTogglePin={() => togglePin(post)}
               />
             ))}
           </ul>
@@ -162,20 +370,51 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   );
 }
 
+// ---------- Composer ----------
+
 function Composer({
   currentUser,
   body,
   setBody,
+  members,
+  image,
+  previewUrl,
+  onPickImage,
   posting,
   onSubmit,
 }: {
   currentUser: CurrentUser;
   body: string;
   setBody: (v: string) => void;
+  members: FeedMember[];
+  image: File | null;
+  previewUrl: string | null;
+  onPickImage: (f: File | null) => void;
   posting: boolean;
   onSubmit: () => void;
 }) {
-  const canSubmit = body.trim().length > 0 && !posting;
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const canSubmit = (body.trim().length > 0 || !!image) && !posting;
+
+  const mentionState = useMentionAutocomplete(taRef, body, members);
+
+  function applyMention(name: string) {
+    if (!taRef.current) return;
+    const cursor = taRef.current.selectionStart ?? body.length;
+    const before = body.slice(0, mentionState.atPos);
+    const after = body.slice(cursor);
+    const next = `${before}@${name} ${after}`;
+    setBody(next);
+    mentionState.close();
+    requestAnimationFrame(() => {
+      if (!taRef.current) return;
+      const pos = before.length + name.length + 2;
+      taRef.current.focus();
+      taRef.current.setSelectionRange(pos, pos);
+    });
+  }
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-start gap-3">
@@ -185,8 +424,9 @@ function Composer({
           avatarUrl={currentUser.avatar_url}
           size={40}
         />
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-2 relative">
           <textarea
+            ref={taRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => {
@@ -195,15 +435,83 @@ function Composer({
                 onSubmit();
               }
             }}
-            placeholder="מה חדש?"
+            placeholder="מה חדש?  השתמשו ב־@ כדי לאזכר חברי קהילה"
             rows={3}
             maxLength={4000}
             className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#22c55e]"
           />
+
+          {mentionState.open && mentionState.suggestions.length > 0 && (
+            <ul className="absolute z-20 mt-1 max-h-56 w-72 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {mentionState.suggestions.map((m) => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => applyMention(m.full_name || m.email || "")}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-[#22c55e]/5"
+                  >
+                    <ProfileAvatar
+                      fullName={m.full_name}
+                      email={m.email}
+                      avatarUrl={m.avatar_url}
+                      size={24}
+                    />
+                    <span className="text-[#1a2744] truncate">
+                      {m.full_name || m.email}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
+                        roleBadgeClass(m.role)
+                      )}
+                    >
+                      {roleLabel(m.role)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {previewUrl && (
+            <div className="relative inline-block">
+              <img
+                src={previewUrl}
+                alt=""
+                className="max-h-60 rounded-lg border border-gray-200"
+              />
+              <button
+                type="button"
+                onClick={() => onPickImage(null)}
+                className="absolute top-2 left-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                title="הסר תמונה"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-gray-400">
-              Cmd/Ctrl+Enter לפרסום
-            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#22c55e] hover:text-[#22c55e]"
+              >
+                <ImageIcon className="size-3.5" />
+                תמונה
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => onPickImage(e.target.files?.[0] || null)}
+              />
+              <p className="text-[11px] text-gray-400 hidden sm:block">
+                Cmd/Ctrl+Enter לפרסום
+              </p>
+            </div>
             <button
               onClick={onSubmit}
               disabled={!canSubmit}
@@ -219,14 +527,66 @@ function Composer({
   );
 }
 
+// ---------- Mention autocomplete hook ----------
+
+function useMentionAutocomplete(
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
+  body: string,
+  members: FeedMember[]
+) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [atPos, setAtPos] = useState(0);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const cursor = ta.selectionStart ?? 0;
+    const upto = body.slice(0, cursor);
+    const m = upto.match(/@([֐-׿A-Za-z0-9'\s]{0,40})$/);
+    if (!m) {
+      setOpen(false);
+      return;
+    }
+    const start = cursor - m[0].length;
+    setAtPos(start);
+    setQuery(m[1]);
+    setOpen(true);
+  }, [body, textareaRef]);
+
+  const suggestions = useMemo(() => {
+    if (!open) return [];
+    const q = query.trim().toLowerCase();
+    return members
+      .filter((m) => {
+        const name = (m.full_name || m.email || "").toLowerCase();
+        return q === "" ? true : name.includes(q);
+      })
+      .slice(0, 6);
+  }, [open, query, members]);
+
+  return {
+    open,
+    suggestions,
+    atPos,
+    close: () => setOpen(false),
+  };
+}
+
+// ---------- Post card ----------
+
 function PostCard({
   post,
+  members,
   currentUser,
   onDelete,
+  onTogglePin,
 }: {
   post: Post;
+  members: FeedMember[];
   currentUser: CurrentUser;
   onDelete: () => void;
+  onTogglePin: () => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
@@ -249,12 +609,23 @@ function PostCard({
 
   const author = post.author;
   const canDelete = currentUser.id === post.author_id || currentUser.role === "admin";
+  const isAdmin = currentUser.role === "admin";
+  const isSystem = post.kind === "system";
 
   return (
     <li
       id={`post-${post.id}`}
-      className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+      className={cn(
+        "rounded-2xl border bg-white p-4 shadow-sm",
+        post.pinned_at ? "border-amber-300 bg-amber-50/30" : "border-gray-100"
+      )}
     >
+      {post.pinned_at && (
+        <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+          <Pin className="size-3" />
+          מוצמד
+        </div>
+      )}
       <div className="flex items-start gap-3">
         <ProfileAvatar
           fullName={author?.full_name}
@@ -269,20 +640,50 @@ function PostCard({
             </p>
             {author?.role && (
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${roleBadgeClass(author.role)}`}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                  roleBadgeClass(author.role)
+                )}
               >
                 {roleLabel(author.role)}
+              </span>
+            )}
+            {isSystem && (
+              <span className="rounded-full bg-[#22c55e]/10 px-2 py-0.5 text-[10px] font-medium text-[#16a34a]">
+                עדכון פעילות
               </span>
             )}
             <span className="text-[11px] text-gray-400">
               {formatRelativeHe(post.created_at)}
             </span>
           </div>
-          <p className="mt-2 text-sm text-[#1a2744] whitespace-pre-wrap leading-relaxed">
-            {post.body}
+          <p
+            className={cn(
+              "mt-2 text-sm whitespace-pre-wrap leading-relaxed",
+              isSystem ? "text-gray-600 italic" : "text-[#1a2744]"
+            )}
+          >
+            {renderBodyWithMentions(post.body, members)}
           </p>
+          {post.image_url && (
+            <a
+              href={post.image_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block"
+            >
+              <img
+                src={post.image_url}
+                alt=""
+                className="max-h-[480px] w-auto rounded-lg border border-gray-100"
+                loading="lazy"
+              />
+            </a>
+          )}
 
-          <div className="mt-3 flex items-center gap-4">
+          <ReactionsBar postId={post.id} currentUser={currentUser} />
+
+          <div className="mt-2 flex items-center gap-4">
             <button
               onClick={() => setShowComments((v) => !v)}
               className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#22c55e] transition-colors"
@@ -290,6 +691,24 @@ function PostCard({
               <MessageCircle className="size-3.5" />
               {commentCount ?? 0} תגובות
             </button>
+            {isAdmin && (
+              <button
+                onClick={onTogglePin}
+                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 transition-colors"
+              >
+                {post.pinned_at ? (
+                  <>
+                    <PinOff className="size-3.5" />
+                    בטל הצמדה
+                  </>
+                ) : (
+                  <>
+                    <Pin className="size-3.5" />
+                    הצמד
+                  </>
+                )}
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={onDelete}
@@ -304,6 +723,8 @@ function PostCard({
           {showComments && (
             <CommentThread
               postId={post.id}
+              postAuthorId={post.author_id}
+              members={members}
               currentUser={currentUser}
               onCountChange={setCommentCount}
             />
@@ -314,12 +735,105 @@ function PostCard({
   );
 }
 
+// ---------- Reactions bar ----------
+
+function ReactionsBar({
+  postId,
+  currentUser,
+}: {
+  postId: string;
+  currentUser: CurrentUser;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [mine, setMine] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("post_reactions")
+        .select("kind, user_id")
+        .eq("post_id", postId);
+      if (cancelled) return;
+      const c: Record<string, number> = {};
+      const m = new Set<string>();
+      for (const r of (data || []) as { kind: string; user_id: string }[]) {
+        c[r.kind] = (c[r.kind] ?? 0) + 1;
+        if (r.user_id === currentUser.id) m.add(r.kind);
+      }
+      setCounts(c);
+      setMine(m);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, postId, currentUser.id]);
+
+  async function toggle(kind: string) {
+    const has = mine.has(kind);
+    // Optimistic
+    setMine((prev) => {
+      const n = new Set(prev);
+      if (has) n.delete(kind);
+      else n.add(kind);
+      return n;
+    });
+    setCounts((prev) => ({
+      ...prev,
+      [kind]: Math.max(0, (prev[kind] ?? 0) + (has ? -1 : 1)),
+    }));
+    if (has) {
+      await supabase
+        .from("post_reactions")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", currentUser.id)
+        .eq("kind", kind);
+    } else {
+      await supabase
+        .from("post_reactions")
+        .insert({ post_id: postId, user_id: currentUser.id, kind });
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {REACTIONS.map((kind) => {
+        const count = counts[kind] ?? 0;
+        const active = mine.has(kind);
+        return (
+          <button
+            key={kind}
+            onClick={() => toggle(kind)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
+              active
+                ? "border-[#22c55e] bg-[#22c55e]/10 text-[#16a34a]"
+                : "border-gray-200 bg-white text-gray-500 hover:border-[#22c55e] hover:text-[#16a34a]"
+            )}
+          >
+            <span>{kind}</span>
+            {count > 0 && <span className="tabular-nums">{count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------- Comment thread ----------
+
 function CommentThread({
   postId,
+  postAuthorId,
+  members,
   currentUser,
   onCountChange,
 }: {
   postId: string;
+  postAuthorId: string;
+  members: FeedMember[];
   currentUser: CurrentUser;
   onCountChange: (n: number) => void;
 }) {
@@ -351,6 +865,30 @@ function CommentThread({
     };
   }, [supabase, postId, onCountChange]);
 
+  async function notifyMentions(text: string) {
+    if (!members.length || !text.includes("@")) return;
+    const matched = new Set<string>();
+    for (const m of members) {
+      const name = (m.full_name || "").trim();
+      if (!name) continue;
+      const re = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+      if (re.test(text) && m.id !== currentUser.id) matched.add(m.id);
+    }
+    for (const targetId of matched) {
+      fetch("/api/notifications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: targetId,
+          type: "feedback",
+          title: "אוזכרת בתגובה לפוסט",
+          body: text.slice(0, 120),
+          link: `/feed#post-${postId}`,
+        }),
+      });
+    }
+  }
+
   async function submitComment() {
     const trimmed = body.trim();
     if (!trimmed || posting) return;
@@ -364,23 +902,20 @@ function CommentThread({
       .single();
     setPosting(false);
     if (error || !data) return;
+
     const next = [...comments, data as PostComment];
     setComments(next);
     onCountChange(next.length);
     setBody("");
 
-    // Notify the post author when someone else comments on their post.
-    const { data: post } = await supabase
-      .from("posts")
-      .select("author_id")
-      .eq("id", postId)
-      .maybeSingle();
-    if (post && post.author_id !== currentUser.id) {
+    notifyMentions(trimmed);
+
+    if (postAuthorId !== currentUser.id) {
       fetch("/api/notifications/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          targetUserId: post.author_id,
+          targetUserId: postAuthorId,
           type: "feedback",
           title: "תגובה חדשה לפוסט שלך",
           body: trimmed.slice(0, 120),
@@ -430,7 +965,10 @@ function CommentThread({
                     </p>
                     {a?.role && (
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${roleBadgeClass(a.role)}`}
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
+                          roleBadgeClass(a.role)
+                        )}
                       >
                         {roleLabel(a.role)}
                       </span>
@@ -449,7 +987,7 @@ function CommentThread({
                     )}
                   </div>
                   <p className="mt-1 text-sm text-[#1a2744] whitespace-pre-wrap leading-relaxed">
-                    {c.body}
+                    {renderBodyWithMentions(c.body, members)}
                   </p>
                 </div>
               </li>

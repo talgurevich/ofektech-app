@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
 import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
+import { FeedUnseenBadge } from "@/components/feed-unseen-badge";
 import { APP_VERSION } from "@/lib/version";
 
 type UserRole = "candidate" | "mentor" | "admin" | "visitor";
@@ -191,6 +192,7 @@ export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSid
                       >
                         <link.icon className="size-4" />
                         <span>{link.label}</span>
+                        {link.href === "/feed" && <FeedUnseenBadge />}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
