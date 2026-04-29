@@ -228,6 +228,7 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   const [hasMore, setHasMore] = useState(true);
   const [members, setMembers] = useState<FeedMember[]>([]);
   const [onlineMembers, setOnlineMembers] = useState<FeedMember[]>([]);
+  const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
 
   // Composer state
   const [composerBody, setComposerBody] = useState("");
@@ -243,6 +244,59 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
       .eq("id", currentUser.id)
       .then(() => {});
   }, [supabase, currentUser.id]);
+
+  // Realtime — push newly-inserted posts into a "pending" tray so we don't
+  // yank the user's scroll. Comments are streamed in their own thread.
+  useEffect(() => {
+    const channel = supabase
+      .channel("feed-posts-stream")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "posts" },
+        async (payload) => {
+          const row = payload.new as Post;
+          if (!row?.id) return;
+          if (row.author_id === currentUser.id) return; // own post is already in list
+          if (row.deleted_at) return;
+          const { data } = await supabase
+            .from("posts")
+            .select(
+              "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
+            )
+            .eq("id", row.id)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (!data) return;
+          const post = data as Post;
+          if (post.pinned_at) {
+            setPinnedPosts((prev) =>
+              prev.some((p) => p.id === post.id) ? prev : [post, ...prev]
+            );
+          } else {
+            setPendingPosts((prev) =>
+              prev.some((p) => p.id === post.id) ? prev : [post, ...prev]
+            );
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [supabase, currentUser.id]);
+
+  function flushPending() {
+    if (pendingPosts.length === 0) return;
+    setPosts((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const fresh = pendingPosts.filter((p) => !seen.has(p.id));
+      return [...fresh, ...prev];
+    });
+    setPendingPosts([]);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   // Realtime presence — track who's currently viewing /feed.
   useEffect(() => {
@@ -500,6 +554,21 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
         posting={posting}
         onSubmit={submitPost}
       />
+
+      {pendingPosts.length > 0 && (
+        <div className="sticky top-2 z-10 flex justify-center">
+          <button
+            type="button"
+            onClick={flushPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#22c55e] px-4 py-1.5 text-xs font-semibold text-white shadow-md transition-colors hover:bg-[#16a34a]"
+          >
+            <ChevronDown className="size-3.5 rotate-180" />
+            {pendingPosts.length === 1
+              ? "פוסט חדש — לחצו לרענון"
+              : `${pendingPosts.length} פוסטים חדשים — לחצו לרענון`}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-10">
@@ -1079,6 +1148,46 @@ function CommentThread({
       cancelled = true;
     };
   }, [supabase, postId, onCountChange]);
+
+  // Realtime — append new comments inserted by other users into the thread.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-stream-${postId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "post_comments",
+          filter: `post_id=eq.${postId}`,
+        },
+        async (payload) => {
+          const row = payload.new as PostComment;
+          if (!row?.id) return;
+          if (row.author_id === currentUser.id) return; // own comment is already in state
+          if (row.deleted_at) return;
+          const { data } = await supabase
+            .from("post_comments")
+            .select(
+              "*, author:profiles!post_comments_author_id_fkey(id, full_name, email, avatar_url, role)"
+            )
+            .eq("id", row.id)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (!data) return;
+          setComments((prev) => {
+            if (prev.some((c) => c.id === (data as PostComment).id)) return prev;
+            const next = [...prev, data as PostComment];
+            onCountChange(next.length);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [supabase, postId, currentUser.id, onCountChange]);
 
   async function notifyMentions(text: string, commentId: string) {
     const { names, all } = detectMentions(text, members);
