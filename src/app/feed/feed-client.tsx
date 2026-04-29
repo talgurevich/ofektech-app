@@ -494,6 +494,24 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
     if (post.image_path) {
       supabase.storage.from(POST_MEDIA_BUCKET).remove([post.image_path]);
     }
+    // Surface admin moderation in Slack — only when an admin removes someone
+    // else's post (a self-delete is just normal cleanup).
+    if (
+      currentUser.role === "admin" &&
+      post.author_id !== currentUser.id
+    ) {
+      const preview = (post.body || "").trim().slice(0, 120);
+      const authorName =
+        post.author?.full_name || post.author?.email || "משתמש";
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "feed_moderation",
+          description: `מנהל מחק פוסט של ${authorName} מהפיד: "${preview}"`,
+        }),
+      });
+    }
     setPosts((prev) => prev.filter((p) => p.id !== post.id));
     setPinnedPosts((prev) => prev.filter((p) => p.id !== post.id));
   }
@@ -513,6 +531,17 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
       return;
     }
     const updated = data as Post;
+    const preview = (updated.body || "").trim().slice(0, 120);
+    fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: updated.pinned_at ? "feed_pin" : "feed_unpin",
+        description: updated.pinned_at
+          ? `פוסט הוצמד בפיד: "${preview}"`
+          : `פוסט הוסר מהצמדה בפיד: "${preview}"`,
+      }),
+    });
     if (updated.pinned_at) {
       setPosts((prev) => prev.filter((p) => p.id !== updated.id));
       setPinnedPosts((prev) => [
@@ -1265,6 +1294,24 @@ function CommentThread({
     if (!data || data.length === 0) {
       alert("המחיקה נחסמה ע\"י הרשאות.");
       return;
+    }
+    const removed = comments.find((c) => c.id === commentId);
+    if (
+      removed &&
+      currentUser.role === "admin" &&
+      removed.author_id !== currentUser.id
+    ) {
+      const preview = (removed.body || "").trim().slice(0, 120);
+      const authorName =
+        removed.author?.full_name || removed.author?.email || "משתמש";
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "feed_moderation",
+          description: `מנהל מחק תגובה של ${authorName} בפיד: "${preview}"`,
+        }),
+      });
     }
     const next = comments.filter((c) => c.id !== commentId);
     setComments(next);

@@ -110,6 +110,22 @@ export default function AdminBulkTasksPage() {
       setMessage(`שגיאה: ${error.message}`);
     } else {
       setMessage(`המשימה נוספה ל־${rows.length} מיזמים`);
+      const preview = taskText.trim().slice(0, 120);
+      const ventureNames = ventures
+        .filter((v) => selected.has(v.id))
+        .map((v) => v.name)
+        .slice(0, 4)
+        .join(", ");
+      const more =
+        rows.length > 4 ? ` ועוד ${rows.length - 4}` : "";
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "bulk_task",
+          description: `משימה נוספה ל־${rows.length} מיזמים (${ventureNames}${more}): "${preview}"`,
+        }),
+      });
       setTaskText("");
       setAssignee("");
       setDueDate("");

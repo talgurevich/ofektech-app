@@ -118,6 +118,14 @@ export function LectureResourcesSection({
       });
     if (insertErr) setError(insertErr.message);
     else {
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "lecture_resource",
+          description: `קישור חדש בהרצאה: "${linkTitle.trim()}" → ${url}`,
+        }),
+      });
       setLinkTitle("");
       setLinkUrl("");
       await refresh();
@@ -177,6 +185,15 @@ export function LectureResourcesSection({
       setBusy(false);
       return;
     }
+
+    fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "lecture_resource",
+        description: `קובץ חדש בהרצאה: "${fileTitle.trim() || file.name}" (${(file.size / 1024).toFixed(0)} KB)`,
+      }),
+    });
 
     setFileTitle("");
     if (fileInputRef.current) fileInputRef.current.value = "";
