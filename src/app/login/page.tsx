@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
-  Sparkles,
   Lightbulb,
   Users,
   Eye,
@@ -118,8 +117,8 @@ export default function LoginPage() {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0f1a33]/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <a href="#top" className="inline-flex items-center">
-            <span className="inline-flex items-center rounded-lg bg-white/95 px-3 py-1.5 shadow-sm ring-1 ring-white/10">
-              <img src="/logo.png" alt="OfekTech" className="h-7 w-auto object-contain" />
+            <span className="inline-flex items-center rounded-lg bg-white/95 px-2.5 py-1 shadow-sm ring-1 ring-white/10">
+              <img src="/logo.png" alt="OfekTech" className="h-5 w-auto object-contain" />
             </span>
           </a>
         </div>
@@ -133,7 +132,7 @@ export default function LoginPage() {
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1a33]/85 via-[#0f1a33]/75 to-[#0f1a33]/95" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0f1a33]/55 via-[#0f1a33]/40 to-[#0f1a33]/80" />
         {/* Dot grid overlay */}
         <div
           className="absolute inset-0 opacity-[0.25]"
@@ -148,11 +147,14 @@ export default function LoginPage() {
 
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14 md:py-20 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
           <div className="text-center lg:text-right">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300 backdrop-blur-sm">
-              <Sparkles className="size-3.5 text-[#22c55e]" />
-              פורטל מאיץ OfekTech
+            <div className="inline-flex items-center rounded-2xl bg-white/95 px-5 py-3 shadow-lg ring-1 ring-white/10">
+              <img
+                src="/logo.png"
+                alt="OfekTech"
+                className="h-16 w-auto object-contain md:h-20"
+              />
             </div>
-            <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">
+            <h1 className="mt-6 text-3xl font-bold leading-tight text-white md:text-5xl">
               המסע שלך ליזמות, חדשנות וטכנולוגיה
               <br />
               <span className="relative inline-block mt-1">
@@ -230,7 +232,7 @@ export default function LoginPage() {
             />
             <RoleCard
               icon={Eye}
-              title="מאזינים"
+              title="חברי קהילה"
               intro="גישה לתוכן ההרצאות של התוכנית."
               bullets={[
                 "לוח ההרצאות המלא",
