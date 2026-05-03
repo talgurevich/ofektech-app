@@ -11,6 +11,7 @@ import {
   Mic2,
   BookOpen,
   Table2,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import { WORKBOOK_SHEETS } from "@/lib/workbook";
@@ -21,6 +22,11 @@ type Option = { href: string; label: string; icon: LucideIcon };
 
 function createOptionsFor(ventureId: string): Option[] {
   return [
+    {
+      href: `/sessions/new?venture=${ventureId}`,
+      label: "סיכום פגישה",
+      icon: MessageSquare,
+    },
     {
       href: `/workbook?venture=${ventureId}&sheet=tasks`,
       label: "משימה חדשה",

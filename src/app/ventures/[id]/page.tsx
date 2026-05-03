@@ -21,6 +21,7 @@ import {
   Users,
   Briefcase,
   Table2,
+  Plus,
 } from "lucide-react";
 import { TaskCategoryPie } from "@/components/task-category-pie";
 
@@ -361,13 +362,24 @@ export default async function VentureDetailPage({
       {/* Section 3: Meeting summaries */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
-            <MessageSquare className="size-5" />
-            סיכומי פגישות
-          </CardTitle>
-          <CardDescription>
-            {sessions?.length || 0} פגישות — לחצו על סיכום כדי להגיב/לערוך משוב
-          </CardDescription>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+                <MessageSquare className="size-5" />
+                סיכומי פגישות
+              </CardTitle>
+              <CardDescription>
+                {sessions?.length || 0} פגישות — לחצו על סיכום כדי להגיב/לערוך משוב
+              </CardDescription>
+            </div>
+            <Link
+              href={`/sessions/new?venture=${ventureId}`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-[#22c55e] hover:bg-[#16a34a] transition-colors shadow-sm shrink-0"
+            >
+              <Plus className="size-4" />
+              סיכום חדש
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {(sessions || []).map((s) => {
