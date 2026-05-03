@@ -26,7 +26,7 @@ function createOptionsFor(ventureId: string): Option[] {
       label: "משימה חדשה",
       icon: WORKBOOK_SHEETS.find((s) => s.key === "tasks")!.icon,
     },
-    ...WORKBOOK_SHEETS.filter((s) => s.key !== "tasks").map((s) => ({
+    ...WORKBOOK_SHEETS.filter((s) => s.key !== "tasks" && !s.tbd).map((s) => ({
       href: `/workbook?venture=${ventureId}&sheet=${s.key}`,
       label: s.label,
       icon: s.icon,

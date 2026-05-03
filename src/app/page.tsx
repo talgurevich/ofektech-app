@@ -546,6 +546,11 @@ async function MentorDashboard({
                 const guidePercent = guideTotal
                   ? Math.round((venture.filledChapters / guideTotal) * 100)
                   : 0;
+                const totalTasks = venture.openTasks + venture.completedTasks;
+                const donePercent = totalTasks
+                  ? (venture.completedTasks / totalTasks) * 100
+                  : 0;
+                const openPercent = totalTasks ? 100 - donePercent : 0;
 
                 return (
                   <Card key={venture.id} className="border-0 shadow-sm">
@@ -589,11 +594,35 @@ async function MentorDashboard({
                       </div>
 
                       {/* Tasks */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <ListTodo className="size-4 text-gray-400" />
-                        <span className="text-gray-600">
-                          {venture.openTasks} פתוחות, {venture.completedTasks} הושלמו
-                        </span>
+                      <div>
+                        <div className="flex items-center justify-between gap-2 text-sm mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <ListTodo className="size-4 text-gray-400" />
+                            <span className="text-gray-600">
+                              {venture.completedTasks}/{totalTasks} משימות
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="inline-flex items-center gap-1 text-gray-500">
+                              <span className="size-2 rounded-full bg-[#22c55e]" />
+                              {venture.completedTasks} הושלמו
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-gray-500">
+                              <span className="size-2 rounded-full bg-amber-400" />
+                              {venture.openTasks} פתוחות
+                            </span>
+                          </div>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden flex">
+                          <div
+                            className="h-full bg-[#22c55e] transition-all duration-500"
+                            style={{ width: `${donePercent}%` }}
+                          />
+                          <div
+                            className="h-full bg-amber-400 transition-all duration-500"
+                            style={{ width: `${openPercent}%` }}
+                          />
+                        </div>
                       </div>
 
                       {/* Tasks-by-category pie */}
