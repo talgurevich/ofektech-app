@@ -96,8 +96,10 @@ async function VisitorDashboard({
 
   const { data: lectures } = await supabase
     .from("lectures")
-    .select("*")
+    .select("*, cohort:cohorts(id, name, is_active, created_at)")
     .order("scheduled_date", { ascending: true });
+
+  const lectureGroups = groupLecturesByCohort(lectures || []);
 
   return (
     <main className="max-w-4xl mx-auto p-4 md:p-8">
@@ -123,73 +125,90 @@ async function VisitorDashboard({
               <CardDescription>לוח הרצאות התוכנית</CardDescription>
             </CardHeader>
             <CardContent>
-              {!lectures || lectures.length === 0 ? (
+              {lectureGroups.length === 0 ? (
                 <p className="text-gray-400 text-sm py-4 text-center">
                   אין הרצאות כרגע
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {lectures.map((lecture) => {
-                    const isPast = lecture.scheduled_date <= today;
-                    return (
-                      <div
-                        key={lecture.id}
-                        className={`flex items-start gap-4 rounded-lg p-3 transition-colors ${
-                          !isPast
-                            ? "bg-gray-50/50"
-                            : "bg-white hover:bg-gray-50/50"
-                        }`}
-                      >
-                        <div
-                          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                            isPast
-                              ? "bg-[#1a2744] text-white"
-                              : "bg-gray-200 text-gray-500"
-                          }`}
-                        >
-                          {lecture.lecture_number || "#"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-[#1a2744]">
-                            {lecture.title}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-500">
-                              {formatDate(lecture.scheduled_date)}
-                            </span>
-                            {lecture.lecturer && (
-                              <span className="text-xs text-gray-400">
-                                {lecture.lecturer}
-                              </span>
-                            )}
-                            {lecture.location && (
-                              <Badge variant="secondary" className="text-[10px] gap-1">
-                                {lecture.location === "זום" ? <Video className="size-3" /> : <MapPin className="size-3" />}
-                                {lecture.location}
-                              </Badge>
-                            )}
-                            {isPast && lecture.recording_url && (
-                              <a href={lecture.recording_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
-                                <Video className="size-3" /> הקלטה <ExternalLink className="size-2.5" />
-                              </a>
-                            )}
-                            {isPast && lecture.presentation_url && (
-                              <a href={lecture.presentation_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
-                                <FileText className="size-3" /> מצגת <ExternalLink className="size-2.5" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <div className="shrink-0">
-                          {!isPast && (
-                            <Badge variant="secondary" className="text-gray-400">
-                              <Clock className="size-3 ml-1" /> בקרוב
-                            </Badge>
-                          )}
-                        </div>
+                <div className="space-y-6">
+                  {lectureGroups.map((group) => (
+                    <div key={group.key} className="space-y-3">
+                      <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                        <span className="text-sm font-semibold text-[#1a2744]">
+                          {group.title}
+                        </span>
+                        {group.isActive && (
+                          <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px]">
+                            פעיל
+                          </Badge>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {group.lectures.length} הרצאות
+                        </span>
                       </div>
-                    );
-                  })}
+                      {group.lectures.map((lecture) => {
+                        const isPast = lecture.scheduled_date <= today;
+                        return (
+                          <div
+                            key={lecture.id}
+                            className={`flex items-start gap-4 rounded-lg p-3 transition-colors ${
+                              !isPast
+                                ? "bg-gray-50/50"
+                                : "bg-white hover:bg-gray-50/50"
+                            }`}
+                          >
+                            <div
+                              className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                                isPast
+                                  ? "bg-[#1a2744] text-white"
+                                  : "bg-gray-200 text-gray-500"
+                              }`}
+                            >
+                              {lecture.lecture_number || "#"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-[#1a2744]">
+                                {lecture.title}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(lecture.scheduled_date)}
+                                </span>
+                                {lecture.lecturer && (
+                                  <span className="text-xs text-gray-400">
+                                    {lecture.lecturer}
+                                  </span>
+                                )}
+                                {lecture.location && (
+                                  <Badge variant="secondary" className="text-[10px] gap-1">
+                                    {lecture.location === "זום" ? <Video className="size-3" /> : <MapPin className="size-3" />}
+                                    {lecture.location}
+                                  </Badge>
+                                )}
+                                {isPast && lecture.recording_url && (
+                                  <a href={lecture.recording_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                    <Video className="size-3" /> הקלטה <ExternalLink className="size-2.5" />
+                                  </a>
+                                )}
+                                {isPast && lecture.presentation_url && (
+                                  <a href={lecture.presentation_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#22c55e] hover:underline">
+                                    <FileText className="size-3" /> מצגת <ExternalLink className="size-2.5" />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            <div className="shrink-0">
+                              {!isPast && (
+                                <Badge variant="secondary" className="text-gray-400">
+                                  <Clock className="size-3 ml-1" /> בקרוב
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -202,6 +221,57 @@ async function VisitorDashboard({
       </AnimatedContainer>
     </main>
   );
+}
+
+type LectureWithCohort = {
+  id: string;
+  lecture_number: number | null;
+  title: string;
+  scheduled_date: string;
+  lecturer: string | null;
+  location: string | null;
+  recording_url: string | null;
+  presentation_url: string | null;
+  cohort_id: string | null;
+  cohort?:
+    | {
+        id: string;
+        name: string;
+        is_active: boolean;
+        created_at: string;
+      }
+    | null;
+};
+
+type LectureGroup = {
+  key: string;
+  title: string;
+  isActive: boolean;
+  createdAt: string;
+  lectures: LectureWithCohort[];
+};
+
+function groupLecturesByCohort(lectures: LectureWithCohort[]): LectureGroup[] {
+  const groups = new Map<string, LectureGroup>();
+  for (const l of lectures) {
+    const cohort = l.cohort || null;
+    const key = cohort?.id || l.cohort_id || "__unassigned__";
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        title: cohort?.name || "ללא מחזור",
+        isActive: !!cohort?.is_active,
+        createdAt: cohort?.created_at || "",
+        lectures: [],
+      });
+    }
+    groups.get(key)!.lectures.push(l);
+  }
+  return Array.from(groups.values()).sort((a, b) => {
+    if (a.isActive && !b.isActive) return -1;
+    if (!a.isActive && b.isActive) return 1;
+    return (a.createdAt || "").localeCompare(b.createdAt || "");
+  });
 }
 
 async function CandidateDashboard({

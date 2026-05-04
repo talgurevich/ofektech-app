@@ -68,6 +68,48 @@ export default function AdminLecturesPage() {
     ? lectures.filter((l) => l.cohort_id === filterCohortId)
     : lectures;
 
+  // When no cohort filter is applied, group lectures by cohort so they don't
+  // interleave by lecture_number. Active cohort first, then by name.
+  type CohortGroup = {
+    key: string;
+    title: string;
+    isActive: boolean;
+    lectures: (Lecture & { cohort?: { name: string } | null })[];
+  };
+  const groupedLectures: CohortGroup[] = (() => {
+    if (filterCohortId) {
+      // Single cohort selected — render flat (no header).
+      return [
+        {
+          key: filterCohortId,
+          title: "",
+          isActive: false,
+          lectures: visibleLectures,
+        },
+      ];
+    }
+    const groups = new Map<string, CohortGroup>();
+    for (const l of visibleLectures) {
+      const cohort = cohorts.find((c) => c.id === l.cohort_id);
+      const key = l.cohort_id || "__unassigned__";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          title: cohort?.name || l.cohort?.name || "ללא מחזור",
+          isActive: !!cohort?.is_active,
+          lectures: [],
+        });
+      }
+      groups.get(key)!.lectures.push(l);
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return a.title.localeCompare(b.title, "he");
+    });
+  })();
+  const showGroupHeaders = !filterCohortId && groupedLectures.length > 0;
+
   async function handleDelete(id: string, title: string) {
     if (!confirm(`למחוק את "${title}"?`)) return;
     await supabase.from("lectures").delete().eq("id", id);
@@ -400,13 +442,30 @@ export default function AdminLecturesPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-6">
         {visibleLectures.length === 0 && lectures.length > 0 && (
           <p className="text-center text-sm text-gray-400 py-6">
             אין הרצאות במחזור שנבחר
           </p>
         )}
-        {visibleLectures.map((l) =>
+        {groupedLectures.map((group) => (
+          <div key={group.key} className="space-y-3">
+            {showGroupHeaders && (
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                <span className="text-sm font-semibold text-[#1a2744]">
+                  {group.title}
+                </span>
+                {group.isActive && (
+                  <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px]">
+                    פעיל
+                  </Badge>
+                )}
+                <span className="text-xs text-gray-400">
+                  {group.lectures.length} הרצאות
+                </span>
+              </div>
+            )}
+            {group.lectures.map((l) =>
           editingId === l.id ? (
             <Card key={l.id} className="border-0 shadow-sm ring-2 ring-[#22c55e]/30">
               <CardContent className="pt-0 space-y-4">
@@ -695,6 +754,8 @@ export default function AdminLecturesPage() {
             </Card>
           )
         )}
+          </div>
+        ))}
       </div>
     </div>
   );

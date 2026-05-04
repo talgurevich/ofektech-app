@@ -51,7 +51,7 @@ export default async function LecturesPage() {
   //   - mentor: any cohort they have a venture assignment in
   let lecturesQuery = supabase
     .from("lectures")
-    .select("*")
+    .select("*, cohort:cohorts(id, name, is_active, created_at)")
     .order("scheduled_date", { ascending: true });
 
   if (profile.role === "candidate") {
@@ -101,6 +101,38 @@ export default async function LecturesPage() {
 
   const isCandidate = profile.role === "candidate";
 
+  // Group lectures by cohort. Active cohort first, then by created_at.
+  const cohortGroups = new Map<
+    string,
+    {
+      key: string;
+      title: string;
+      isActive: boolean;
+      createdAt: string;
+      lectures: typeof lectures;
+    }
+  >();
+  for (const l of lectures || []) {
+    const cohort = (l as { cohort?: { id: string; name: string; is_active: boolean; created_at: string } | null }).cohort || null;
+    const key = cohort?.id || l.cohort_id || "__unassigned__";
+    if (!cohortGroups.has(key)) {
+      cohortGroups.set(key, {
+        key,
+        title: cohort?.name || "ללא מחזור",
+        isActive: !!cohort?.is_active,
+        createdAt: cohort?.created_at || "",
+        lectures: [],
+      });
+    }
+    cohortGroups.get(key)!.lectures!.push(l);
+  }
+  const sortedGroups = Array.from(cohortGroups.values()).sort((a, b) => {
+    if (a.isActive && !b.isActive) return -1;
+    if (!a.isActive && b.isActive) return 1;
+    return (a.createdAt || "").localeCompare(b.createdAt || "");
+  });
+  const showCohortHeaders = sortedGroups.length > 1;
+
   return (
     <main className="max-w-4xl mx-auto p-4 md:p-8">
       <div className="mb-5">
@@ -122,8 +154,25 @@ export default async function LecturesPage() {
               אין הרצאות כרגע
             </p>
           ) : (
-            <div className="space-y-3">
-              {lectures.map((lecture) => {
+            <div className="space-y-6">
+              {sortedGroups.map((group) => (
+                <div key={group.key} className="space-y-3">
+                  {showCohortHeaders && (
+                    <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                      <span className="text-sm font-semibold text-[#1a2744]">
+                        {group.title}
+                      </span>
+                      {group.isActive && (
+                        <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px]">
+                          פעיל
+                        </Badge>
+                      )}
+                      <span className="text-xs text-gray-400">
+                        {group.lectures!.length} הרצאות
+                      </span>
+                    </div>
+                  )}
+                  {group.lectures!.map((lecture) => {
                 const isPast = lecture.scheduled_date <= today;
                 const hasSubmitted = submittedLectureIds.has(lecture.id);
 
@@ -224,7 +273,9 @@ export default async function LecturesPage() {
                     </div>
                   </div>
                 );
-              })}
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
