@@ -773,6 +773,7 @@ function TeamContactCard({
     { name: "טל גורביץ׳", phone: "050-442-5322" },
     { name: "אתי אילן", phone: "050-735-4911" },
     { name: "רותם שרון", phone: "050-405-1122" },
+    { name: "יעל לובן", phone: "050-267-0758" },
   ];
 
   return (
