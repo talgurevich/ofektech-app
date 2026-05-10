@@ -665,6 +665,23 @@ async function MentorDashboard({
         {/* Venture cards */}
         {ventureStats.length > 0 ? (
           <AnimatedItem>
+            {/* Quick-jump chip nav (only when 2+ ventures) */}
+            {ventureStats.length > 1 && (
+              <div className="sticky top-2 z-10 mb-4">
+                <div className="flex flex-wrap gap-2 rounded-full bg-white/85 backdrop-blur-sm ring-1 ring-gray-200 px-2 py-2 shadow-sm">
+                  {ventureStats.map((v) => (
+                    <a
+                      key={v.id}
+                      href={`#venture-${v.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#1a2744]/5 px-3 py-1.5 text-xs font-medium text-[#1a2744] hover:bg-[#22c55e]/15 hover:text-[#22c55e] transition-colors"
+                    >
+                      <Briefcase className="size-3" />
+                      <span className="truncate max-w-[140px]">{v.name}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4">
               {ventureStats.map((venture) => {
                 const guidePercent = guideTotal
@@ -677,7 +694,11 @@ async function MentorDashboard({
                 const openPercent = totalTasks ? 100 - donePercent : 0;
 
                 return (
-                  <Card key={venture.id} className="border-0 shadow-sm">
+                  <Card
+                    key={venture.id}
+                    id={`venture-${venture.id}`}
+                    className="border-0 shadow-sm scroll-mt-24"
+                  >
                     <CardContent className="pt-0 space-y-4">
                       {/* Venture header + entrepreneur contacts */}
                       <div className="rounded-xl bg-gradient-to-br from-[#1a2744]/10 via-white to-[#22c55e]/10 ring-1 ring-[#1a2744]/10 p-4 space-y-4">
