@@ -322,6 +322,7 @@ async function CandidateDashboard({
   let mentorName: string | null = null;
   let mentorAvatar: string | null = null;
   let mentorPhone: string | null = null;
+  let mentorEmail: string | null = null;
   let mentorExpertise: string | null = null;
   if (ventureId) {
     const { data: mentorAssignment } = await supabase
@@ -334,12 +335,13 @@ async function CandidateDashboard({
     if (mentorAssignment?.mentor_id) {
       const { data: mentorProfile } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, phone, expertise")
+        .select("full_name, avatar_url, phone, email, expertise")
         .eq("id", mentorAssignment.mentor_id)
         .single();
       mentorName = mentorProfile?.full_name || null;
       mentorAvatar = mentorProfile?.avatar_url || null;
       mentorPhone = mentorProfile?.phone || null;
+      mentorEmail = mentorProfile?.email || null;
       mentorExpertise = mentorProfile?.expertise || null;
     }
   }
@@ -363,29 +365,81 @@ async function CandidateDashboard({
         {/* Venture info card */}
         <AnimatedItem>
           {ventureId && ventureName ? (
-            <Card className="border-0 shadow-sm bg-gradient-to-l from-[#1a2744]/5 to-[#1a2744]/10">
-              <CardContent className="pt-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/15">
-                    <Briefcase className="size-5 text-[#1a2744]" />
+            <Card className="border-0 shadow-md bg-gradient-to-br from-[#1a2744]/10 via-white to-[#22c55e]/10 ring-1 ring-[#1a2744]/10">
+              <CardContent className="pt-0 space-y-4">
+                {/* Venture name */}
+                <div className="flex items-center gap-3 pb-3 border-b border-[#1a2744]/10">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-[#1a2744]/15 shrink-0">
+                    <Briefcase className="size-6 text-[#1a2744]" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-[#1a2744]">{ventureName}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {ventureMembers.length > 0 && (
-                        <span className="text-xs text-gray-500">
-                          שותפים: {ventureMembers.map((m) => m.full_name).join(", ")}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-gray-500 tracking-wide">
+                      מיזם
+                    </p>
+                    <p className="text-xl font-bold text-[#1a2744] leading-tight">
+                      {ventureName}
+                    </p>
+                    {ventureMembers.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        שותפים: {ventureMembers.map((m) => m.full_name).join(", ")}
+                      </p>
+                    )}
                   </div>
-                  {mentorName && (
-                    <div className="text-left">
-                      <p className="text-[10px] text-gray-500">מנטור/ית</p>
-                      <p className="text-sm font-medium text-[#1a2744]">{mentorName}</p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Assigned mentor */}
+                {mentorName && (
+                  <div className="flex items-start gap-3">
+                    {mentorAvatar ? (
+                      <img
+                        src={mentorAvatar}
+                        alt={mentorName}
+                        className="size-12 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="flex size-12 items-center justify-center rounded-full bg-[#22c55e]/20 shrink-0">
+                        <span className="text-base font-bold text-[#22c55e]">
+                          {mentorName.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium text-gray-500 tracking-wide">
+                        המנטור/ית שלך
+                      </p>
+                      <p className="text-base font-semibold text-[#1a2744] leading-tight">
+                        {mentorName}
+                      </p>
+                      {mentorExpertise && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {mentorExpertise}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                        {mentorPhone && (
+                          <a
+                            href={`tel:${mentorPhone.replace(/-/g, "")}`}
+                            className="inline-flex items-center gap-1.5 text-sm text-[#22c55e] hover:underline"
+                            dir="ltr"
+                          >
+                            <Phone className="size-3.5" />
+                            {mentorPhone}
+                          </a>
+                        )}
+                        {mentorEmail && (
+                          <a
+                            href={`mailto:${mentorEmail}`}
+                            className="inline-flex items-center gap-1.5 text-sm text-[#22c55e] hover:underline break-all"
+                            dir="ltr"
+                          >
+                            <Mail className="size-3.5 shrink-0" />
+                            {mentorEmail}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
