@@ -531,7 +531,7 @@ async function MentorDashboard({
       // Get members
       const { data: members } = await supabase
         .from("profiles")
-        .select("id, full_name, email, avatar_url, venture_role")
+        .select("id, full_name, email, avatar_url, venture_role, phone")
         .eq("venture_id", venture.id);
 
       // Get venture tasks (from workbook) + chapter + session stats + activity
@@ -679,42 +679,84 @@ async function MentorDashboard({
                 return (
                   <Card key={venture.id} className="border-0 shadow-sm">
                     <CardContent className="pt-0 space-y-4">
-                      {/* Name + members */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-full bg-[#1a2744]/10">
-                          <Briefcase className="size-4 text-[#1a2744]" />
+                      {/* Venture header + entrepreneur contacts */}
+                      <div className="rounded-xl bg-gradient-to-br from-[#1a2744]/10 via-white to-[#22c55e]/10 ring-1 ring-[#1a2744]/10 p-4 space-y-4">
+                        {/* Venture name */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-12 items-center justify-center rounded-full bg-[#1a2744]/15 shrink-0">
+                            <Briefcase className="size-6 text-[#1a2744]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-medium text-gray-500 tracking-wide">
+                              מיזם
+                            </p>
+                            <p className="text-xl font-bold text-[#1a2744] leading-tight">
+                              {venture.name}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-lg font-semibold text-[#1a2744]">
-                            {venture.name}
-                          </p>
-                          <div className="flex flex-wrap gap-1 mt-1">
+
+                        {/* Entrepreneurs */}
+                        {venture.members.length > 0 ? (
+                          <div className="border-t border-[#1a2744]/10 pt-3 space-y-3">
+                            <p className="text-[11px] font-medium text-gray-500 tracking-wide">
+                              יזמים במיזם
+                            </p>
                             {venture.members.map((m) => (
-                              <Badge
-                                key={m.id}
-                                variant="secondary"
-                                className="text-[10px] gap-1"
-                              >
+                              <div key={m.id} className="flex items-start gap-3">
                                 {m.avatar_url ? (
                                   <img
                                     src={m.avatar_url}
                                     alt={m.full_name || ""}
-                                    className="size-5 rounded-full object-cover"
+                                    className="size-10 rounded-full object-cover shrink-0"
                                   />
                                 ) : (
-                                  <span className="flex size-5 items-center justify-center rounded-full bg-[#22c55e]/20 text-[8px] font-bold text-[#22c55e]">
-                                    {(m.full_name || m.email || "?").charAt(0)}
-                                  </span>
+                                  <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/20 shrink-0">
+                                    <span className="text-sm font-bold text-[#22c55e]">
+                                      {(m.full_name || m.email || "?").charAt(0)}
+                                    </span>
+                                  </div>
                                 )}
-                                {m.full_name || m.email}
-                                {m.venture_role && ` — ${m.venture_role}`}
-                              </Badge>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-[#1a2744] leading-tight">
+                                    {m.full_name || m.email}
+                                  </p>
+                                  {m.venture_role && (
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {m.venture_role}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                                    {m.phone && (
+                                      <a
+                                        href={`tel:${m.phone.replace(/-/g, "")}`}
+                                        className="inline-flex items-center gap-1.5 text-xs text-[#22c55e] hover:underline"
+                                        dir="ltr"
+                                      >
+                                        <Phone className="size-3" />
+                                        {m.phone}
+                                      </a>
+                                    )}
+                                    {m.email && (
+                                      <a
+                                        href={`mailto:${m.email}`}
+                                        className="inline-flex items-center gap-1.5 text-xs text-[#22c55e] hover:underline break-all"
+                                        dir="ltr"
+                                      >
+                                        <Mail className="size-3 shrink-0" />
+                                        {m.email}
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             ))}
-                            {venture.members.length === 0 && (
-                              <span className="text-xs text-gray-400">אין חברים</span>
-                            )}
                           </div>
-                        </div>
+                        ) : (
+                          <p className="text-xs text-gray-400 border-t border-[#1a2744]/10 pt-3">
+                            אין יזמים משובצים
+                          </p>
+                        )}
                       </div>
 
                       {/* Tasks */}
