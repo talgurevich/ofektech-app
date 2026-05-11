@@ -23,6 +23,7 @@ import {
   Star,
   UserCheck,
   Activity,
+  Headphones,
 } from "lucide-react";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
 import type { VentureActivity } from "@/lib/types";
@@ -34,11 +35,13 @@ export default async function AdminDashboard() {
   const [
     { count: totalCandidates },
     { count: totalMentors },
+    { count: totalVisitors },
     { count: totalLectures },
     { count: totalVentures },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "candidate"),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "mentor"),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "visitor"),
     supabase.from("lectures").select("*", { count: "exact", head: true }),
     supabase.from("ventures").select("*", { count: "exact", head: true }),
   ]);
@@ -154,9 +157,10 @@ export default async function AdminDashboard() {
       <h1 className="text-2xl font-bold text-[#1a2744]">סקירה כללית</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="יזמים" value={totalCandidates || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/candidates" />
         <StatCard label="מנטורים" value={totalMentors || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/users" />
+        <StatCard label="מאזינים" value={totalVisitors || 0} icon={<Headphones className="size-5 text-[#22c55e]" />} href="/admin/users" />
         <StatCard label="מיזמים פעילים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} href="/admin/ventures" />
         <StatCard label="סה״כ הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} href="/admin/lectures" />
       </div>
