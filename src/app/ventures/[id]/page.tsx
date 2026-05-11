@@ -22,6 +22,7 @@ import {
   Briefcase,
   Table2,
   Plus,
+  ClipboardCheck,
 } from "lucide-react";
 import { TaskCategoryPie } from "@/components/task-category-pie";
 
@@ -72,6 +73,22 @@ export default async function VentureDetailPage({
     .select("id, full_name, email, avatar_url, venture_role")
     .eq("venture_id", ventureId)
     .order("full_name");
+
+  // Get opening check-ins (entry questionnaire) for venture members
+  const memberIds = (members || []).map((m) => m.id);
+  const { data: openingCheckins } = memberIds.length > 0
+    ? await supabase
+        .from("checkins")
+        .select(
+          "candidate_id, venture_name, venture_stage, expectations, most_important_outcome, main_goal_3m, mood, concerns, team_notes, background, program_goals, submitted_at"
+        )
+        .in("candidate_id", memberIds)
+        .eq("type", "opening")
+    : { data: [] };
+
+  const checkinByMember = new Map(
+    (openingCheckins || []).map((c) => [c.candidate_id, c])
+  );
 
   // Venture tasks live in the workbook
   let allTasks: Array<{
@@ -223,6 +240,94 @@ export default async function VentureDetailPage({
 
       {/* Tasks-by-category pie */}
       <TaskCategoryPie tasks={taskRowsForPie} />
+
+      {/* Opening questionnaire (per member) */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+            <ClipboardCheck className="size-5" />
+            שאלון פתיחה
+          </CardTitle>
+          <CardDescription>
+            תשובות חברי המיזם בכניסה לתוכנית
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {(members || []).map((m) => {
+            const c = checkinByMember.get(m.id);
+            return (
+              <div
+                key={m.id}
+                className="rounded-lg border border-gray-100 bg-gray-50/50 p-4"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  {m.avatar_url ? (
+                    <img
+                      src={m.avatar_url}
+                      alt={m.full_name || ""}
+                      className="size-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-7 items-center justify-center rounded-full bg-[#22c55e]/20 text-[10px] font-bold text-[#22c55e]">
+                      {(m.full_name || m.email || "?").charAt(0)}
+                    </span>
+                  )}
+                  <p className="text-sm font-semibold text-[#1a2744]">
+                    {m.full_name || m.email}
+                    {m.venture_role && (
+                      <span className="text-xs font-normal text-gray-500">
+                        {" "}— {m.venture_role}
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {c ? (
+                  <div className="space-y-2.5">
+                    {[
+                      { label: "שם המיזם", value: c.venture_name },
+                      { label: "שלב המיזם", value: c.venture_stage },
+                      { label: "רקע", value: c.background },
+                      { label: "מטרות מהתוכנית", value: c.program_goals },
+                      { label: "ציפיות", value: c.expectations },
+                      {
+                        label: "התוצאה החשובה ביותר",
+                        value: c.most_important_outcome,
+                      },
+                      { label: "מטרה ל-3 חודשים", value: c.main_goal_3m },
+                      {
+                        label: "מצב רוח",
+                        value: c.mood ? `${c.mood}/5` : null,
+                      },
+                      { label: "חששות", value: c.concerns },
+                      { label: "הערות צוות", value: c.team_notes },
+                    ]
+                      .filter((f) => f.value)
+                      .map((field) => (
+                        <div key={field.label}>
+                          <p className="text-xs font-medium text-gray-500 mb-0.5">
+                            {field.label}
+                          </p>
+                          <p className="text-sm text-[#1a2744] whitespace-pre-wrap leading-relaxed">
+                            {field.value}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">לא מילא/ה</p>
+                )}
+              </div>
+            );
+          })}
+
+          {(!members || members.length === 0) && (
+            <p className="text-sm text-gray-400 text-center py-4">
+              אין חברי מיזם
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Section 1: Tasks (read-only snapshot) */}
       <Card className="border-0 shadow-sm">

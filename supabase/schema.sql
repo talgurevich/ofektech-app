@@ -450,11 +450,18 @@ create policy "Authenticated users insert own activity"
 create policy "Admin manages all activity"
   on venture_activity for all using (get_user_role() = 'admin');
 
--- Check-ins (personal)
-create policy "Candidates see own checkins"
+-- Check-ins (personal, also visible to assigned mentors)
+create policy "Candidates and assigned mentors see checkins"
   on checkins for select using (
     candidate_id = auth.uid()
     or get_user_role() = 'admin'
+    or exists (
+      select 1
+      from profiles p
+      join mentor_assignments ma on ma.venture_id = p.venture_id
+      where p.id = checkins.candidate_id
+      and ma.mentor_id = auth.uid()
+    )
   );
 create policy "Candidates submit own checkins"
   on checkins for insert with check (
