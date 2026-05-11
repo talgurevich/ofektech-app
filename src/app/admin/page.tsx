@@ -157,8 +157,8 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="יזמים" value={totalCandidates || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/candidates" />
         <StatCard label="מנטורים" value={totalMentors || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/users" />
-        <StatCard label="מיזמים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} href="/admin/ventures" />
-        <StatCard label="הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} href="/admin/lectures" />
+        <StatCard label="מיזמים פעילים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} href="/admin/ventures" />
+        <StatCard label="סה״כ הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} href="/admin/lectures" />
       </div>
 
       {/* Cross-venture activity feed */}
