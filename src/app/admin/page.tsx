@@ -155,10 +155,10 @@ export default async function AdminDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="יזמים" value={totalCandidates || 0} icon={<Users className="size-5 text-[#22c55e]" />} />
-        <StatCard label="מנטורים" value={totalMentors || 0} icon={<Users className="size-5 text-[#22c55e]" />} />
-        <StatCard label="מיזמים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} />
-        <StatCard label="הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} />
+        <StatCard label="יזמים" value={totalCandidates || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/candidates" />
+        <StatCard label="מנטורים" value={totalMentors || 0} icon={<Users className="size-5 text-[#22c55e]" />} href="/admin/users" />
+        <StatCard label="מיזמים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} href="/admin/ventures" />
+        <StatCard label="הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} href="/admin/lectures" />
       </div>
 
       {/* Cross-venture activity feed */}
@@ -176,7 +176,7 @@ export default async function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="max-h-[420px] overflow-y-auto pr-1">
-            <VentureActivityFeed items={activity} showVenture />
+            <VentureActivityFeed items={activity} showVenture audience="admin" />
           </div>
         </CardContent>
       </Card>
@@ -213,15 +213,19 @@ export default async function AdminDashboard() {
                   <p className="text-xs font-medium text-gray-500 mb-1.5">טרם השלימו ({notOnboardedUsers.length})</p>
                   <div className="space-y-1">
                     {notOnboardedUsers.map((u) => (
-                      <div key={u.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-red-50/50">
-                        <div className="flex items-center gap-2">
+                      <Link
+                        key={u.id}
+                        href={u.role === "candidate" ? `/admin/candidates/${u.id}` : `/profile/${u.id}`}
+                        className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
                           <XCircle className="size-3.5 text-red-400 shrink-0" />
-                          <span className="text-xs text-[#1a2744]">{u.full_name || u.email}</span>
+                          <span className="text-xs text-[#1a2744] truncate">{u.full_name || u.email}</span>
                         </div>
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
                           {u.role === "mentor" ? "מנטור" : u.role === "visitor" ? "מאזין" : "יזם"}
                         </Badge>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -232,15 +236,19 @@ export default async function AdminDashboard() {
                   <p className="text-xs font-medium text-gray-500 mb-1.5">השלימו ({onboardedUsers.length})</p>
                   <div className="space-y-1">
                     {onboardedUsers.map((u) => (
-                      <div key={u.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-[#22c55e]/5">
-                        <div className="flex items-center gap-2">
+                      <Link
+                        key={u.id}
+                        href={u.role === "candidate" ? `/admin/candidates/${u.id}` : `/profile/${u.id}`}
+                        className="flex items-center justify-between rounded-lg px-3 py-1.5 bg-[#22c55e]/5 hover:bg-[#22c55e]/10 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
                           <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
-                          <span className="text-xs text-[#1a2744]">{u.full_name || u.email}</span>
+                          <span className="text-xs text-[#1a2744] truncate">{u.full_name || u.email}</span>
                         </div>
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
                           {u.role === "mentor" ? "מנטור" : u.role === "visitor" ? "מאזין" : "יזם"}
                         </Badge>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -274,10 +282,14 @@ export default async function AdminDashboard() {
                   <p className="text-xs font-medium text-gray-500 mb-1.5">טרם מילאו ({didNotOpening.length})</p>
                   <div className="space-y-1">
                     {didNotOpening.map((c) => (
-                      <div key={c.id} className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50">
+                      <Link
+                        key={c.id}
+                        href={`/admin/candidates/${c.id}`}
+                        className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
+                      >
                         <XCircle className="size-3.5 text-red-400 shrink-0" />
-                        <span className="text-xs text-[#1a2744]">{c.full_name || c.email}</span>
-                      </div>
+                        <span className="text-xs text-[#1a2744] truncate">{c.full_name || c.email}</span>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -288,10 +300,14 @@ export default async function AdminDashboard() {
                   <p className="text-xs font-medium text-gray-500 mb-1.5">מילאו ({didOpening.length})</p>
                   <div className="space-y-1">
                     {didOpening.map((c) => (
-                      <div key={c.id} className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-[#22c55e]/5">
+                      <Link
+                        key={c.id}
+                        href={`/admin/candidates/${c.id}`}
+                        className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-[#22c55e]/5 hover:bg-[#22c55e]/10 transition-colors"
+                      >
                         <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
-                        <span className="text-xs text-[#1a2744]">{c.full_name || c.email}</span>
-                      </div>
+                        <span className="text-xs text-[#1a2744] truncate">{c.full_name || c.email}</span>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -319,7 +335,11 @@ export default async function AdminDashboard() {
                 ventureGuideProgress.map((v) => {
                   const percent = Math.round((v.filled / guideTotal) * 100);
                   return (
-                    <div key={v.id}>
+                    <Link
+                      key={v.id}
+                      href={`/workbook?venture=${v.id}`}
+                      className="block rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-[#1a2744]">{v.name}</span>
                         <span className="text-xs text-gray-500">{v.filled}/{guideTotal}</span>
@@ -332,7 +352,7 @@ export default async function AdminDashboard() {
                           style={{ width: `${percent}%` }}
                         />
                       </div>
-                    </div>
+                    </Link>
                   );
                 })
               )}
@@ -364,17 +384,21 @@ export default async function AdminDashboard() {
                     const hasFeedback = feedbackBySession.has(session.id);
 
                     return (
-                      <div key={session.id} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50/50 transition-colors">
+                      <Link
+                        key={session.id}
+                        href={`/sessions/${session.id}/feedback`}
+                        className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+                      >
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-[#1a2744] truncate">
                             {venture?.name || "מיזם"} ← {mentor?.full_name || "מנטור"}
                           </p>
                           <p className="text-xs text-gray-500">{formatDate(session.session_date)}</p>
                         </div>
-                        <Badge className={`text-[10px] border-0 ${hasFeedback ? "bg-[#22c55e]/10 text-[#22c55e]" : "bg-gray-100 text-gray-400"}`}>
+                        <Badge className={`text-[10px] border-0 shrink-0 ${hasFeedback ? "bg-[#22c55e]/10 text-[#22c55e]" : "bg-gray-100 text-gray-400"}`}>
                           {hasFeedback ? "✓ משוב" : "ממתין"}
                         </Badge>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -410,10 +434,11 @@ export default async function AdminDashboard() {
                     const ventureName = ventureMap.get(task.venture_id) || "מיזם";
 
                     return (
-                      <div
+                      <Link
                         key={task.id}
-                        className={`flex items-start gap-2 rounded-lg px-3 py-2 ${
-                          task.done ? "bg-[#22c55e]/5" : "bg-gray-50/60"
+                        href={`/workbook?venture=${task.venture_id}&sheet=tasks`}
+                        className={`flex items-start gap-2 rounded-lg px-3 py-2 transition-colors ${
+                          task.done ? "bg-[#22c55e]/5 hover:bg-[#22c55e]/10" : "bg-gray-50/60 hover:bg-gray-100/70"
                         }`}
                       >
                         {task.done ? (
@@ -449,7 +474,7 @@ export default async function AdminDashboard() {
                             </span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -462,9 +487,19 @@ export default async function AdminDashboard() {
   );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return (
-    <Card className="border-0 shadow-sm">
+function StatCard({
+  label,
+  value,
+  icon,
+  href,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  href?: string;
+}) {
+  const inner = (
+    <Card className={`border-0 shadow-sm h-full ${href ? "transition-shadow hover:shadow-md" : ""}`}>
       <CardContent className="flex items-center gap-4 pt-0">
         <div className="flex size-10 items-center justify-center rounded-lg bg-[#22c55e]/10">
           {icon}
@@ -476,4 +511,13 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }

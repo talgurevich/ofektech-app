@@ -847,7 +847,7 @@ async function MentorDashboard({
                         <p className="text-xs font-medium text-gray-500 mb-2">
                           פעילות אחרונה
                         </p>
-                        <VentureActivityFeed items={venture.activity} />
+                        <VentureActivityFeed items={venture.activity} audience="mentor" />
                       </div>
                     </CardContent>
                   </Card>

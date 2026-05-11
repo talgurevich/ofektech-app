@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Activity,
   Briefcase,
@@ -13,6 +14,42 @@ import {
 } from "lucide-react";
 import type { ActivityKind, VentureActivity } from "@/lib/types";
 import { formatRelativeHe } from "@/lib/utils";
+
+type Audience = "admin" | "mentor";
+
+function hrefForActivity(
+  item: VentureActivity,
+  audience: Audience
+): string | null {
+  const meta = item.metadata || {};
+  const sessionId = typeof meta.session_id === "string" ? meta.session_id : null;
+  const lectureId = typeof meta.lecture_id === "string" ? meta.lecture_id : null;
+  const sheetKey = typeof meta.sheet_key === "string" ? meta.sheet_key : null;
+
+  switch (item.kind) {
+    case "workbook_added":
+    case "workbook_updated":
+    case "workbook_deleted":
+    case "workbook_task_done":
+    case "workbook_task_reopened":
+      return `/workbook?venture=${item.venture_id}${
+        sheetKey ? `&sheet=${sheetKey}` : ""
+      }`;
+    case "session_feedback":
+    case "meeting_summary_submitted":
+      return sessionId ? `/sessions/${sessionId}/feedback` : null;
+    case "lecture_feedback":
+      return lectureId ? `/lectures/${lectureId}` : null;
+    case "profile_updated":
+      return item.actor_id ? `/profile/${item.actor_id}` : null;
+    case "guide_updated":
+      return audience === "admin" && item.actor_id
+        ? `/admin/candidates/${item.actor_id}`
+        : `/ventures/${item.venture_id}`;
+    default:
+      return null;
+  }
+}
 
 const KIND_ICON: Record<ActivityKind, LucideIcon> = {
   workbook_added: Table2,
@@ -66,10 +103,12 @@ export function VentureActivityFeed({
   items,
   emptyLabel = "אין פעילות אחרונה",
   showVenture = false,
+  audience,
 }: {
   items: VentureActivity[];
   emptyLabel?: string;
   showVenture?: boolean;
+  audience?: Audience;
 }) {
   if (items.length === 0) {
     return (
@@ -93,8 +132,10 @@ export function VentureActivityFeed({
             ? (item.metadata.row_label as string)
             : null;
         const ventureName = showVenture ? item.venture?.name : null;
-        return (
-          <li key={item.id} className="flex items-start gap-2.5 text-xs">
+        const href = audience ? hrefForActivity(item, audience) : null;
+
+        const body = (
+          <>
             <Icon className={`size-4 shrink-0 mt-0.5 ${tint}`} />
             <div className="flex-1 min-w-0">
               <p className="text-[#1a2744] leading-snug">
@@ -119,6 +160,21 @@ export function VentureActivityFeed({
                 )}
               </div>
             </div>
+          </>
+        );
+
+        return (
+          <li key={item.id} className="text-xs">
+            {href ? (
+              <Link
+                href={href}
+                className="flex items-start gap-2.5 -mx-2 px-2 py-1 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                {body}
+              </Link>
+            ) : (
+              <div className="flex items-start gap-2.5">{body}</div>
+            )}
           </li>
         );
       })}
