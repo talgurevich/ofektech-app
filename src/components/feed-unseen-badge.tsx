@@ -36,11 +36,32 @@ export function FeedUnseenBadge() {
       if (!cancelled) setCount(count ?? 0);
     }
 
-    load();
-    const t = setInterval(load, 60_000);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    function start() {
+      load();
+      if (interval !== null) return;
+      interval = setInterval(load, 120_000);
+    }
+    function stop() {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    }
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      start();
+    } else {
+      load();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
-      clearInterval(t);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

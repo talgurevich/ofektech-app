@@ -236,54 +236,72 @@ export function FeedClient({ currentUser }: { currentUser: CurrentUser }) {
   const [composerPreview, setComposerPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
-  // Bump feed_last_seen_at on mount so the sidebar badge clears.
+  // Refetch newer posts on focus instead of streaming via realtime — the
+  // posts table is no longer in the realtime publication.
+  const stateRef = useRef({ posts, pinnedPosts, pendingPosts });
   useEffect(() => {
-    supabase
-      .from("profiles")
-      .update({ feed_last_seen_at: new Date().toISOString() })
-      .eq("id", currentUser.id)
-      .then(() => {});
-  }, [supabase, currentUser.id]);
+    stateRef.current = { posts, pinnedPosts, pendingPosts };
+  }, [posts, pinnedPosts, pendingPosts]);
 
-  // Realtime — push newly-inserted posts into a "pending" tray so we don't
-  // yank the user's scroll. Comments are streamed in their own thread.
   useEffect(() => {
-    const channel = supabase
-      .channel("feed-posts-stream")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
-        async (payload) => {
-          const row = payload.new as Post;
-          if (!row?.id) return;
-          if (row.author_id === currentUser.id) return; // own post is already in list
-          if (row.deleted_at) return;
-          const { data } = await supabase
-            .from("posts")
-            .select(
-              "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
-            )
-            .eq("id", row.id)
-            .is("deleted_at", null)
-            .maybeSingle();
-          if (!data) return;
-          const post = data as Post;
-          if (post.pinned_at) {
-            setPinnedPosts((prev) =>
-              prev.some((p) => p.id === post.id) ? prev : [post, ...prev]
-            );
-          } else {
-            setPendingPosts((prev) =>
-              prev.some((p) => p.id === post.id) ? prev : [post, ...prev]
-            );
-          }
-        }
-      )
-      .subscribe();
+    async function refetchNewer() {
+      const { posts, pinnedPosts, pendingPosts } = stateRef.current;
+      const maxAt = [...posts, ...pinnedPosts, ...pendingPosts].reduce(
+        (m, p) => (p.created_at > m ? p.created_at : m),
+        ""
+      );
+      if (!maxAt) return;
+      const { data } = await supabase
+        .from("posts")
+        .select(
+          "*, author:profiles!posts_author_id_fkey(id, full_name, email, avatar_url, role)"
+        )
+        .is("deleted_at", null)
+        .neq("author_id", currentUser.id)
+        .gt("created_at", maxAt)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const rows = (data as Post[]) || [];
+      if (rows.length === 0) return;
+      setPinnedPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const fresh = rows.filter((p) => p.pinned_at && !seen.has(p.id));
+        return fresh.length ? [...fresh, ...prev] : prev;
+      });
+      setPendingPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const fresh = rows.filter((p) => !p.pinned_at && !seen.has(p.id));
+        return fresh.length ? [...fresh, ...prev] : prev;
+      });
+    }
+    function onVisible() {
+      if (document.visibilityState === "visible") refetchNewer();
+    }
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      channel.unsubscribe();
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [supabase, currentUser.id]);
+
+  // Mark feed as seen once after the initial load. The `or` filter makes
+  // the UPDATE a no-op (no WAL) when the profile's seen-at is already current.
+  const seenBumpedRef = useRef(false);
+  useEffect(() => {
+    if (seenBumpedRef.current || loading) return;
+    const newest = [...posts, ...pinnedPosts]
+      .filter((p) => p.author_id !== currentUser.id)
+      .reduce((m, p) => (p.created_at > m ? p.created_at : m), "");
+    if (!newest) return;
+    seenBumpedRef.current = true;
+    supabase
+      .from("profiles")
+      .update({ feed_last_seen_at: newest })
+      .eq("id", currentUser.id)
+      .or(`feed_last_seen_at.is.null,feed_last_seen_at.lt.${newest}`)
+      .then(() => {});
+  }, [loading, posts, pinnedPosts, supabase, currentUser.id]);
 
   function flushPending() {
     if (pendingPosts.length === 0) return;
@@ -1156,67 +1174,38 @@ function CommentThread({
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("post_comments")
-        .select(
-          "*, author:profiles!post_comments_author_id_fkey(id, full_name, email, avatar_url, role)"
-        )
-        .eq("post_id", postId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true });
-      if (cancelled) return;
-      const rows = (data as PostComment[]) || [];
-      setComments(rows);
-      onCountChange(rows.length);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const fetchComments = useCallback(async () => {
+    const { data } = await supabase
+      .from("post_comments")
+      .select(
+        "*, author:profiles!post_comments_author_id_fkey(id, full_name, email, avatar_url, role)"
+      )
+      .eq("post_id", postId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true });
+    const rows = (data as PostComment[]) || [];
+    setComments(rows);
+    onCountChange(rows.length);
+    setLoading(false);
   }, [supabase, postId, onCountChange]);
 
-  // Realtime — append new comments inserted by other users into the thread.
   useEffect(() => {
-    const channel = supabase
-      .channel(`comments-stream-${postId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "post_comments",
-          filter: `post_id=eq.${postId}`,
-        },
-        async (payload) => {
-          const row = payload.new as PostComment;
-          if (!row?.id) return;
-          if (row.author_id === currentUser.id) return; // own comment is already in state
-          if (row.deleted_at) return;
-          const { data } = await supabase
-            .from("post_comments")
-            .select(
-              "*, author:profiles!post_comments_author_id_fkey(id, full_name, email, avatar_url, role)"
-            )
-            .eq("id", row.id)
-            .is("deleted_at", null)
-            .maybeSingle();
-          if (!data) return;
-          setComments((prev) => {
-            if (prev.some((c) => c.id === (data as PostComment).id)) return prev;
-            const next = [...prev, data as PostComment];
-            onCountChange(next.length);
-            return next;
-          });
-        }
-      )
-      .subscribe();
+    fetchComments();
+  }, [fetchComments]);
+
+  // Refetch when the tab regains focus, to pick up comments from other users
+  // (we no longer keep a realtime subscription on post_comments).
+  useEffect(() => {
+    function onFocus() {
+      if (document.visibilityState === "visible") fetchComments();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
     return () => {
-      channel.unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [supabase, postId, currentUser.id, onCountChange]);
+  }, [fetchComments]);
 
   async function notifyMentions(text: string, commentId: string) {
     const { names, all } = detectMentions(text, members);

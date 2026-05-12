@@ -52,11 +52,35 @@ export function NotificationBell() {
     }
   }, []);
 
-  // Fetch on mount and poll every 30s
+  // Poll every 90s while the tab is visible. Pausing when hidden cuts
+  // background DB load — the bell is in the sidebar on every authed page.
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    function start() {
+      fetchNotifications();
+      if (interval !== null) return;
+      interval = setInterval(fetchNotifications, 90_000);
+    }
+    function stop() {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    }
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      start();
+    } else {
+      fetchNotifications();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [fetchNotifications]);
 
   // Close dropdown on navigation
