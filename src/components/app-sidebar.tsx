@@ -58,6 +58,7 @@ const candidateLinks = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
+  { href: "/directory", label: "אנשי המחזור", icon: Users },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
@@ -65,6 +66,7 @@ const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
   { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
+  { href: "/directory", label: "אנשי המחזור", icon: Users },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
