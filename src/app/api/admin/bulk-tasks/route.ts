@@ -47,6 +47,14 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!ventureIds.every((id) => UUID_RE.test(id))) {
+    return NextResponse.json(
+      { error: "invalid venture_id" },
+      { status: 400 }
+    );
+  }
   if (files.length > MAX_FILES) {
     return NextResponse.json(
       { error: `up to ${MAX_FILES} files allowed` },
@@ -54,6 +62,12 @@ export async function POST(request: Request) {
     );
   }
   for (const f of files) {
+    if (f.size === 0) {
+      return NextResponse.json(
+        { error: `file "${f.name}" is empty` },
+        { status: 400 }
+      );
+    }
     if (f.size > MAX_FILE_BYTES) {
       return NextResponse.json(
         { error: `file "${f.name}" exceeds 10MB` },
@@ -68,17 +82,21 @@ export async function POST(request: Request) {
   const insertedEntryIds: string[] = [];
 
   async function rollback() {
-    if (uploadedPaths.length > 0) {
-      await supabase.storage.from(BUCKET).remove(uploadedPaths);
-    }
-    if (insertedEntryIds.length > 0) {
-      await supabase
-        .from("workbook_entries")
-        .delete()
-        .in("id", insertedEntryIds);
-    }
-    if (bulkTaskId) {
-      await supabase.from("admin_bulk_tasks").delete().eq("id", bulkTaskId);
+    try {
+      if (uploadedPaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(uploadedPaths);
+      }
+      if (insertedEntryIds.length > 0) {
+        await supabase
+          .from("workbook_entries")
+          .delete()
+          .in("id", insertedEntryIds);
+      }
+      if (bulkTaskId) {
+        await supabase.from("admin_bulk_tasks").delete().eq("id", bulkTaskId);
+      }
+    } catch (err) {
+      console.error("[bulk-tasks POST] rollback failed:", err);
     }
   }
 
