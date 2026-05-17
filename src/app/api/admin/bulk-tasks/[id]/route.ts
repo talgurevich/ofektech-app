@@ -30,11 +30,22 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 1. Capture all storage paths linked to this bulk task BEFORE deleting.
-  const { data: fileRows } = await supabase
-    .from("workbook_task_files")
-    .select("storage_path")
+  // 1. Capture all storage paths attached to ANY entry of this bulk task
+  //    (both admin-broadcast files and per-venture uploads on those entries)
+  //    BEFORE the cascade-delete in step 3 removes the file rows.
+  const { data: entryRows } = await supabase
+    .from("workbook_entries")
+    .select("id")
     .eq("bulk_task_id", id);
+  const entryIds = (entryRows || []).map((r) => r.id as string);
+
+  const { data: fileRows } =
+    entryIds.length === 0
+      ? { data: [] as { storage_path: string }[] }
+      : await supabase
+          .from("workbook_task_files")
+          .select("storage_path")
+          .in("entry_id", entryIds);
   const paths = Array.from(
     new Set((fileRows || []).map((r) => r.storage_path as string))
   );
