@@ -29,6 +29,8 @@ interface DirectoryMember {
   avatar_url: string | null;
   phone: string | null;
   linkedin_url: string | null;
+  motto: string | null;
+  bio: string | null;
   venture_role: string | null;
   company: string | null;
   expertise: string | null;
@@ -111,50 +113,29 @@ export default async function DirectoryPage() {
   const cohortIdList = Array.from(cohortIds);
 
   // Collect members:
-  // - All candidates in those cohorts.
-  // - All mentors assigned to ventures in those cohorts.
-  let candidates: DirectoryMember[] = [];
-  let mentors: DirectoryMember[] = [];
+  // - Candidates: scoped to the viewer's cohort(s).
+  // - Mentors: ALL mentors in the program, since mentors are a
+  //   community-wide resource (not strictly cohort-bound).
+  const memberFields =
+    "id, full_name, email, role, avatar_url, phone, linkedin_url, motto, bio, venture_role, company, expertise, cohort_id, venture:ventures(id, name), cohort:cohorts(id, name)";
 
+  let candidates: DirectoryMember[] = [];
   if (cohortIdList.length > 0) {
     const { data: candidateRows } = await supabase
       .from("profiles")
-      .select(
-        "id, full_name, email, role, avatar_url, phone, linkedin_url, venture_role, company, expertise, cohort_id, venture:ventures(id, name), cohort:cohorts(id, name)"
-      )
+      .select(memberFields)
       .eq("role", "candidate")
       .in("cohort_id", cohortIdList)
       .order("full_name", { ascending: true });
     candidates = (candidateRows ?? []) as DirectoryMember[];
-
-    // Mentors assigned to ventures in those cohorts.
-    const { data: ventureRows } = await supabase
-      .from("ventures")
-      .select("id")
-      .in("cohort_id", cohortIdList);
-    const ventureIds = (ventureRows ?? []).map((v) => v.id);
-
-    if (ventureIds.length > 0) {
-      const { data: assignmentRows } = await supabase
-        .from("mentor_assignments")
-        .select("mentor_id")
-        .in("venture_id", ventureIds);
-      const mentorIds = Array.from(
-        new Set((assignmentRows ?? []).map((a) => a.mentor_id))
-      );
-
-      if (mentorIds.length > 0) {
-        const { data: mentorRows } = await supabase
-          .from("profiles")
-          .select(
-            "id, full_name, email, role, avatar_url, phone, linkedin_url, venture_role, company, expertise, cohort_id, venture:ventures(id, name), cohort:cohorts(id, name)"
-          )
-          .in("id", mentorIds)
-          .order("full_name", { ascending: true });
-        mentors = (mentorRows ?? []) as DirectoryMember[];
-      }
-    }
   }
+
+  const { data: mentorRows } = await supabase
+    .from("profiles")
+    .select(memberFields)
+    .eq("role", "mentor")
+    .order("full_name", { ascending: true });
+  let mentors: DirectoryMember[] = (mentorRows ?? []) as DirectoryMember[];
 
   // Hide the viewer from their own directory.
   candidates = candidates.filter((m) => m.id !== user.id);
@@ -236,6 +217,9 @@ export default async function DirectoryPage() {
             <h2 className="text-lg font-semibold text-[#1a2744]">מנטורים</h2>
             <Badge variant="secondary">{mentors.length}</Badge>
           </div>
+          <p className="text-xs text-gray-500">
+            כל המנטורים בתוכנית, מתוך הפרופילים שלהם.
+          </p>
           <div className="space-y-2">
             {mentors.map((m) => (
               <MemberCard key={m.id} member={m} tone="navy" />
@@ -262,6 +246,10 @@ function MemberCard({
       : venture
         ? `${venture.name}${member.venture_role ? ` — ${member.venture_role}` : ""}`
         : "";
+  const blurb =
+    member.role === "mentor"
+      ? member.bio?.trim() || member.motto?.trim() || ""
+      : "";
 
   const phoneHref = member.phone
     ? `tel:${member.phone.replace(/[^0-9+]/g, "")}`
@@ -303,6 +291,11 @@ function MemberCard({
               {subtitle && (
                 <p className="mt-0.5 text-xs text-gray-500 truncate">
                   {subtitle}
+                </p>
+              )}
+              {blurb && (
+                <p className="mt-1 text-xs text-gray-600 leading-relaxed line-clamp-2">
+                  {blurb}
                 </p>
               )}
             </div>
