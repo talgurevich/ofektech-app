@@ -173,13 +173,13 @@ export function TaskFilesModal({
       return;
     }
 
-    // Ref-count check: only remove the storage object if no other row
-    // (in any venture) still references this path.
-    const { count } = await supabase
-      .from("workbook_task_files")
-      .select("id", { count: "exact", head: true })
-      .eq("storage_path", f.storage_path);
-    if ((count ?? 0) === 0) {
+    // Storage cleanup: only remove the object when we know this row was the
+    // sole reference. Per-venture uploads (bulk_task_id null) use a
+    // UUID-unique path, so removing the row makes the object orphaned and
+    // safe to delete. Admin-broadcast files share one path across many
+    // venture rows that RLS hides from this client — leave that cleanup to
+    // the admin bulk-delete route (which runs with admin RLS).
+    if (f.bulk_task_id === null) {
       await supabase.storage.from(BUCKET).remove([f.storage_path]);
     }
 
@@ -249,7 +249,8 @@ export function TaskFilesModal({
                     <button
                       type="button"
                       onClick={() => handleDownload(f)}
-                      className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#1a2744]"
+                      disabled={busy}
+                      className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#1a2744] disabled:opacity-40 disabled:hover:bg-transparent"
                       title="הורדה"
                     >
                       <Download className="size-4" />
