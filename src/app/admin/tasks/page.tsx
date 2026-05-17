@@ -17,6 +17,8 @@ type VentureRow = {
 };
 
 const CATEGORY_OPTIONS = ["מוצר", "עיסקי"] as const;
+const MAX_FILES = 5;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export default function AdminBulkTasksPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -32,8 +34,6 @@ export default function AdminBulkTasksPage() {
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
-  const MAX_FILES = 5;
-  const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
   useEffect(() => {
     (async () => {
@@ -76,13 +76,25 @@ export default function AdminBulkTasksPage() {
     fd.append("venture_ids", Array.from(selected).join(","));
     for (const f of stagedFiles) fd.append("files", f, f.name);
 
-    const res = await fetch("/api/admin/bulk-tasks", {
-      method: "POST",
-      body: fd,
-    });
-    const body = (await res.json()) as
+    let body:
       | { bulk_task_id: string; target_count: number; file_count: number }
       | { error: string };
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/bulk-tasks", {
+        method: "POST",
+        body: fd,
+      });
+      body = (await res.json()) as
+        | { bulk_task_id: string; target_count: number; file_count: number }
+        | { error: string };
+    } catch (err) {
+      setMessage(
+        `שגיאה: ${err instanceof Error ? err.message : "שגיאת רשת"}`
+      );
+      setSubmitting(false);
+      return;
+    }
 
     if (!res.ok || "error" in body) {
       const errMsg = "error" in body ? body.error : `HTTP ${res.status}`;
