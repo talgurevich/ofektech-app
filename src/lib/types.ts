@@ -209,9 +209,33 @@ export interface WorkbookEntry {
   sheet_key: string;
   data: Record<string, unknown>;
   position: number;
+  bulk_task_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminBulkTask {
+  id: string;
+  task_text: string;
+  category: string | null;
+  assignee: string | null;
+  due_date: string | null;
+  target_count: number;
+  created_by: string;
+  created_at: string;
+}
+
+export interface WorkbookTaskFile {
+  id: string;
+  entry_id: string;
+  bulk_task_id: string | null;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  uploaded_by: string;
+  created_at: string;
 }
 
 // WeeklyCheckin removed — feature deprecated. The opening (entry)

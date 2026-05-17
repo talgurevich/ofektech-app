@@ -19,7 +19,8 @@ export type WorkbookColumnType =
   | "phone"
   | "select"
   | "select_creatable"
-  | "member";
+  | "member"
+  | "files";
 
 export interface WorkbookColumn {
   key: string;
@@ -57,6 +58,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       { key: "assignee", label: "אחראי ביצוע", type: "member" },
       { key: "date", label: "תאריך פתיחה", type: "date" },
       { key: "due_date", label: "תאריך לביצוע", type: "date" },
+      { key: "attachments", label: "קבצים", type: "files", width: "100px" },
       { key: "done", label: "בוצע", type: "boolean", width: "90px" },
     ],
   },
