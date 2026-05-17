@@ -9,6 +9,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(id)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -59,7 +64,15 @@ export async function DELETE(
     if ((count ?? 0) === 0) orphans.push(p);
   }
   if (orphans.length > 0) {
-    await supabase.storage.from(BUCKET).remove(orphans);
+    const { error: storageErr } = await supabase.storage
+      .from(BUCKET)
+      .remove(orphans);
+    if (storageErr) {
+      console.warn(
+        "[bulk-tasks DELETE] storage remove failed:",
+        storageErr.message
+      );
+    }
   }
 
   // 5. Delete the registry row itself.

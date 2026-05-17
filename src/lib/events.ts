@@ -21,6 +21,7 @@ const EMOJI: Record<string, string> = {
   feed_unpin: "📍",
   feed_moderation: "🛡️",
   bulk_task: "📤",
+  bulk_task_deleted: "🗑️",
   lecture_resource: "📎",
 };
 
