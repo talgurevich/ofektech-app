@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, ListTodo, Plus, Send, Loader2, Paperclip, Trash2 } from "lucide-react";
+import { Briefcase, History, ListTodo, Plus, Send, Loader2, Paperclip, Trash2 } from "lucide-react";
+import type { AdminBulkTask } from "@/lib/types";
 
 type VentureRow = {
   id: string;
@@ -376,6 +377,215 @@ export default function AdminBulkTasksPage() {
           </form>
         </CardContent>
       </Card>
+
+      <BulkTaskHistory refreshKey={historyRefreshKey} />
     </div>
+  );
+}
+
+type BulkTaskRow = AdminBulkTask & {
+  current_count: number;
+  file_count: number;
+};
+
+function BulkTaskHistory({
+  refreshKey,
+}: {
+  refreshKey: number;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const [rows, setRows] = useState<BulkTaskRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedFiles, setExpandedFiles] = useState<
+    { id: string; file_name: string; storage_path: string; size_bytes: number | null }[]
+  >([]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data: bulk } = await supabase
+      .from("admin_bulk_tasks")
+      .select("*")
+      .order("created_at", { ascending: false });
+    const list = (bulk as AdminBulkTask[]) || [];
+
+    // For each bulk task, fetch current entry count and distinct file count.
+    const enriched: BulkTaskRow[] = await Promise.all(
+      list.map(async (b) => {
+        const { count: cur } = await supabase
+          .from("workbook_entries")
+          .select("id", { count: "exact", head: true })
+          .eq("bulk_task_id", b.id);
+        const { data: files } = await supabase
+          .from("workbook_task_files")
+          .select("storage_path")
+          .eq("bulk_task_id", b.id);
+        const distinctFiles = new Set(
+          (files || []).map((r) => r.storage_path as string)
+        );
+        return {
+          ...b,
+          current_count: cur ?? 0,
+          file_count: distinctFiles.size,
+        };
+      })
+    );
+    setRows(enriched);
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    load();
+  }, [load, refreshKey]);
+
+  async function toggleFiles(b: BulkTaskRow) {
+    if (expandedId === b.id) {
+      setExpandedId(null);
+      setExpandedFiles([]);
+      return;
+    }
+    setExpandedId(b.id);
+    setExpandedFiles([]);
+    const { data } = await supabase
+      .from("workbook_task_files")
+      .select("id, file_name, storage_path, size_bytes")
+      .eq("bulk_task_id", b.id);
+    // Dedupe by storage_path (same file across many ventures shows once)
+    const seen = new Set<string>();
+    const unique = (data || [])
+      .filter((r) => {
+        const p = r.storage_path as string;
+        if (seen.has(p)) return false;
+        seen.add(p);
+        return true;
+      })
+      .map((r) => ({
+        id: r.id as string,
+        file_name: r.file_name as string,
+        storage_path: r.storage_path as string,
+        size_bytes: (r.size_bytes as number | null) ?? null,
+      }));
+    setExpandedFiles(unique);
+  }
+
+  async function downloadFile(path: string, name: string) {
+    const { data } = await supabase.storage
+      .from("workbook-task-files")
+      .createSignedUrl(path, 3600, { download: name });
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  }
+
+  async function handleDelete(b: BulkTaskRow) {
+    const confirmMsg =
+      b.current_count > 0
+        ? `למחוק את המשימה מ-${b.current_count} המיזמים שבהם היא עדיין מופיעה? פעולה זו תמחק גם את הקבצים שצורפו.`
+        : `למחוק את הרשומה מההיסטוריה? (המשימה כבר אינה קיימת באף מיזם)`;
+    if (!confirm(confirmMsg)) return;
+    setBusyId(b.id);
+    const res = await fetch(`/api/admin/bulk-tasks/${b.id}`, {
+      method: "DELETE",
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`שגיאה: ${body?.error || res.status}`);
+      return;
+    }
+    await load();
+  }
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
+          <History className="size-4" />
+          משימות שנשלחו
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="py-6 text-center text-gray-400">
+            <Loader2 className="mx-auto size-5 animate-spin" />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">
+            עדיין לא נשלחו משימות בקבוצה
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {rows.map((b) => (
+              <li key={b.id} className="py-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#1a2744] line-clamp-2">
+                      {b.task_text}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                      {b.category && <span>קטגוריה: {b.category}</span>}
+                      {b.assignee && <span>אחראי: {b.assignee}</span>}
+                      {b.due_date && <span>יעד: {b.due_date}</span>}
+                      <span>
+                        נשלח: {new Date(b.created_at).toLocaleDateString("he-IL")}
+                      </span>
+                      <span>
+                        נשלח ל-{b.target_count} · עדיין ב-{b.current_count}
+                      </span>
+                      {b.file_count > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleFiles(b)}
+                          className="inline-flex items-center gap-1 text-[#22c55e] hover:underline"
+                        >
+                          <Paperclip className="size-3" />
+                          {b.file_count}
+                        </button>
+                      )}
+                    </div>
+                    {expandedId === b.id && expandedFiles.length > 0 && (
+                      <ul className="mt-2 rounded-md border border-gray-100 bg-gray-50/60 p-2 text-xs text-gray-600">
+                        {expandedFiles.map((f) => (
+                          <li
+                            key={f.id}
+                            className="flex items-center gap-2 py-1"
+                          >
+                            <Paperclip className="size-3 text-gray-400" />
+                            <span className="flex-1 min-w-0 truncate">
+                              {f.file_name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                downloadFile(f.storage_path, f.file_name)
+                              }
+                              className="text-[#22c55e] hover:underline"
+                            >
+                              הורדה
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(b)}
+                    disabled={busyId === b.id}
+                    className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                    title="מחק משימה מכל המיזמים"
+                  >
+                    {busyId === b.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-4" />
+                    )}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
