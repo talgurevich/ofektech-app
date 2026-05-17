@@ -132,11 +132,10 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
     // this client — leave their cleanup to the admin bulk-delete route.
     const { data: fileRows } = await supabase
       .from("workbook_task_files")
-      .select("storage_path, bulk_task_id")
-      .eq("entry_id", id);
-    const orphanPaths = (fileRows || [])
-      .filter((r) => (r.bulk_task_id as string | null) === null)
-      .map((r) => r.storage_path as string);
+      .select("storage_path")
+      .eq("entry_id", id)
+      .is("bulk_task_id", null);
+    const orphanPaths = (fileRows || []).map((r) => r.storage_path as string);
 
     setEntries((prev) => prev.filter((e) => e.id !== id));
     await supabase.from("workbook_entries").delete().eq("id", id);
@@ -608,6 +607,7 @@ function FilesCell({
   const supabase = useMemo(() => createClient(), []);
   const [count, setCount] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
+  const handleCountChange = useCallback((c: number) => setCount(c), []);
 
   const loadCount = useCallback(async () => {
     const { count: c } = await supabase
@@ -639,11 +639,8 @@ function FilesCell({
         entryId={entryId}
         ventureId={ventureId}
         open={open}
-        onClose={() => {
-          setOpen(false);
-          loadCount();
-        }}
-        onCountChange={(c) => setCount(c)}
+        onClose={() => setOpen(false)}
+        onCountChange={handleCountChange}
       />
     </>
   );
