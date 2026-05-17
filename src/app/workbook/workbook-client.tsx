@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TaskFilesModal } from "@/components/task-files-modal";
 
 interface Props {
   ventureId: string;
@@ -124,8 +125,26 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
   async function deleteRow(id: string) {
     if (!confirm("למחוק את השורה הזו?")) return;
     const removed = entries.find((e) => e.id === id);
+
+    // Capture per-venture (non-bulk) file paths BEFORE delete; the cascade
+    // will remove the file rows. Admin-broadcast files (bulk_task_id set)
+    // share storage_path across many ventures' rows that RLS hides from
+    // this client — leave their cleanup to the admin bulk-delete route.
+    const { data: fileRows } = await supabase
+      .from("workbook_task_files")
+      .select("storage_path, bulk_task_id")
+      .eq("entry_id", id);
+    const orphanPaths = (fileRows || [])
+      .filter((r) => (r.bulk_task_id as string | null) === null)
+      .map((r) => r.storage_path as string);
+
     setEntries((prev) => prev.filter((e) => e.id !== id));
     await supabase.from("workbook_entries").delete().eq("id", id);
+
+    if (orphanPaths.length > 0) {
+      await supabase.storage.from("workbook-task-files").remove(orphanPaths);
+    }
+
     logActivity(supabase, {
       ventureId,
       kind: "workbook_deleted",
@@ -299,13 +318,20 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
                             title="חדש — טרם נצפה"
                           />
                         )}
-                        <CellEditor
-                          column={col}
-                          value={entry.data[col.key]}
-                          onChange={(v) => updateCell(entry.id, col.key, v)}
-                          suggestions={columnSuggestions[col.key]}
-                          members={members}
-                        />
+                        {col.type === "files" ? (
+                          <FilesCell
+                            entryId={entry.id}
+                            ventureId={ventureId}
+                          />
+                        ) : (
+                          <CellEditor
+                            column={col}
+                            value={entry.data[col.key]}
+                            onChange={(v) => updateCell(entry.id, col.key, v)}
+                            suggestions={columnSuggestions[col.key]}
+                            members={members}
+                          />
+                        )}
                       </div>
                     </td>
                   ))}
@@ -375,6 +401,12 @@ function CellEditor({
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
 
   const strVal = value == null ? "" : String(value);
+
+  if (column.type === "files") {
+    // Files are stored in their own table, not in entry.data.
+    // The cell is rendered separately via FilesCell, which knows the entry id.
+    return null;
+  }
 
   if (column.type === "boolean") {
     return (
@@ -563,6 +595,57 @@ function EditableInput({
         </button>
       )}
     </div>
+  );
+}
+
+function FilesCell({
+  entryId,
+  ventureId,
+}: {
+  entryId: string;
+  ventureId: string;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const [count, setCount] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const loadCount = useCallback(async () => {
+    const { count: c } = await supabase
+      .from("workbook_task_files")
+      .select("id", { count: "exact", head: true })
+      .eq("entry_id", entryId);
+    setCount(c ?? 0);
+  }, [supabase, entryId]);
+
+  useEffect(() => {
+    loadCount();
+  }, [loadCount]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "inline-flex w-full items-center justify-center gap-1 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-600 transition-colors hover:bg-white hover:border-gray-200",
+          count === 0 && "text-gray-400"
+        )}
+        title="קבצים מצורפים"
+      >
+        <Paperclip className="size-3.5" />
+        <span>{count ?? "…"}</span>
+      </button>
+      <TaskFilesModal
+        entryId={entryId}
+        ventureId={ventureId}
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          loadCount();
+        }}
+        onCountChange={(c) => setCount(c)}
+      />
+    </>
   );
 }
 
