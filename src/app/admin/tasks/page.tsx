@@ -404,35 +404,38 @@ function BulkTaskHistory({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: bulk } = await supabase
-      .from("admin_bulk_tasks")
-      .select("*")
-      .order("created_at", { ascending: false });
-    const list = (bulk as AdminBulkTask[]) || [];
+    try {
+      const { data: bulk } = await supabase
+        .from("admin_bulk_tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const list = (bulk as AdminBulkTask[]) || [];
 
-    // For each bulk task, fetch current entry count and distinct file count.
-    const enriched: BulkTaskRow[] = await Promise.all(
-      list.map(async (b) => {
-        const { count: cur } = await supabase
-          .from("workbook_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("bulk_task_id", b.id);
-        const { data: files } = await supabase
-          .from("workbook_task_files")
-          .select("storage_path")
-          .eq("bulk_task_id", b.id);
-        const distinctFiles = new Set(
-          (files || []).map((r) => r.storage_path as string)
-        );
-        return {
-          ...b,
-          current_count: cur ?? 0,
-          file_count: distinctFiles.size,
-        };
-      })
-    );
-    setRows(enriched);
-    setLoading(false);
+      // For each bulk task, fetch current entry count and distinct file count.
+      const enriched: BulkTaskRow[] = await Promise.all(
+        list.map(async (b) => {
+          const { count: cur } = await supabase
+            .from("workbook_entries")
+            .select("id", { count: "exact", head: true })
+            .eq("bulk_task_id", b.id);
+          const { data: files } = await supabase
+            .from("workbook_task_files")
+            .select("storage_path")
+            .eq("bulk_task_id", b.id);
+          const distinctFiles = new Set(
+            (files || []).map((r) => r.storage_path as string)
+          );
+          return {
+            ...b,
+            current_count: cur ?? 0,
+            file_count: distinctFiles.size,
+          };
+        })
+      );
+      setRows(enriched);
+    } finally {
+      setLoading(false);
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -445,12 +448,13 @@ function BulkTaskHistory({
       setExpandedFiles([]);
       return;
     }
-    setExpandedId(b.id);
+    const requestedId = b.id;
+    setExpandedId(requestedId);
     setExpandedFiles([]);
     const { data } = await supabase
       .from("workbook_task_files")
       .select("id, file_name, storage_path, size_bytes")
-      .eq("bulk_task_id", b.id);
+      .eq("bulk_task_id", requestedId);
     // Dedupe by storage_path (same file across many ventures shows once)
     const seen = new Set<string>();
     const unique = (data || [])
@@ -466,7 +470,11 @@ function BulkTaskHistory({
         storage_path: r.storage_path as string,
         size_bytes: (r.size_bytes as number | null) ?? null,
       }));
-    setExpandedFiles(unique);
+    // Drop stale results: another row may have been expanded mid-fetch.
+    setExpandedId((current) => {
+      if (current === requestedId) setExpandedFiles(unique);
+      return current;
+    });
   }
 
   async function downloadFile(path: string, name: string) {
@@ -477,9 +485,11 @@ function BulkTaskHistory({
   }
 
   async function handleDelete(b: BulkTaskRow) {
+    const filesClause =
+      b.file_count > 0 ? " פעולה זו תמחק גם את הקבצים שצורפו." : "";
     const confirmMsg =
       b.current_count > 0
-        ? `למחוק את המשימה מ-${b.current_count} המיזמים שבהם היא עדיין מופיעה? פעולה זו תמחק גם את הקבצים שצורפו.`
+        ? `למחוק את המשימה מ-${b.current_count} המיזמים שבהם היא עדיין מופיעה?${filesClause}`
         : `למחוק את הרשומה מההיסטוריה? (המשימה כבר אינה קיימת באף מיזם)`;
     if (!confirm(confirmMsg)) return;
     setBusyId(b.id);
