@@ -336,12 +336,15 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
                   ? new Date(entry.created_at).getTime()
                   : 0;
                 const isUnseen = lastSeen > 0 && createdAt > lastSeen;
+                const isAdminBroadcast = !!entry.bulk_task_id;
                 return (
                 <tr
                   key={entry.id}
+                  title={isAdminBroadcast ? "משימה מההנהלה" : undefined}
                   className={cn(
                     "border-b border-gray-100 hover:bg-gray-50/50",
-                    isUnseen && "bg-red-50/30"
+                    isAdminBroadcast && "bg-green-50/60 hover:bg-green-50/80",
+                    isUnseen && !isAdminBroadcast && "bg-red-50/30"
                   )}
                 >
                   {activeSheet.columns.map((col, idx) => (
