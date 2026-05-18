@@ -34,6 +34,7 @@ import {
 
 const FILE_BUCKET = "bibliography-files";
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
 
 type FileMeta = {
   file_url: string | null;
@@ -49,6 +50,16 @@ const EMPTY_FILE: FileMeta = {
   file_name: null,
   file_size: null,
   file_mime: null,
+};
+
+type CoverMeta = {
+  cover_url: string | null;
+  cover_path: string | null;
+};
+
+const EMPTY_COVER: CoverMeta = {
+  cover_url: null,
+  cover_path: null,
 };
 
 function formatBytes(bytes: number | null): string {
@@ -98,7 +109,7 @@ type FormState = {
   kind: BibliographyKind;
   url: string;
   description: string;
-  cover_url: string;
+  cover: CoverMeta;
   file: FileMeta;
 };
 
@@ -109,7 +120,7 @@ const EMPTY_FORM: FormState = {
   kind: "book",
   url: "",
   description: "",
-  cover_url: "",
+  cover: EMPTY_COVER,
   file: EMPTY_FILE,
 };
 
@@ -170,7 +181,8 @@ export default function AdminBibliographyPage() {
       kind: newForm.kind,
       url: newForm.url.trim() || null,
       description: newForm.description.trim() || null,
-      cover_url: newForm.cover_url.trim() || null,
+      cover_url: newForm.cover.cover_url,
+      cover_path: newForm.cover.cover_path,
       file_url: newForm.file.file_url,
       file_path: newForm.file.file_path,
       file_name: newForm.file.file_name,
@@ -179,9 +191,13 @@ export default function AdminBibliographyPage() {
     });
 
     if (error) {
-      // Roll back any uploaded file so we don't leak storage.
-      if (newForm.file.file_path) {
-        await supabase.storage.from(FILE_BUCKET).remove([newForm.file.file_path]);
+      // Roll back any uploaded objects so we don't leak storage.
+      const toRemove = [
+        newForm.file.file_path,
+        newForm.cover.cover_path,
+      ].filter((p): p is string => !!p);
+      if (toRemove.length > 0) {
+        await supabase.storage.from(FILE_BUCKET).remove(toRemove);
       }
       setMessage(`שגיאה: ${error.message}`);
     } else {
@@ -204,7 +220,10 @@ export default function AdminBibliographyPage() {
       kind: entry.kind,
       url: entry.url || "",
       description: entry.description || "",
-      cover_url: entry.cover_url || "",
+      cover: {
+        cover_url: entry.cover_url,
+        cover_path: entry.cover_path,
+      },
       file: {
         file_url: entry.file_url,
         file_path: entry.file_path,
@@ -219,12 +238,17 @@ export default function AdminBibliographyPage() {
     if (!editForm.cohort_id || !editForm.title.trim()) return;
     setLoading(true);
 
-    // If the edit replaced or removed the file, capture the OLD storage path
-    // so we can remove it after the DB update succeeds.
+    // Capture OLD paths so we can remove them after the DB update succeeds
+    // (only paths we own — entries with cover_url-only have no cover_path).
     const original = entries.find((e) => e.id === id);
-    const oldPath = original?.file_path || null;
-    const newPath = editForm.file.file_path;
-    const oldFileNeedsRemoval = oldPath && oldPath !== newPath;
+    const oldFilePath = original?.file_path || null;
+    const oldCoverPath = original?.cover_path || null;
+    const newFilePath = editForm.file.file_path;
+    const newCoverPath = editForm.cover.cover_path;
+    const oldFileToRemove =
+      oldFilePath && oldFilePath !== newFilePath ? oldFilePath : null;
+    const oldCoverToRemove =
+      oldCoverPath && oldCoverPath !== newCoverPath ? oldCoverPath : null;
 
     const { error } = await supabase
       .from("bibliography_entries")
@@ -235,7 +259,8 @@ export default function AdminBibliographyPage() {
         kind: editForm.kind,
         url: editForm.url.trim() || null,
         description: editForm.description.trim() || null,
-        cover_url: editForm.cover_url.trim() || null,
+        cover_url: editForm.cover.cover_url,
+        cover_path: editForm.cover.cover_path,
         file_url: editForm.file.file_url,
         file_path: editForm.file.file_path,
         file_name: editForm.file.file_name,
@@ -245,14 +270,21 @@ export default function AdminBibliographyPage() {
       .eq("id", id);
 
     if (error) {
-      // If we'd already uploaded a NEW file, roll it back so we don't leak.
-      if (newPath && newPath !== oldPath) {
-        await supabase.storage.from(FILE_BUCKET).remove([newPath]);
+      // If we'd already uploaded NEW objects, roll them back.
+      const rollback = [
+        newFilePath && newFilePath !== oldFilePath ? newFilePath : null,
+        newCoverPath && newCoverPath !== oldCoverPath ? newCoverPath : null,
+      ].filter((p): p is string => !!p);
+      if (rollback.length > 0) {
+        await supabase.storage.from(FILE_BUCKET).remove(rollback);
       }
       setMessage(`שגיאה: ${error.message}`);
     } else {
-      if (oldFileNeedsRemoval) {
-        await supabase.storage.from(FILE_BUCKET).remove([oldPath as string]);
+      const purge = [oldFileToRemove, oldCoverToRemove].filter(
+        (p): p is string => !!p
+      );
+      if (purge.length > 0) {
+        await supabase.storage.from(FILE_BUCKET).remove(purge);
       }
       setEditingId(null);
     }
@@ -277,10 +309,11 @@ export default function AdminBibliographyPage() {
       return;
     }
 
-    if (original?.file_path) {
-      await supabase.storage
-        .from(FILE_BUCKET)
-        .remove([original.file_path]);
+    const paths = [original?.file_path, original?.cover_path].filter(
+      (p): p is string => !!p
+    );
+    if (paths.length > 0) {
+      await supabase.storage.from(FILE_BUCKET).remove(paths);
     }
 
     setMessage("הפריט נמחק");
@@ -566,8 +599,74 @@ function EntryForm({
 }) {
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState("");
+
+  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverError("");
+
+    if (!file.type.startsWith("image/")) {
+      setCoverError("יש לבחור קובץ תמונה");
+      e.target.value = "";
+      return;
+    }
+    if (file.size === 0) {
+      setCoverError("הקובץ ריק");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_COVER_BYTES) {
+      setCoverError(
+        `התמונה גדולה מ-${Math.round(MAX_COVER_BYTES / (1024 * 1024))} MB`
+      );
+      e.target.value = "";
+      return;
+    }
+
+    setCoverUploading(true);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `covers/${Date.now()}-${safeName}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from(FILE_BUCKET)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+    if (uploadErr) {
+      setCoverError(uploadErr.message);
+      setCoverUploading(false);
+      e.target.value = "";
+      return;
+    }
+
+    // Drop any previous staged-but-unsaved cover from storage.
+    if (form.cover.cover_path) {
+      await supabase.storage.from(FILE_BUCKET).remove([form.cover.cover_path]);
+    }
+
+    const { data: pub } = supabase.storage.from(FILE_BUCKET).getPublicUrl(path);
+    setForm({
+      ...form,
+      cover: { cover_url: pub.publicUrl, cover_path: path },
+    });
+    setCoverUploading(false);
+    e.target.value = "";
+  }
+
+  function clearCover() {
+    // Same rationale as clearFile: don't actually delete from storage here;
+    // saveEdit reconciles based on what the DB row ends up referencing.
+    setForm({ ...form, cover: EMPTY_COVER });
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -723,16 +822,50 @@ function EntryForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          קישור לתמונת כריכה
+          תמונת כריכה
         </label>
-        <input
-          type="url"
-          value={form.cover_url}
-          onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
-          placeholder="https://"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
-          dir="ltr"
-        />
+        {form.cover.cover_url ? (
+          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <img
+              src={form.cover.cover_url}
+              alt=""
+              className="size-12 rounded object-cover bg-white"
+            />
+            <span className="flex-1 text-xs text-gray-500">
+              {form.cover.cover_path
+                ? "תמונה הועלתה"
+                : "תמונה חיצונית (URL ישן)"}
+            </span>
+            <button
+              type="button"
+              onClick={clearCover}
+              className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors shrink-0"
+              title="הסר תמונה"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCoverChange}
+              disabled={coverUploading}
+              className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#1a2744]/10 file:text-[#1a2744] hover:file:bg-[#1a2744]/20 file:cursor-pointer disabled:opacity-50"
+            />
+            {coverUploading && (
+              <Upload className="size-4 text-[#1a2744] animate-pulse shrink-0" />
+            )}
+          </div>
+        )}
+        {coverError && (
+          <p className="text-xs text-red-600 mt-1">{coverError}</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          עד {Math.round(MAX_COVER_BYTES / (1024 * 1024))} MB. תמונה בלבד.
+        </p>
       </div>
 
       <div>
@@ -803,7 +936,7 @@ function EntryForm({
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={submitting || uploading}
+          disabled={submitting || uploading || coverUploading}
           className="inline-flex items-center gap-1.5 bg-[#22c55e] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
         >
           <Check className="size-4" />
