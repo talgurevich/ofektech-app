@@ -175,7 +175,43 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
     // Activity logging: tasks.done gets its own events; other edits are
     // debounced per row so a burst of cell edits becomes one event.
     const prevValue = before?.data?.[key];
+
+    // Email admins the first time a task description goes from empty to
+    // non-empty — that's the moment the row actually becomes a task. Server
+    // route filters out admin actors so admin-side edits don't self-notify.
+    const isNonEmpty = (v: unknown): boolean =>
+      typeof v === "string" && v.trim() !== "";
+    if (
+      activeSheetKey === "tasks" &&
+      key === "task" &&
+      !isNonEmpty(prevValue) &&
+      isNonEmpty(value)
+    ) {
+      fetch("/api/email-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "workbook_task_created",
+          ventureId,
+          description: String(value).trim(),
+        }),
+      }).catch(() => {});
+    }
+
     if (activeSheetKey === "tasks" && key === "done" && prevValue !== value) {
+      if (value === true) {
+        const taskText =
+          typeof nextData?.task === "string" ? nextData.task.trim() : "";
+        fetch("/api/email-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "workbook_task_completed",
+            ventureId,
+            description: taskText,
+          }),
+        }).catch(() => {});
+      }
       logActivity(supabase, {
         ventureId,
         kind: value ? "workbook_task_done" : "workbook_task_reopened",

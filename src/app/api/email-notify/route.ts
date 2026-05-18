@@ -136,6 +136,48 @@ export async function POST(request: Request) {
       }
       break;
     }
+
+    case "workbook_task_created": {
+      // Candidate or mentor wrote a new task in the workbook → notify admins
+      const recipients = filterSelf(adminEmails);
+      if (recipients.length > 0) {
+        const roleLabel =
+          actorRole === "mentor" ? "מנטור/ית" : "חניך/ה";
+        const ctaUrl = ventureId
+          ? `${BASE_URL}/admin/ventures/${ventureId}`
+          : `${BASE_URL}/admin/ventures`;
+        await sendNotificationEmail({
+          to: recipients,
+          subject: `משימה חדשה — ${ventureName}`,
+          heading: "משימה חדשה נוספה לטבלת העבודה",
+          body: `${actorName} (${roleLabel}) הוסיף/ה משימה למיזם ${ventureName}${description ? `: "${description}"` : ""}.`,
+          ctaText: "צפייה במיזם",
+          ctaUrl,
+        });
+      }
+      break;
+    }
+
+    case "workbook_task_completed": {
+      // Candidate or mentor marked a task done → notify admins
+      const recipients = filterSelf(adminEmails);
+      if (recipients.length > 0) {
+        const roleLabel =
+          actorRole === "mentor" ? "מנטור/ית" : "חניך/ה";
+        const ctaUrl = ventureId
+          ? `${BASE_URL}/admin/ventures/${ventureId}`
+          : `${BASE_URL}/admin/ventures`;
+        await sendNotificationEmail({
+          to: recipients,
+          subject: `משימה הושלמה — ${ventureName}`,
+          heading: "משימה סומנה כהושלמה",
+          body: `${actorName} (${roleLabel}) סימן/ה משימה כהושלמה במיזם ${ventureName}${description ? `: "${description}"` : ""}.`,
+          ctaText: "צפייה במיזם",
+          ctaUrl,
+        });
+      }
+      break;
+    }
   }
 
   return NextResponse.json({ success: true });
