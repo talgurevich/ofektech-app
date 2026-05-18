@@ -249,6 +249,11 @@ export interface BibliographyEntry {
   url: string | null;
   description: string | null;
   cover_url: string | null;
+  file_url: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  file_mime: string | null;
   created_by: string | null;
   created_at: string;
   cohort?: Cohort | null;

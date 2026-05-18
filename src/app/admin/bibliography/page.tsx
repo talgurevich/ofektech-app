@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   BibliographyEntry,
   BibliographyKind,
@@ -27,7 +27,36 @@ import {
   Video as VideoIcon,
   Headphones,
   Link2,
+  Paperclip,
+  Upload,
+  Download,
 } from "lucide-react";
+
+const FILE_BUCKET = "bibliography-files";
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+type FileMeta = {
+  file_url: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  file_mime: string | null;
+};
+
+const EMPTY_FILE: FileMeta = {
+  file_url: null,
+  file_path: null,
+  file_name: null,
+  file_size: null,
+  file_mime: null,
+};
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const KIND_OPTIONS: { value: BibliographyKind; label: string }[] = [
   { value: "book", label: "ספר" },
@@ -62,7 +91,7 @@ function KindIcon({ kind, className }: { kind: BibliographyKind; className?: str
 
 type EntryWithCohort = BibliographyEntry & { cohort?: Cohort | null };
 
-const EMPTY_FORM: {
+type FormState = {
   cohort_id: string;
   title: string;
   author: string;
@@ -70,7 +99,10 @@ const EMPTY_FORM: {
   url: string;
   description: string;
   cover_url: string;
-} = {
+  file: FileMeta;
+};
+
+const EMPTY_FORM: FormState = {
   cohort_id: "",
   title: "",
   author: "",
@@ -78,6 +110,7 @@ const EMPTY_FORM: {
   url: "",
   description: "",
   cover_url: "",
+  file: EMPTY_FILE,
 };
 
 export default function AdminBibliographyPage() {
@@ -138,9 +171,18 @@ export default function AdminBibliographyPage() {
       url: newForm.url.trim() || null,
       description: newForm.description.trim() || null,
       cover_url: newForm.cover_url.trim() || null,
+      file_url: newForm.file.file_url,
+      file_path: newForm.file.file_path,
+      file_name: newForm.file.file_name,
+      file_size: newForm.file.file_size,
+      file_mime: newForm.file.file_mime,
     });
 
     if (error) {
+      // Roll back any uploaded file so we don't leak storage.
+      if (newForm.file.file_path) {
+        await supabase.storage.from(FILE_BUCKET).remove([newForm.file.file_path]);
+      }
       setMessage(`שגיאה: ${error.message}`);
     } else {
       setMessage("הפריט נוסף");
@@ -163,12 +205,26 @@ export default function AdminBibliographyPage() {
       url: entry.url || "",
       description: entry.description || "",
       cover_url: entry.cover_url || "",
+      file: {
+        file_url: entry.file_url,
+        file_path: entry.file_path,
+        file_name: entry.file_name,
+        file_size: entry.file_size,
+        file_mime: entry.file_mime,
+      },
     });
   }
 
   async function saveEdit(id: string) {
     if (!editForm.cohort_id || !editForm.title.trim()) return;
     setLoading(true);
+
+    // If the edit replaced or removed the file, capture the OLD storage path
+    // so we can remove it after the DB update succeeds.
+    const original = entries.find((e) => e.id === id);
+    const oldPath = original?.file_path || null;
+    const newPath = editForm.file.file_path;
+    const oldFileNeedsRemoval = oldPath && oldPath !== newPath;
 
     const { error } = await supabase
       .from("bibliography_entries")
@@ -180,12 +236,24 @@ export default function AdminBibliographyPage() {
         url: editForm.url.trim() || null,
         description: editForm.description.trim() || null,
         cover_url: editForm.cover_url.trim() || null,
+        file_url: editForm.file.file_url,
+        file_path: editForm.file.file_path,
+        file_name: editForm.file.file_name,
+        file_size: editForm.file.file_size,
+        file_mime: editForm.file.file_mime,
       })
       .eq("id", id);
 
     if (error) {
+      // If we'd already uploaded a NEW file, roll it back so we don't leak.
+      if (newPath && newPath !== oldPath) {
+        await supabase.storage.from(FILE_BUCKET).remove([newPath]);
+      }
       setMessage(`שגיאה: ${error.message}`);
     } else {
+      if (oldFileNeedsRemoval) {
+        await supabase.storage.from(FILE_BUCKET).remove([oldPath as string]);
+      }
       setEditingId(null);
     }
 
@@ -196,6 +264,8 @@ export default function AdminBibliographyPage() {
   async function handleDelete(id: string) {
     if (!confirm("למחוק פריט זה? פעולה זו לא ניתנת לביטול.")) return;
 
+    const original = entries.find((e) => e.id === id);
+
     const { error } = await supabase
       .from("bibliography_entries")
       .delete()
@@ -203,10 +273,17 @@ export default function AdminBibliographyPage() {
 
     if (error) {
       setMessage(`שגיאה: ${error.message}`);
-    } else {
-      setMessage("הפריט נמחק");
+      loadEntries();
+      return;
     }
 
+    if (original?.file_path) {
+      await supabase.storage
+        .from(FILE_BUCKET)
+        .remove([original.file_path]);
+    }
+
+    setMessage("הפריט נמחק");
     loadEntries();
   }
 
@@ -413,17 +490,35 @@ export default function AdminBibliographyPage() {
                               {entry.description}
                             </p>
                           )}
-                          {entry.url && (
-                            <a
-                              href={entry.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs text-[#22c55e] hover:underline"
-                            >
-                              <ExternalLink className="size-3.5" />
-                              קישור
-                            </a>
-                          )}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {entry.url && (
+                              <a
+                                href={entry.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs text-[#22c55e] hover:underline"
+                              >
+                                <ExternalLink className="size-3.5" />
+                                קישור
+                              </a>
+                            )}
+                            {entry.file_url && (
+                              <a
+                                href={entry.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs text-[#22c55e] hover:underline"
+                              >
+                                <Paperclip className="size-3.5" />
+                                {entry.file_name || "קובץ מצורף"}
+                                {entry.file_size && (
+                                  <span className="text-gray-400">
+                                    ({formatBytes(entry.file_size)})
+                                  </span>
+                                )}
+                              </a>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
@@ -461,14 +556,85 @@ function EntryForm({
   submitting,
   submitLabel,
 }: {
-  form: typeof EMPTY_FORM;
-  setForm: (f: typeof EMPTY_FORM) => void;
+  form: FormState;
+  setForm: (f: FormState) => void;
   cohorts: Cohort[];
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   submitting: boolean;
   submitLabel: string;
 }) {
+  const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+
+    if (file.size === 0) {
+      setUploadError("הקובץ ריק");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setUploadError(
+        `הקובץ גדול מ-${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB`
+      );
+      e.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${Date.now()}-${safeName}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from(FILE_BUCKET)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+    if (uploadErr) {
+      setUploadError(uploadErr.message);
+      setUploading(false);
+      e.target.value = "";
+      return;
+    }
+
+    // If a previous staged-but-unsaved upload exists on this form, drop it
+    // from storage now to avoid leaking a file the user replaced.
+    if (form.file.file_path) {
+      await supabase.storage.from(FILE_BUCKET).remove([form.file.file_path]);
+    }
+
+    const { data: pub } = supabase.storage.from(FILE_BUCKET).getPublicUrl(path);
+    setForm({
+      ...form,
+      file: {
+        file_url: pub.publicUrl,
+        file_path: path,
+        file_name: file.name,
+        file_size: file.size,
+        file_mime: file.type || null,
+      },
+    });
+    setUploading(false);
+    e.target.value = "";
+  }
+
+  function clearFile() {
+    // Don't actually remove from storage here — the file may already belong
+    // to a saved entry, and the user might cancel the edit. Real cleanup
+    // happens in saveEdit when the DB row no longer references the path.
+    setForm({ ...form, file: EMPTY_FILE });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -571,6 +737,58 @@ function EntryForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
+          קובץ מצורף
+        </label>
+        {form.file.file_url && form.file.file_name ? (
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <Paperclip className="size-4 text-[#22c55e] shrink-0" />
+            <a
+              href={form.file.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 min-w-0 truncate text-sm text-[#1a2744] hover:underline"
+              dir="ltr"
+            >
+              {form.file.file_name}
+            </a>
+            {form.file.file_size && (
+              <span className="text-xs text-gray-500 shrink-0">
+                {formatBytes(form.file.file_size)}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={clearFile}
+              className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors shrink-0"
+              title="הסר קובץ"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              disabled={uploading}
+              className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#22c55e]/10 file:text-[#22c55e] hover:file:bg-[#22c55e]/20 file:cursor-pointer disabled:opacity-50"
+            />
+            {uploading && (
+              <Upload className="size-4 text-[#22c55e] animate-pulse shrink-0" />
+            )}
+          </div>
+        )}
+        {uploadError && (
+          <p className="text-xs text-red-600 mt-1">{uploadError}</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          עד {Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB. כל פורמט.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
           תיאור
         </label>
         <textarea
@@ -585,7 +803,7 @@ function EntryForm({
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploading}
           className="inline-flex items-center gap-1.5 bg-[#22c55e] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
         >
           <Check className="size-4" />

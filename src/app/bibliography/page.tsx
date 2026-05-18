@@ -16,7 +16,15 @@ import {
   Headphones,
   Link2,
   ExternalLink,
+  Paperclip,
 } from "lucide-react";
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 import type { BibliographyEntry, BibliographyKind, Cohort } from "@/lib/types";
 
 const KIND_LABELS: Record<BibliographyKind, string> = {
@@ -210,24 +218,42 @@ export default async function BibliographyPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  {(entry.description || entry.url) && (
+                  {(entry.description || entry.url || entry.file_url) && (
                     <CardContent className="space-y-3">
                       {entry.description && (
                         <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                           {entry.description}
                         </p>
                       )}
-                      {entry.url && (
-                        <a
-                          href={entry.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-[#22c55e] hover:underline"
-                        >
-                          <ExternalLink className="size-4" />
-                          פתח/י קישור
-                        </a>
-                      )}
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {entry.url && (
+                          <a
+                            href={entry.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#22c55e] hover:underline"
+                          >
+                            <ExternalLink className="size-4" />
+                            פתח/י קישור
+                          </a>
+                        )}
+                        {entry.file_url && (
+                          <a
+                            href={entry.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#22c55e] hover:underline"
+                          >
+                            <Paperclip className="size-4" />
+                            {entry.file_name || "הורד/י קובץ"}
+                            {entry.file_size && (
+                              <span className="text-xs text-gray-400">
+                                ({formatBytes(entry.file_size)})
+                              </span>
+                            )}
+                          </a>
+                        )}
+                      </div>
                     </CardContent>
                   )}
                 </Card>
