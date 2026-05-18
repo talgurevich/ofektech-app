@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Profile, Venture, Cohort } from "@/lib/types";
 import {
   Card,
@@ -377,9 +378,12 @@ export default function AdminVenturesPage() {
                   </div>
                 ) : (
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#1a2744]">
+                    <Link
+                      href={`/admin/ventures/${venture.id}`}
+                      className="font-semibold text-[#1a2744] hover:text-[#22c55e] transition-colors"
+                    >
                       {venture.name}
-                    </p>
+                    </Link>
                     {venture.description && (
                       <p className="text-xs text-gray-500">{venture.description}</p>
                     )}
