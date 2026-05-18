@@ -238,6 +238,22 @@ export interface WorkbookTaskFile {
   created_at: string;
 }
 
+export type BibliographyKind = "book" | "article" | "video" | "podcast" | "other";
+
+export interface BibliographyEntry {
+  id: string;
+  cohort_id: string;
+  title: string;
+  author: string | null;
+  kind: BibliographyKind;
+  url: string | null;
+  description: string | null;
+  cover_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  cohort?: Cohort | null;
+}
+
 // WeeklyCheckin removed — feature deprecated. The opening (entry)
 // checkin is still served by Profile + the `checkins` table where
 // `type = "opening"`.

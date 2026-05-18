@@ -20,6 +20,7 @@ import {
   UserCircle,
   Table2,
   Sparkles,
+  Library,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,7 @@ const candidateLinks = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
+  { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/directory", label: "אנשי המחזור", icon: Users },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
@@ -66,6 +68,7 @@ const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
   { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
+  { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/directory", label: "אנשי המחזור", icon: Users },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
@@ -73,6 +76,7 @@ const mentorLinks = [
 const visitorLinks = [
   { href: "/", label: "הרצאות", icon: Mic2 },
   { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
+  { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
@@ -86,6 +90,7 @@ const adminLinks = [
   { href: "/admin/assignments", label: "שיבוצים", icon: UserCheck },
   { href: "/admin/tasks", label: "משימות למיזמים", icon: ListTodo },
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
+  { href: "/admin/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
   { href: "/admin/checkins", label: "שאלוני פתיחה", icon: ClipboardCheck },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
