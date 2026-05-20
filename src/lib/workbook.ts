@@ -29,6 +29,8 @@ export interface WorkbookColumn {
   options?: string[];
   placeholder?: string;
   width?: string;
+  /** Read-only columns are rendered as static text (no editor). */
+  readOnly?: boolean;
 }
 
 export interface WorkbookSheet {
@@ -49,6 +51,13 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     columns: [
       { key: "task", label: "משימה", type: "longtext", width: "minmax(200px,2fr)" },
       {
+        key: "answer",
+        label: "תשובה / מענה",
+        type: "longtext",
+        width: "minmax(200px,2fr)",
+        placeholder: "כתבו כאן את התשובה למשימה...",
+      },
+      {
         key: "category",
         label: "קטגוריה",
         type: "select_creatable",
@@ -56,6 +65,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
         placeholder: "בחר או הוסף קטגוריה...",
       },
       { key: "assignee", label: "אחראי ביצוע", type: "member" },
+      { key: "creator", label: "נוצר ע״י", type: "member", width: "120px", readOnly: true },
       { key: "date", label: "תאריך פתיחה", type: "date" },
       { key: "due_date", label: "תאריך לביצוע", type: "date" },
       { key: "attachments", label: "קבצים", type: "files", width: "100px" },

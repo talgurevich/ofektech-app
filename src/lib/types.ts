@@ -221,6 +221,7 @@ export interface AdminBulkTask {
   category: string | null;
   assignee: string | null;
   due_date: string | null;
+  guide_chapter_id: string | null;
   target_count: number;
   created_by: string;
   created_at: string;

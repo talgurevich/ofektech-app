@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, full_name")
     .eq("id", user.id)
     .single();
   if (profile?.role !== "admin") {
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   const category = String(form.get("category") || "").trim();
   const assignee = String(form.get("assignee") || "").trim();
   const dueDate = String(form.get("due_date") || "").trim();
+  const guideChapterId = String(form.get("guide_chapter_id") || "").trim();
   const ventureIdsRaw = String(form.get("venture_ids") || "").trim();
   const files = form.getAll("files").filter((v): v is File => v instanceof File);
 
@@ -52,6 +53,12 @@ export async function POST(request: Request) {
   if (!ventureIds.every((id) => UUID_RE.test(id))) {
     return NextResponse.json(
       { error: "invalid venture_id" },
+      { status: 400 }
+    );
+  }
+  if (guideChapterId && !UUID_RE.test(guideChapterId)) {
+    return NextResponse.json(
+      { error: "invalid guide_chapter_id" },
       { status: 400 }
     );
   }
@@ -108,6 +115,7 @@ export async function POST(request: Request) {
       category: category || null,
       assignee: assignee || null,
       due_date: dueDate || null,
+      guide_chapter_id: guideChapterId || null,
       target_count: ventureIds.length,
       created_by: user.id,
     })
@@ -168,13 +176,19 @@ export async function POST(request: Request) {
 
   // 4. Build task data payload (kept compatible with the existing sheet shape).
   const today = new Date().toISOString().slice(0, 10);
+  const adminName =
+    (profile.full_name && profile.full_name.trim()) || "ההנהלה";
   const taskData: Record<string, unknown> = {
     task: taskText,
     category: category || "מוצר",
+    creator: adminName,
     date: today,
   };
   if (assignee) taskData.assignee = assignee;
   if (dueDate) taskData.due_date = dueDate;
+  // Carried per-entry so candidates (who can't read admin_bulk_tasks) get the
+  // target chapter pre-selected in the "push to workbook" dialog.
+  if (guideChapterId) taskData.suggestedChapterId = guideChapterId;
 
   // 5. Insert workbook entries (one per venture).
   const entryRows = ventureIds.map((venture_id) => ({

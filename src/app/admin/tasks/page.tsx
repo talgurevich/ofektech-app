@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, History, ListTodo, Plus, Send, Loader2, Paperclip, Trash2 } from "lucide-react";
-import type { AdminBulkTask } from "@/lib/types";
+import type { AdminBulkTask, GuideChapter } from "@/lib/types";
 
 type VentureRow = {
   id: string;
@@ -29,6 +29,8 @@ export default function AdminBulkTasksPage() {
   const [category, setCategory] = useState<string>("מוצר");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [guideChapters, setGuideChapters] = useState<GuideChapter[]>([]);
+  const [guideChapterId, setGuideChapterId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -38,11 +40,15 @@ export default function AdminBulkTasksPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("ventures")
-        .select("id, name")
-        .order("name");
-      setVentures((data || []) as VentureRow[]);
+      const [{ data: ventureData }, { data: chapterData }] = await Promise.all([
+        supabase.from("ventures").select("id, name").order("name"),
+        supabase
+          .from("guide_chapters")
+          .select("*")
+          .order("chapter_number", { ascending: true }),
+      ]);
+      setVentures((ventureData || []) as VentureRow[]);
+      setGuideChapters((chapterData || []) as GuideChapter[]);
       setLoading(false);
     })();
   }, [supabase]);
@@ -74,6 +80,7 @@ export default function AdminBulkTasksPage() {
     fd.append("category", category);
     if (assignee.trim()) fd.append("assignee", assignee.trim());
     if (dueDate) fd.append("due_date", dueDate);
+    if (guideChapterId) fd.append("guide_chapter_id", guideChapterId);
     fd.append("venture_ids", Array.from(selected).join(","));
     for (const f of stagedFiles) fd.append("files", f, f.name);
 
@@ -132,6 +139,7 @@ export default function AdminBulkTasksPage() {
     setTaskText("");
     setAssignee("");
     setDueDate("");
+    setGuideChapterId("");
     setSelected(new Set());
     setStagedFiles([]);
     setSubmitting(false);
@@ -228,6 +236,28 @@ export default function AdminBulkTasksPage() {
                   dir="ltr"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                פרק יעד בחוברת העבודה (אופציונלי)
+              </label>
+              <select
+                value={guideChapterId}
+                onChange={(e) => setGuideChapterId(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]"
+              >
+                <option value="">ללא — אל תקשר לפרק</option>
+                {guideChapters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.chapter_number}. {c.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-400">
+                אם תבחרו פרק, הצוותים יוכלו להוסיף את תשובת המשימה ישירות לאותו
+                פרק בחוברת העבודה שלהם.
+              </p>
             </div>
 
             <div>

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
-import type { WorkbookEntry } from "@/lib/types";
+import type { WorkbookEntry, GuideChapter, UserRole } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskFilesModal } from "@/components/task-files-modal";
 
@@ -14,6 +14,18 @@ interface Props {
   ventureName: string;
   initialSheetKey?: string;
   members?: { id: string; name: string }[];
+  currentUserName?: string;
+  userRole?: UserRole;
+}
+
+function taskHasAnswer(entry: WorkbookEntry): boolean {
+  const a = entry.data?.answer;
+  return typeof a === "string" && a.trim().length > 0;
+}
+
+function taskWasPushed(entry: WorkbookEntry): boolean {
+  const p = entry.data?.pushedChapters;
+  return Array.isArray(p) && p.length > 0;
 }
 
 function lastSeenKey(ventureId: string, sheetKey: string) {
@@ -31,8 +43,17 @@ function writeLastSeen(ventureId: string, sheetKey: string, ts: number) {
   window.localStorage.setItem(lastSeenKey(ventureId, sheetKey), String(ts));
 }
 
-export function WorkbookClient({ ventureId, ventureName, initialSheetKey, members = [] }: Props) {
+export function WorkbookClient({
+  ventureId,
+  ventureName,
+  initialSheetKey,
+  members = [],
+  currentUserName = "",
+  userRole,
+}: Props) {
   const supabase = useMemo(() => createClient(), []);
+  // Mentors are read-only on guide chapters (RLS), so they can't push answers.
+  const canPushToChapter = userRole !== "mentor";
   const [activeSheetKey, setActiveSheetKey] = useState<string>(
     initialSheetKey && WORKBOOK_SHEETS.some((s) => s.key === initialSheetKey)
       ? initialSheetKey
@@ -43,6 +64,8 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const updateLogTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [lastSeen, setLastSeen] = useState<number>(0);
+  const [guideChapters, setGuideChapters] = useState<GuideChapter[]>([]);
+  const [pushEntry, setPushEntry] = useState<WorkbookEntry | null>(null);
 
   const activeSheet = useMemo<WorkbookSheet>(
     () => WORKBOOK_SHEETS.find((s) => s.key === activeSheetKey)!,
@@ -93,13 +116,28 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
     return () => clearTimeout(timer);
   }, [ventureId, activeSheetKey]);
 
+  // Guide chapters power the "push answer to workbook" picker. Loaded once;
+  // they aren't cohort-scoped and every authenticated user may read them.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("guide_chapters")
+        .select("*")
+        .order("chapter_number", { ascending: true });
+      setGuideChapters((data as GuideChapter[]) || []);
+    })();
+  }, [supabase]);
+
   async function addRow() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const maxPos = entries.reduce((m, e) => Math.max(m, e.position), -1);
     const initialData: Record<string, unknown> =
       activeSheetKey === "tasks"
-        ? { date: new Date().toISOString().slice(0, 10) }
+        ? {
+            date: new Date().toISOString().slice(0, 10),
+            creator: currentUserName,
+          }
         : {};
     const { data, error } = await supabase
       .from("workbook_entries")
@@ -378,6 +416,29 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
                       {savingIds.has(entry.id) && (
                         <Loader2 className="size-3 animate-spin text-gray-400" />
                       )}
+                      {activeSheetKey === "tasks" && canPushToChapter && (
+                        <button
+                          onClick={() => setPushEntry(entry)}
+                          disabled={!taskHasAnswer(entry)}
+                          className={cn(
+                            "rounded p-1.5 transition-colors",
+                            !taskHasAnswer(entry)
+                              ? "cursor-not-allowed text-gray-300"
+                              : taskWasPushed(entry)
+                                ? "text-[#22c55e] hover:bg-green-50"
+                                : "text-gray-400 hover:bg-gray-100 hover:text-[#1a2744]"
+                          )}
+                          title={
+                            !taskHasAnswer(entry)
+                              ? "יש למלא תשובה לפני הוספה לחוברת"
+                              : taskWasPushed(entry)
+                                ? "התשובה נוספה לחוברת — לחצו להוספה נוספת"
+                                : "הוסף את התשובה לחוברת העבודה"
+                          }
+                        >
+                          <BookOpen className="size-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => deleteRow(entry.id)}
                         className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -405,6 +466,202 @@ export function WorkbookClient({ ventureId, ventureName, initialSheetKey, member
       </button>
       </>
       )}
+
+      {pushEntry && (
+        <PushToChapterDialog
+          entry={pushEntry}
+          chapters={guideChapters}
+          onClose={() => setPushEntry(null)}
+          onPushed={(pushedChapters) => {
+            setEntries((prev) =>
+              prev.map((e) =>
+                e.id === pushEntry.id
+                  ? { ...e, data: { ...e.data, pushedChapters } }
+                  : e
+              )
+            );
+            setPushEntry(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function PushToChapterDialog({
+  entry,
+  chapters,
+  onClose,
+  onPushed,
+}: {
+  entry: WorkbookEntry;
+  chapters: GuideChapter[];
+  onClose: () => void;
+  onPushed: (pushedChapters: unknown[]) => void;
+}) {
+  const answer =
+    typeof entry.data?.answer === "string" ? entry.data.answer : "";
+  const taskText =
+    typeof entry.data?.task === "string" ? entry.data.task : "";
+  const suggestedId =
+    typeof entry.data?.suggestedChapterId === "string"
+      ? entry.data.suggestedChapterId
+      : "";
+  const pushedIds = Array.isArray(entry.data?.pushedChapters)
+    ? (entry.data.pushedChapters as { chapterId?: string }[])
+        .map((p) => p?.chapterId)
+        .filter((v): v is string => typeof v === "string")
+    : [];
+
+  const [chapterId, setChapterId] = useState<string>(
+    suggestedId && chapters.some((c) => c.id === suggestedId)
+      ? suggestedId
+      : chapters[0]?.id || ""
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const alreadyHere = pushedIds.includes(chapterId);
+
+  async function submit() {
+    if (!chapterId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/workbook/push-to-chapter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryId: entry.id, chapterId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body?.error || `שגיאה ${res.status}`);
+        setBusy(false);
+        return;
+      }
+      // Fire-and-forget event tracking, mirroring the guide page.
+      fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "guide",
+          description: `פרק "${body.chapterTitle}" עודכן מתוך משימה`,
+        }),
+      }).catch(() => {});
+      onPushed(Array.isArray(body.pushedChapters) ? body.pushedChapters : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "שגיאת רשת");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        dir="rtl"
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-[#1a2744]">
+            <BookOpen className="size-5 text-[#22c55e]" />
+            הוספה לחוברת העבודה
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            aria-label="סגור"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {chapters.length === 0 ? (
+            <p className="rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500">
+              אין עדיין פרקים בחוברת העבודה.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500">
+                הטקסט יועתק לפרק שתבחרו ויתווסף בסופו. עריכת המשימה בהמשך לא
+                תעדכן את הפרק.
+              </p>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  פרק יעד
+                </label>
+                <select
+                  value={chapterId}
+                  onChange={(e) => setChapterId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#22c55e]"
+                >
+                  {chapters.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.chapter_number}. {c.title}
+                      {pushedIds.includes(c.id) ? " ✓" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  התשובה שתתווסף
+                </label>
+                {taskText.trim() && (
+                  <p className="mb-1 text-xs text-gray-400">
+                    משימה: {taskText.trim()}
+                  </p>
+                )}
+                <div className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  {answer.trim() || "—"}
+                </div>
+              </div>
+
+              {alreadyHere && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  התשובה כבר נוספה לפרק זה בעבר. הוספה חוזרת תוסיף עותק נוסף.
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {error}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            ביטול
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || !chapterId || chapters.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16a34a] disabled:opacity-50"
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <BookOpen className="size-4" />
+            )}
+            {busy ? "מוסיף..." : "הוסף לפרק"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -439,6 +696,15 @@ function CellEditor({
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
 
   const strVal = value == null ? "" : String(value);
+
+  // Read-only columns (e.g. the auto-filled task creator) show static text.
+  if (column.readOnly) {
+    return (
+      <div className="truncate px-2 py-1.5 text-sm text-gray-500" title={strVal}>
+        {strVal || "—"}
+      </div>
+    );
+  }
 
   if (column.type === "files") {
     // Files are stored in their own table, not in entry.data.

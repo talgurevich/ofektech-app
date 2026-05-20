@@ -19,7 +19,7 @@ export default async function WorkbookPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, venture_id")
+    .select("id, role, venture_id, full_name")
     .eq("id", user.id)
     .single();
 
@@ -76,12 +76,17 @@ export default async function WorkbookPage({
     name: (m.full_name && m.full_name.trim()) || m.email || "",
   }));
 
+  const currentUserName =
+    (profile.full_name && profile.full_name.trim()) || user.email || "";
+
   return (
     <WorkbookClient
       ventureId={resolvedVentureId}
       ventureName={venture?.name || ""}
       initialSheetKey={initialSheet!}
       members={members}
+      currentUserName={currentUserName}
+      userRole={profile.role}
     />
   );
 }
