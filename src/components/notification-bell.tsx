@@ -52,14 +52,14 @@ export function NotificationBell() {
     }
   }, []);
 
-  // Poll every 90s while the tab is visible. Pausing when hidden cuts
+  // Poll every 5 min while the tab is visible. Pausing when hidden cuts
   // background DB load — the bell is in the sidebar on every authed page.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     function start() {
       fetchNotifications();
       if (interval !== null) return;
-      interval = setInterval(fetchNotifications, 90_000);
+      interval = setInterval(fetchNotifications, 300_000);
     }
     function stop() {
       if (interval !== null) {

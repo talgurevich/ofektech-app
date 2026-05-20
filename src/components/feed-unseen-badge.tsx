@@ -13,9 +13,12 @@ export function FeedUnseenBadge() {
     const supabase = createClient();
 
     async function load() {
+      // getSession reads the JWT from the local cookie — no DB round-trip.
+      // getUser would fan out to ~5 auth-schema queries on every poll.
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) return;
 
       const { data: profile } = await supabase
@@ -40,7 +43,7 @@ export function FeedUnseenBadge() {
     function start() {
       load();
       if (interval !== null) return;
-      interval = setInterval(load, 120_000);
+      interval = setInterval(load, 300_000);
     }
     function stop() {
       if (interval !== null) {
