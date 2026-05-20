@@ -18,11 +18,6 @@ interface Props {
   userRole?: UserRole;
 }
 
-function taskHasAnswer(entry: WorkbookEntry): boolean {
-  const a = entry.data?.answer;
-  return typeof a === "string" && a.trim().length > 0;
-}
-
 function taskWasPushed(entry: WorkbookEntry): boolean {
   const p = entry.data?.pushedChapters;
   return Array.isArray(p) && p.length > 0;
@@ -282,6 +277,17 @@ export function WorkbookClient({
     }, 5000);
   }
 
+  // Save the answer (if edited) then open the chapter-picker dialog. The
+  // answer must be persisted first — the push API reads it from the DB.
+  async function handlePushAnswer(entry: WorkbookEntry, draftAnswer: string) {
+    const current =
+      typeof entry.data.answer === "string" ? entry.data.answer : "";
+    if (draftAnswer !== current) {
+      await updateCell(entry.id, "answer", draftAnswer);
+    }
+    setPushEntry({ ...entry, data: { ...entry.data, answer: draftAnswer } });
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] p-4 md:p-6">
       <div className="mb-4 md:mb-6">
@@ -406,6 +412,16 @@ export function WorkbookClient({
                             onChange={(v) => updateCell(entry.id, col.key, v)}
                             suggestions={columnSuggestions[col.key]}
                             members={members}
+                            onPush={
+                              activeSheetKey === "tasks" &&
+                              col.key === "answer" &&
+                              canPushToChapter
+                                ? (draft) => handlePushAnswer(entry, draft)
+                                : undefined
+                            }
+                            pushed={
+                              col.key === "answer" && taskWasPushed(entry)
+                            }
                           />
                         )}
                       </div>
@@ -415,29 +431,6 @@ export function WorkbookClient({
                     <div className="flex items-center justify-center gap-1">
                       {savingIds.has(entry.id) && (
                         <Loader2 className="size-3 animate-spin text-gray-400" />
-                      )}
-                      {activeSheetKey === "tasks" && canPushToChapter && (
-                        <button
-                          onClick={() => setPushEntry(entry)}
-                          disabled={!taskHasAnswer(entry)}
-                          className={cn(
-                            "rounded p-1.5 transition-colors",
-                            !taskHasAnswer(entry)
-                              ? "cursor-not-allowed text-gray-300"
-                              : taskWasPushed(entry)
-                                ? "text-[#22c55e] hover:bg-green-50"
-                                : "text-gray-400 hover:bg-gray-100 hover:text-[#1a2744]"
-                          )}
-                          title={
-                            !taskHasAnswer(entry)
-                              ? "יש למלא תשובה לפני הוספה לחוברת"
-                              : taskWasPushed(entry)
-                                ? "התשובה נוספה לחוברת — לחצו להוספה נוספת"
-                                : "הוסף את התשובה לחוברת העבודה"
-                          }
-                        >
-                          <BookOpen className="size-4" />
-                        </button>
                       )}
                       <button
                         onClick={() => deleteRow(entry.id)}
@@ -685,12 +678,16 @@ function CellEditor({
   onChange,
   suggestions,
   members = [],
+  onPush,
+  pushed,
 }: {
   column: WorkbookColumn;
   value: unknown;
   onChange: (v: unknown) => void;
   suggestions?: string[];
   members?: { id: string; name: string }[];
+  onPush?: (draft: string) => void | Promise<void>;
+  pushed?: boolean;
 }) {
   const base =
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
@@ -777,7 +774,15 @@ function CellEditor({
   }
 
   if (column.type === "longtext") {
-    return <LongTextCell column={column} value={strVal} onChange={onChange} />;
+    return (
+      <LongTextCell
+        column={column}
+        value={strVal}
+        onChange={onChange}
+        onPush={onPush}
+        pushed={pushed}
+      />
+    );
   }
 
   // text-style inputs (text/email/phone/url/number/select_creatable):
@@ -955,13 +960,19 @@ function LongTextCell({
   column,
   value,
   onChange,
+  onPush,
+  pushed,
 }: {
   column: WorkbookColumn;
   value: string;
   onChange: (v: unknown) => void;
+  // When set, the editor modal shows an "add to workbook chapter" action.
+  onPush?: (draft: string) => void | Promise<void>;
+  pushed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [pushing, setPushing] = useState(false);
 
   function openModal() {
     setDraft(value);
@@ -978,6 +989,17 @@ function LongTextCell({
     setOpen(false);
   }
 
+  async function saveAndPush() {
+    if (!onPush || !draft.trim()) return;
+    setPushing(true);
+    try {
+      await onPush(draft);
+      setOpen(false);
+    } finally {
+      setPushing(false);
+    }
+  }
+
   return (
     <>
       <button
@@ -991,7 +1013,15 @@ function LongTextCell({
         <span className="line-clamp-2 whitespace-pre-wrap break-words flex-1 min-w-0">
           {value || column.placeholder || "לחצו לעריכה..."}
         </span>
-        <Maximize2 className="size-3.5 shrink-0 text-gray-300 transition-colors group-hover:text-gray-500" />
+        <span className="flex shrink-0 items-center gap-1">
+          {pushed && (
+            <BookOpen
+              className="size-3.5 text-[#22c55e]"
+              aria-label="נוסף לחוברת"
+            />
+          )}
+          <Maximize2 className="size-3.5 text-gray-300 transition-colors group-hover:text-gray-500" />
+        </span>
       </button>
 
       {open && (
@@ -1034,21 +1064,43 @@ function LongTextCell({
                 }}
               />
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
-              <button
-                type="button"
-                onClick={cancel}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-              >
-                ביטול
-              </button>
-              <button
-                type="button"
-                onClick={save}
-                className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16a34a]"
-              >
-                שמור
-              </button>
+            <div className="flex items-center gap-2 border-t border-gray-100 px-5 py-3">
+              {onPush && (
+                <button
+                  type="button"
+                  onClick={saveAndPush}
+                  disabled={pushing || !draft.trim()}
+                  title={
+                    !draft.trim()
+                      ? "כתבו תשובה כדי להוסיף אותה לחוברת"
+                      : undefined
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#22c55e] bg-[#22c55e]/10 px-4 py-2 text-sm font-medium text-[#16a34a] transition-colors hover:bg-[#22c55e]/20 disabled:opacity-50"
+                >
+                  {pushing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <BookOpen className="size-4" />
+                  )}
+                  {pushed ? "הוסף שוב לחוברת" : "הוסף לחוברת העבודה"}
+                </button>
+              )}
+              <div className="ms-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={cancel}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  ביטול
+                </button>
+                <button
+                  type="button"
+                  onClick={save}
+                  className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16a34a]"
+                >
+                  שמור
+                </button>
+              </div>
             </div>
           </div>
         </div>
