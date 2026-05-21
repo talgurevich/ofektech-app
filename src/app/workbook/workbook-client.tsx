@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry, GuideChapter, UserRole } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskFilesModal } from "@/components/task-files-modal";
 
@@ -422,6 +422,18 @@ export function WorkbookClient({
                             pushed={
                               col.key === "answer" && taskWasPushed(entry)
                             }
+                            contextLabel={
+                              activeSheetKey === "tasks" &&
+                              col.key === "answer"
+                                ? "המשימה"
+                                : undefined
+                            }
+                            contextValue={
+                              activeSheetKey === "tasks" &&
+                              col.key === "answer"
+                                ? (entry.data["task"] as string | undefined)
+                                : undefined
+                            }
                           />
                         )}
                       </div>
@@ -680,6 +692,8 @@ function CellEditor({
   members = [],
   onPush,
   pushed,
+  contextLabel,
+  contextValue,
 }: {
   column: WorkbookColumn;
   value: unknown;
@@ -688,6 +702,8 @@ function CellEditor({
   members?: { id: string; name: string }[];
   onPush?: (draft: string) => void | Promise<void>;
   pushed?: boolean;
+  contextLabel?: string;
+  contextValue?: string;
 }) {
   const base =
     "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 outline-none transition-colors focus:border-[#22c55e] focus:bg-white hover:bg-white";
@@ -781,6 +797,8 @@ function CellEditor({
         onChange={onChange}
         onPush={onPush}
         pushed={pushed}
+        contextLabel={contextLabel}
+        contextValue={contextValue}
       />
     );
   }
@@ -962,6 +980,8 @@ function LongTextCell({
   onChange,
   onPush,
   pushed,
+  contextLabel,
+  contextValue,
 }: {
   column: WorkbookColumn;
   value: string;
@@ -969,10 +989,15 @@ function LongTextCell({
   // When set, the editor modal shows an "add to workbook chapter" action.
   onPush?: (draft: string) => void | Promise<void>;
   pushed?: boolean;
+  // When set, the editor modal pins this read-only text above the textarea
+  // (e.g. the task text shown while writing the answer).
+  contextLabel?: string;
+  contextValue?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const [pushing, setPushing] = useState(false);
+  const [contextOpen, setContextOpen] = useState(true);
 
   function openModal() {
     setDraft(value);
@@ -1046,6 +1071,28 @@ function LongTextCell({
               </button>
             </div>
             <div className="p-5">
+              {contextValue?.trim() && (
+                <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <button
+                    type="button"
+                    onClick={() => setContextOpen((v) => !v)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-right text-xs font-semibold text-gray-500"
+                  >
+                    <span>{contextLabel ?? "הקשר"}</span>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 shrink-0 transition-transform",
+                        !contextOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  {contextOpen && (
+                    <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words border-t border-gray-200 px-3 py-2 text-sm text-gray-700">
+                      {contextValue}
+                    </p>
+                  )}
+                </div>
+              )}
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
