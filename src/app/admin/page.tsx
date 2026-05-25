@@ -175,6 +175,17 @@ export default async function AdminDashboard() {
     (v) => !summarizedByVenture.has(v.id)
   );
 
+  // Member names per venture (for display alongside venture name)
+  const membersByVenture = new Map<string, string[]>();
+  (candidates || []).forEach((c) => {
+    if (!c.venture_id) return;
+    const name = (c.full_name || c.email || "").trim();
+    if (!name) return;
+    const list = membersByVenture.get(c.venture_id) || [];
+    list.push(name);
+    membersByVenture.set(c.venture_id, list);
+  });
+
   // Cross-venture activity feed
   const { data: activityRows } = await supabase
     .from("venture_activity")
@@ -433,18 +444,27 @@ export default async function AdminDashboard() {
                     לא סיכמו ({notSummarizedVentures.length})
                   </p>
                   <div className="space-y-1">
-                    {notSummarizedVentures.map((v) => (
-                      <Link
-                        key={v.id}
-                        href={`/ventures/${v.id}`}
-                        className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
-                      >
-                        <XCircle className="size-3.5 text-red-400 shrink-0" />
-                        <span className="text-xs text-[#1a2744] truncate">
-                          {v.name}
-                        </span>
-                      </Link>
-                    ))}
+                    {notSummarizedVentures.map((v) => {
+                      const members = membersByVenture.get(v.id) || [];
+                      return (
+                        <Link
+                          key={v.id}
+                          href={`/ventures/${v.id}`}
+                          className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
+                        >
+                          <XCircle className="size-3.5 text-red-400 shrink-0" />
+                          <span className="text-xs text-[#1a2744] truncate">
+                            {v.name}
+                            {members.length > 0 && (
+                              <span className="text-gray-400 font-normal">
+                                {" · "}
+                                {members.join(", ")}
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -457,6 +477,7 @@ export default async function AdminDashboard() {
                   <div className="space-y-1">
                     {summarizedVentures.map((v) => {
                       const info = summarizedByVenture.get(v.id)!;
+                      const members = membersByVenture.get(v.id) || [];
                       return (
                         <Link
                           key={v.id}
@@ -467,6 +488,12 @@ export default async function AdminDashboard() {
                             <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
                             <span className="text-xs text-[#1a2744] truncate">
                               {v.name}
+                              {members.length > 0 && (
+                                <span className="text-gray-400 font-normal">
+                                  {" · "}
+                                  {members.join(", ")}
+                                </span>
+                              )}
                             </span>
                           </div>
                           <span className="text-[10px] text-gray-400 shrink-0">
