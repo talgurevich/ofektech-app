@@ -22,11 +22,13 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
+import { AdminNotesCard } from "@/components/admin-notes-card";
 import type {
   Profile,
   Venture,
   Cohort,
   VentureActivity,
+  AdminVentureNote,
 } from "@/lib/types";
 
 const ACTIVITY_PAGE_SIZE = 30;
@@ -69,6 +71,7 @@ export default async function AdminVentureDetailPage({
     { data: chapterEntries },
     { count: sessionCount },
     { data: activityRows, count: activityCount },
+    { data: noteRows },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -101,7 +104,15 @@ export default async function AdminVentureDetailPage({
       .eq("venture_id", ventureId)
       .order("created_at", { ascending: false })
       .range(from, to),
+    supabase
+      .from("admin_venture_notes")
+      .select("*, author:author_id(id, full_name, avatar_url)")
+      .eq("venture_id", ventureId)
+      .order("resolved_at", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: false }),
   ]);
+
+  const notes = ((noteRows || []) as AdminVentureNote[]) || [];
 
   const memberList = (members || []) as Array<
     Pick<Profile, "id" | "full_name" | "email" | "avatar_url" | "venture_role">
@@ -234,6 +245,9 @@ export default async function AdminVentureDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Admin notes (admin-only) */}
+      <AdminNotesCard ventureId={ventureId} initialNotes={notes} />
 
       {/* Quick links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

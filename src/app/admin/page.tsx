@@ -25,9 +25,33 @@ import {
   Activity,
   Headphones,
   FileText,
+  StickyNote,
+  Info,
+  AlertTriangle,
+  Flame,
 } from "lucide-react";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
-import type { VentureActivity } from "@/lib/types";
+import { formatRelativeHe } from "@/lib/utils";
+import type {
+  VentureActivity,
+  AdminVentureNote,
+  AdminNoteSeverity,
+} from "@/lib/types";
+
+const NOTE_SEVERITY_RANK: Record<AdminNoteSeverity, number> = {
+  blocker: 0,
+  watch: 1,
+  info: 2,
+};
+
+const NOTE_SEVERITY_META: Record<
+  AdminNoteSeverity,
+  { label: string; chip: string; icon: typeof Info }
+> = {
+  info: { label: "מידע", chip: "bg-gray-100 text-gray-600", icon: Info },
+  watch: { label: "מעקב", chip: "bg-amber-100 text-amber-700", icon: AlertTriangle },
+  blocker: { label: "חוסם", chip: "bg-red-100 text-red-700", icon: Flame },
+};
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -196,6 +220,19 @@ export default async function AdminDashboard() {
     .limit(30);
   const activity = (activityRows as VentureActivity[]) || [];
 
+  // Open admin notes across all ventures
+  const { data: openNoteRows } = await supabase
+    .from("admin_venture_notes")
+    .select(
+      "*, author:author_id(id, full_name, avatar_url), venture:venture_id(id, name)"
+    )
+    .is("resolved_at", null);
+  const openNotes = ((openNoteRows || []) as AdminVentureNote[]).sort((a, b) => {
+    const rank = NOTE_SEVERITY_RANK[a.severity] - NOTE_SEVERITY_RANK[b.severity];
+    if (rank !== 0) return rank;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[#1a2744]">סקירה כללית</h1>
@@ -208,6 +245,61 @@ export default async function AdminDashboard() {
         <StatCard label="מיזמים פעילים" value={totalVentures || 0} icon={<Briefcase className="size-5 text-[#22c55e]" />} href="/admin/ventures" />
         <StatCard label="סה״כ הרצאות" value={totalLectures || 0} icon={<Mic2 className="size-5 text-[#22c55e]" />} href="/admin/lectures" />
       </div>
+
+      {/* Open admin notes across all ventures */}
+      {openNotes.length > 0 && (
+        <Card className="border-0 shadow-sm ring-1 ring-amber-200/60 bg-amber-50/30">
+          <CardHeader>
+            <div className="flex items-center justify-between w-full">
+              <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                <StickyNote className="size-5 text-amber-600" />
+                הערות אדמין פתוחות
+              </CardTitle>
+              <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">
+                {openNotes.length} פתוחות
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {openNotes.map((note) => {
+                const meta = NOTE_SEVERITY_META[note.severity];
+                const Icon = meta.icon;
+                return (
+                  <Link
+                    key={note.id}
+                    href={`/admin/ventures/${note.venture_id}#admin-notes`}
+                    className="block rounded-xl bg-white border border-gray-200 p-3 hover:border-amber-300 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] shrink-0 ${meta.chip}`}
+                      >
+                        <Icon className="size-2.5" />
+                        {meta.label}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-[#1a2744] line-clamp-2 whitespace-pre-wrap">
+                          {note.content}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          <span className="font-medium text-[#1a2744]">
+                            {note.venture?.name || "מיזם"}
+                          </span>
+                          {" · "}
+                          {note.author?.full_name || "אדמין"}
+                          {" · "}
+                          {formatRelativeHe(note.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cross-venture activity feed */}
       <Card className="border-0 shadow-sm">

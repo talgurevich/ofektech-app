@@ -239,6 +239,22 @@ export interface WorkbookTaskFile {
   created_at: string;
 }
 
+export type AdminNoteSeverity = "info" | "watch" | "blocker";
+
+export interface AdminVentureNote {
+  id: string;
+  venture_id: string;
+  author_id: string | null;
+  content: string;
+  severity: AdminNoteSeverity;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
+  author?: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
+  venture?: Pick<Venture, "id" | "name"> | null;
+}
+
 export type BibliographyKind = "book" | "article" | "video" | "podcast" | "other";
 
 export interface BibliographyEntry {

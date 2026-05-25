@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Profile, Venture, Cohort } from "@/lib/types";
+import type { Profile, Venture, Cohort, AdminNoteSeverity } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -23,7 +23,28 @@ import {
   AlertCircle,
   Pencil,
   Check,
+  StickyNote,
 } from "lucide-react";
+
+type NoteSummary = { count: number; topSeverity: AdminNoteSeverity };
+
+const SEVERITY_RANK: Record<AdminNoteSeverity, number> = {
+  info: 0,
+  watch: 1,
+  blocker: 2,
+};
+
+const NOTE_BADGE_CLASS: Record<AdminNoteSeverity, string> = {
+  info: "bg-gray-100 text-gray-600",
+  watch: "bg-amber-100 text-amber-700",
+  blocker: "bg-red-100 text-red-700",
+};
+
+const NOTE_LABEL: Record<AdminNoteSeverity, string> = {
+  info: "מידע",
+  watch: "מעקב",
+  blocker: "חוסם",
+};
 
 export default function AdminVenturesPage() {
   const supabase = createClient();
@@ -32,6 +53,9 @@ export default function AdminVenturesPage() {
   >([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [candidates, setCandidates] = useState<Profile[]>([]);
+  const [noteSummaries, setNoteSummaries] = useState<Map<string, NoteSummary>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -58,6 +82,7 @@ export default function AdminVenturesPage() {
       { data: ventureData },
       { data: cohortData },
       { data: candidateData },
+      { data: openNotes },
     ] = await Promise.all([
       supabase
         .from("ventures")
@@ -69,10 +94,30 @@ export default function AdminVenturesPage() {
         .select("*")
         .eq("role", "candidate")
         .order("full_name"),
+      supabase
+        .from("admin_venture_notes")
+        .select("venture_id, severity")
+        .is("resolved_at", null),
     ]);
 
     if (cohortData) setCohorts(cohortData);
     if (candidateData) setCandidates(candidateData);
+
+    const summaries = new Map<string, NoteSummary>();
+    (openNotes || []).forEach((n) => {
+      const vId = n.venture_id as string;
+      const sev = n.severity as AdminNoteSeverity;
+      const cur = summaries.get(vId);
+      if (!cur) {
+        summaries.set(vId, { count: 1, topSeverity: sev });
+      } else {
+        cur.count += 1;
+        if (SEVERITY_RANK[sev] > SEVERITY_RANK[cur.topSeverity]) {
+          cur.topSeverity = sev;
+        }
+      }
+    });
+    setNoteSummaries(summaries);
 
     if (ventureData) {
       // Get members for each venture
@@ -391,6 +436,22 @@ export default function AdminVenturesPage() {
                 )}
                 {editingId !== venture.id && (
                   <div className="flex items-center gap-2">
+                    {(() => {
+                      const summary = noteSummaries.get(venture.id);
+                      if (!summary) return null;
+                      return (
+                        <Link
+                          href={`/admin/ventures/${venture.id}#admin-notes`}
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+                            NOTE_BADGE_CLASS[summary.topSeverity]
+                          } hover:opacity-80 transition-opacity`}
+                          title={`${summary.count} הערות אדמין פתוחות`}
+                        >
+                          <StickyNote className="size-3" />
+                          {summary.count} · {NOTE_LABEL[summary.topSeverity]}
+                        </Link>
+                      );
+                    })()}
                     {venture.cohort && (
                       <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-xs">
                         {venture.cohort.name}
