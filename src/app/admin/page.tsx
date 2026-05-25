@@ -143,15 +143,15 @@ export default async function AdminDashboard() {
     };
   });
 
-  // Mentor meeting summaries in the last 7 days
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekAgoIso = weekAgo.toISOString().slice(0, 10);
+  // Mentor meeting summaries in the last 14 days
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const twoWeeksAgoIso = twoWeeksAgo.toISOString().slice(0, 10);
 
   const { data: weekSessions } = await supabase
     .from("mentor_sessions")
     .select("venture_id, session_date, meeting_summary, summary_submitted_at")
-    .gte("session_date", weekAgoIso)
+    .gte("session_date", twoWeeksAgoIso)
     .order("session_date", { ascending: false });
 
   const summarizedByVenture = new Map<
@@ -400,13 +400,13 @@ export default async function AdminDashboard() {
         {/* Right column */}
         <div className="space-y-6">
 
-          {/* Mentor meeting summaries — last 7 days */}
+          {/* Mentor meeting summaries — last 14 days */}
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between w-full">
                 <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
                   <FileText className="size-5" />
-                  סיכומי פגישת מנטור — שבוע אחרון
+                  סיכומי פגישת מנטור — שבועיים אחרונים
                 </CardTitle>
                 <Badge variant="secondary" className="text-sm">
                   {summarizedVentures.length} / {ventures?.length || 0}
