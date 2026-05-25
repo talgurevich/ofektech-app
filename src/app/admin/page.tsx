@@ -24,6 +24,7 @@ import {
   UserCheck,
   Activity,
   Headphones,
+  FileText,
 } from "lucide-react";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
 import type { VentureActivity } from "@/lib/types";
@@ -141,6 +142,38 @@ export default async function AdminDashboard() {
       venture_id: row.venture_id,
     };
   });
+
+  // Mentor meeting summaries in the last 7 days
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoIso = weekAgo.toISOString().slice(0, 10);
+
+  const { data: weekSessions } = await supabase
+    .from("mentor_sessions")
+    .select("venture_id, session_date, meeting_summary, summary_submitted_at")
+    .gte("session_date", weekAgoIso)
+    .order("session_date", { ascending: false });
+
+  const summarizedByVenture = new Map<
+    string,
+    { session_date: string; summary_submitted_at: string | null }
+  >();
+  (weekSessions || []).forEach((s) => {
+    if ((s.meeting_summary || "").trim() === "") return;
+    if (!summarizedByVenture.has(s.venture_id)) {
+      summarizedByVenture.set(s.venture_id, {
+        session_date: s.session_date,
+        summary_submitted_at: s.summary_submitted_at,
+      });
+    }
+  });
+
+  const summarizedVentures = (ventures || []).filter((v) =>
+    summarizedByVenture.has(v.id)
+  );
+  const notSummarizedVentures = (ventures || []).filter(
+    (v) => !summarizedByVenture.has(v.id)
+  );
 
   // Cross-venture activity feed
   const { data: activityRows } = await supabase
@@ -366,6 +399,87 @@ export default async function AdminDashboard() {
 
         {/* Right column */}
         <div className="space-y-6">
+
+          {/* Mentor meeting summaries — last 7 days */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                  <FileText className="size-5" />
+                  סיכומי פגישת מנטור — שבוע אחרון
+                </CardTitle>
+                <Badge variant="secondary" className="text-sm">
+                  {summarizedVentures.length} / {ventures?.length || 0}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#22c55e] transition-all"
+                  style={{
+                    width: `${
+                      ventures?.length
+                        ? (summarizedVentures.length / ventures.length) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+
+              {notSummarizedVentures.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">
+                    לא סיכמו ({notSummarizedVentures.length})
+                  </p>
+                  <div className="space-y-1">
+                    {notSummarizedVentures.map((v) => (
+                      <Link
+                        key={v.id}
+                        href={`/ventures/${v.id}`}
+                        className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
+                      >
+                        <XCircle className="size-3.5 text-red-400 shrink-0" />
+                        <span className="text-xs text-[#1a2744] truncate">
+                          {v.name}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {summarizedVentures.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">
+                    סיכמו ({summarizedVentures.length})
+                  </p>
+                  <div className="space-y-1">
+                    {summarizedVentures.map((v) => {
+                      const info = summarizedByVenture.get(v.id)!;
+                      return (
+                        <Link
+                          key={v.id}
+                          href={`/ventures/${v.id}`}
+                          className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 bg-[#22c55e]/5 hover:bg-[#22c55e]/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
+                            <span className="text-xs text-[#1a2744] truncate">
+                              {v.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-gray-400 shrink-0">
+                            {formatDate(info.session_date)}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Recent mentor sessions */}
           <Card className="border-0 shadow-sm">
