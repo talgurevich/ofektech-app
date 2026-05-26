@@ -20,6 +20,7 @@ const seeOptions: Option[] = [
   { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
+  { href: "/profile#submitted-feedback", label: "המשובים שלי", icon: MessageSquare },
 ];
 
 const createOptions: Option[] = [

@@ -50,6 +50,7 @@ function seeOptionsFor(ventureId: string): Option[] {
 
 const globalSeeOptions: Option[] = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
+  { href: "/profile#submitted-feedback", label: "המשובים שלי", icon: MessageSquare },
 ];
 
 type Mode = "create" | "see";

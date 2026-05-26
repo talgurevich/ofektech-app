@@ -531,7 +531,7 @@ export default function ProfilePage() {
 
       {/* Submitted meeting feedback / summaries */}
       {(role === "candidate" || role === "mentor") && (
-        <Card className="border-0 shadow-sm">
+        <Card id="submitted-feedback" className="border-0 shadow-sm scroll-mt-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
               <MessageSquare className="size-4" />
