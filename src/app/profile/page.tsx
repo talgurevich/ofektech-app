@@ -22,7 +22,10 @@ import {
   Sparkles,
   ArrowLeft,
   Users,
+  MessageSquare,
+  CalendarDays,
 } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
 
@@ -35,6 +38,22 @@ interface ProfileData {
   company: string;
   expertise: string;
   avatar_url: string;
+}
+
+interface SubmittedFeedbackItem {
+  session_id: string;
+  session_date: string;
+  venture_name: string;
+  submitted_at: string;
+  kind: "feedback" | "summary";
+  preview: string;
+  ratings: {
+    focus: number | null;
+    progress: number | null;
+    preparedness: number | null;
+    initiative: number | null;
+    followthrough: number | null;
+  } | null;
 }
 
 const emptyProfile: ProfileData = {
@@ -60,6 +79,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [openingCheckinDone, setOpeningCheckinDone] = useState(true);
   const [ventureId, setVentureId] = useState<string | null>(null);
+  const [submittedFeedback, setSubmittedFeedback] = useState<SubmittedFeedbackItem[]>([]);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const activityTimer = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +127,89 @@ export default function ProfilePage() {
           .maybeSingle();
         setOpeningCheckinDone(!!checkin);
       }
+
+      // Submissions: meeting summaries (candidates) + session feedback (mentors)
+      const items: SubmittedFeedbackItem[] = [];
+
+      const { data: summaryRows } = await supabase
+        .from("mentor_sessions")
+        .select(
+          "id, session_date, meeting_summary, summary_submitted_at, venture:ventures(name)"
+        )
+        .eq("summary_submitted_by", user.id)
+        .not("meeting_summary", "is", null)
+        .neq("meeting_summary", "")
+        .order("summary_submitted_at", { ascending: false });
+
+      for (const row of (summaryRows || []) as Array<{
+        id: string;
+        session_date: string;
+        meeting_summary: string | null;
+        summary_submitted_at: string | null;
+        venture: { name: string } | { name: string }[] | null;
+      }>) {
+        const text = (row.meeting_summary || "").trim();
+        if (!text) continue;
+        const ventureObj = Array.isArray(row.venture) ? row.venture[0] : row.venture;
+        items.push({
+          session_id: row.id,
+          session_date: row.session_date,
+          venture_name: ventureObj?.name || "מיזם",
+          submitted_at: row.summary_submitted_at || row.session_date,
+          kind: "summary",
+          preview: text.length > 200 ? text.slice(0, 200) + "…" : text,
+          ratings: null,
+        });
+      }
+
+      const { data: feedbackRows } = await supabase
+        .from("session_feedback")
+        .select(
+          "session_id, content, submitted_at, rating_focus, rating_progress, rating_preparedness, rating_initiative, rating_followthrough, session:mentor_sessions(session_date, venture:ventures(name))"
+        )
+        .eq("submitted_by", user.id)
+        .order("submitted_at", { ascending: false });
+
+      for (const row of (feedbackRows || []) as Array<{
+        session_id: string;
+        content: string | null;
+        submitted_at: string;
+        rating_focus: number | null;
+        rating_progress: number | null;
+        rating_preparedness: number | null;
+        rating_initiative: number | null;
+        rating_followthrough: number | null;
+        session:
+          | { session_date: string; venture: { name: string } | { name: string }[] | null }
+          | { session_date: string; venture: { name: string } | { name: string }[] | null }[]
+          | null;
+      }>) {
+        const sessionObj = Array.isArray(row.session) ? row.session[0] : row.session;
+        const ventureObj = sessionObj
+          ? Array.isArray(sessionObj.venture)
+            ? sessionObj.venture[0]
+            : sessionObj.venture
+          : null;
+        const text = (row.content || "").trim();
+        items.push({
+          session_id: row.session_id,
+          session_date: sessionObj?.session_date || row.submitted_at,
+          venture_name: ventureObj?.name || "מיזם",
+          submitted_at: row.submitted_at,
+          kind: "feedback",
+          preview: text.length > 200 ? text.slice(0, 200) + "…" : text,
+          ratings: {
+            focus: row.rating_focus,
+            progress: row.rating_progress,
+            preparedness: row.rating_preparedness,
+            initiative: row.rating_initiative,
+            followthrough: row.rating_followthrough,
+          },
+        });
+      }
+
+      items.sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
+      setSubmittedFeedback(items);
 
       setLoading(false);
     }
@@ -422,6 +525,96 @@ export default function ProfilePage() {
                 className="rounded-xl"
               />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Submitted meeting feedback / summaries */}
+      {(role === "candidate" || role === "mentor") && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+              <MessageSquare className="size-4" />
+              המשובים שלי
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {submittedFeedback.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-2">
+                {role === "mentor"
+                  ? "עדיין לא שלחת משוב על פגישה"
+                  : "עדיין לא שלחת סיכום פגישה"}
+              </p>
+            ) : (
+              submittedFeedback.map((item) => (
+                <Link
+                  key={`${item.kind}-${item.session_id}`}
+                  href={`/sessions/${item.session_id}/feedback`}
+                  className="block rounded-lg border border-gray-100 bg-gray-50/50 p-3 transition-colors hover:bg-[#22c55e]/5 hover:border-[#22c55e]/40"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Briefcase className="size-4 text-gray-400" />
+                    <span className="text-sm font-medium text-[#1a2744] truncate">
+                      {item.venture_name}
+                    </span>
+                    <Badge
+                      className={`text-[10px] border-0 ${
+                        item.kind === "feedback"
+                          ? "bg-[#22c55e]/10 text-[#22c55e]"
+                          : "bg-[#1a2744]/10 text-[#1a2744]"
+                      }`}
+                    >
+                      {item.kind === "feedback" ? "משוב" : "סיכום"}
+                    </Badge>
+                    <span className="mr-auto inline-flex items-center gap-1 text-xs text-gray-400">
+                      <CalendarDays className="size-3" />
+                      {formatDate(item.session_date)}
+                    </span>
+                  </div>
+                  {item.ratings &&
+                    (item.ratings.focus ||
+                      item.ratings.progress ||
+                      item.ratings.preparedness ||
+                      item.ratings.initiative ||
+                      item.ratings.followthrough) ? (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {item.ratings.focus && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          מיקוד {item.ratings.focus}/5
+                        </Badge>
+                      )}
+                      {item.ratings.progress && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          התקדמות {item.ratings.progress}/5
+                        </Badge>
+                      )}
+                      {item.ratings.preparedness && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          מוכנות {item.ratings.preparedness}/5
+                        </Badge>
+                      )}
+                      {item.ratings.initiative && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          יוזמה {item.ratings.initiative}/5
+                        </Badge>
+                      )}
+                      {item.ratings.followthrough && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          יישום {item.ratings.followthrough}/5
+                        </Badge>
+                      )}
+                    </div>
+                  ) : null}
+                  {item.preview ? (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {item.preview}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400">ללא טקסט</p>
+                  )}
+                </Link>
+              ))
+            )}
           </CardContent>
         </Card>
       )}

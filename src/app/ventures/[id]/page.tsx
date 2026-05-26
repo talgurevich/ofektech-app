@@ -506,7 +506,7 @@ export default async function VentureDetailPage({
                   <span className="mr-auto">
                     {fb ? (
                       <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px]">
-                        ניתן משוב
+                        המשוב שלך נשלח ✓
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px]">
