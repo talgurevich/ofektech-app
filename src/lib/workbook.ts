@@ -126,7 +126,6 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       },
       { key: "description", label: "מה החברה עושה", type: "longtext", width: "minmax(200px,2fr)" },
       { key: "pricing", label: "מודל עסקי", type: "text" },
-      { key: "metrics", label: "ביצועים", type: "text" },
       { key: "website", label: "אתר החברה", type: "url" },
       { key: "notes", label: "הערות", type: "longtext", width: "minmax(200px,2fr)" },
     ],
