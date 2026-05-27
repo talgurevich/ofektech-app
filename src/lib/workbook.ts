@@ -110,7 +110,6 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     label: "מתחרים",
     icon: Swords,
     description: "מחקר מתחרים בשוק",
-    tbd: true,
     columns: [
       { key: "name", label: "שם חברה", type: "text" },
       { key: "description", label: "מה החברה עושה", type: "longtext", width: "minmax(200px,2fr)" },
