@@ -78,13 +78,19 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     icon: Users,
     description: "לקוחות פוטנציאליים ופעילים",
     columns: [
-      { key: "name", label: "שם לקוח", type: "text" },
-      { key: "website", label: "אתר", type: "url" },
-      { key: "description", label: "תיאור", type: "longtext", width: "minmax(200px,2fr)" },
-      { key: "email", label: "דוא\"ל", type: "email" },
-      { key: "phone", label: "טלפון", type: "phone" },
+      { key: "name", label: "שם חברה / לקוח", type: "text" },
       { key: "contact", label: "איש קשר", type: "text" },
-      { key: "channels", label: "דרכי גישה עדיפות ללקוח", type: "text" },
+      { key: "role", label: "תפקיד", type: "text" },
+      { key: "email", label: "אימייל", type: "email" },
+      { key: "phone", label: "טלפון / ווטסאפ", type: "phone" },
+      { key: "segment", label: "סוג לקוח / סגמנט", type: "select_creatable" },
+      {
+        key: "pain",
+        label: "צורך / כאב מרכזי עליהם נותנים מענה",
+        type: "longtext",
+        width: "minmax(240px,2fr)",
+      },
+      { key: "created_at", label: "נוצר ב", type: "text", readOnly: true, width: "140px" },
     ],
   },
   {
@@ -128,6 +134,7 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       { key: "pricing", label: "מודל עסקי", type: "text" },
       { key: "website", label: "אתר החברה", type: "url" },
       { key: "notes", label: "הערות", type: "longtext", width: "minmax(200px,2fr)" },
+      { key: "created_at", label: "נוצר ב", type: "text", readOnly: true, width: "140px" },
     ],
   },
   {

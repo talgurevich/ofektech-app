@@ -134,6 +134,12 @@ export function WorkbookClient({
             creator: currentUserName,
           }
         : {};
+    if (activeSheet.columns.some((c) => c.key === "created_at")) {
+      initialData.created_at = new Date().toLocaleString("he-IL", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    }
     const { data, error } = await supabase
       .from("workbook_entries")
       .insert({
