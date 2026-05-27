@@ -20,9 +20,13 @@ import {
   MessageSquare,
   ChevronRight,
   ChevronLeft,
+  CalendarDays,
+  FileText,
+  UserCircle,
 } from "lucide-react";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
 import { AdminNotesCard } from "@/components/admin-notes-card";
+import { formatDate } from "@/lib/utils";
 import type {
   Profile,
   Venture,
@@ -69,7 +73,7 @@ export default async function AdminVentureDetailPage({
     { data: workbookRows },
     { data: chapters },
     { data: chapterEntries },
-    { count: sessionCount },
+    { data: sessionRows },
     { data: activityRows, count: activityCount },
     { data: noteRows },
   ] = await Promise.all([
@@ -93,8 +97,11 @@ export default async function AdminVentureDetailPage({
       .eq("venture_id", ventureId),
     supabase
       .from("mentor_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("venture_id", ventureId),
+      .select(
+        "id, session_date, meeting_summary, summary_submitted_at, mentor:profiles!mentor_sessions_mentor_id_fkey(id, full_name, avatar_url), summary_author:profiles!mentor_sessions_summary_submitted_by_fkey(id, full_name, avatar_url)"
+      )
+      .eq("venture_id", ventureId)
+      .order("session_date", { ascending: false }),
     supabase
       .from("venture_activity")
       .select(
@@ -111,6 +118,18 @@ export default async function AdminVentureDetailPage({
       .order("resolved_at", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false }),
   ]);
+
+  type SessionRow = {
+    id: string;
+    session_date: string;
+    meeting_summary: string | null;
+    summary_submitted_at: string | null;
+    mentor: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
+    summary_author: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
+  };
+
+  const sessions = ((sessionRows || []) as unknown as SessionRow[]) || [];
+  const sessionCount = sessions.length;
 
   const notes = ((noteRows || []) as AdminVentureNote[]) || [];
 
@@ -282,17 +301,65 @@ export default async function AdminVentureDetailPage({
         </Link>
       </div>
 
-      {/* Sessions summary */}
+      {/* Meeting summaries */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-[#1a2744]">
             <MessageSquare className="size-5" />
-            פגישות מנטור
+            סיכומי פגישות מנטור
           </CardTitle>
           <CardDescription>
-            {sessionCount || 0} סיכומי פגישות נרשמו עד כה
+            {sessionCount} סיכומי פגישות נרשמו עד כה
           </CardDescription>
         </CardHeader>
+        <CardContent className="space-y-3">
+          {sessions.length > 0 ? (
+            sessions.map((s) => {
+              const mentorName = s.mentor?.full_name || "מנטור";
+              const authorName = s.summary_author?.full_name;
+              const summary = (s.meeting_summary || "").trim();
+
+              return (
+                <Link
+                  key={s.id}
+                  href={`/sessions/${s.id}/feedback`}
+                  className="block rounded-lg border border-gray-100 bg-gray-50/50 p-3 transition-colors hover:bg-[#22c55e]/5 hover:border-[#22c55e]/40"
+                >
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge className="bg-[#1a2744]/10 text-[#1a2744] border-0 text-[10px] gap-1">
+                      <CalendarDays className="size-3" />
+                      {formatDate(s.session_date)}
+                    </Badge>
+                    <Badge className="bg-[#22c55e]/10 text-[#22c55e] border-0 text-[10px] gap-1">
+                      <UserCheck className="size-3" />
+                      {mentorName}
+                    </Badge>
+                    {authorName && authorName !== mentorName && (
+                      <Badge variant="secondary" className="text-[10px] gap-1">
+                        <UserCircle className="size-3" />
+                        נכתב ע״י {authorName}
+                      </Badge>
+                    )}
+                  </div>
+                  {summary ? (
+                    <div className="flex items-start gap-2">
+                      <FileText className="size-4 text-gray-400 mt-0.5 shrink-0" />
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed flex-1">
+                        {summary}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">אין סיכום עדיין</p>
+                  )}
+                </Link>
+              );
+            })
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-6">
+              אין סיכומי פגישות עדיין
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {/* Activity feed */}
