@@ -91,6 +91,8 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
         width: "minmax(240px,2fr)",
       },
       { key: "created_at", label: "נוצר ב", type: "text", readOnly: true, width: "140px" },
+      { key: "updated_at", label: "עודכן ב", type: "text", readOnly: true, width: "140px" },
+      { key: "updated_by", label: "עודכן ע״י", type: "text", readOnly: true, width: "140px" },
     ],
   },
   {
@@ -137,6 +139,8 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       { key: "email", label: "אימייל", type: "email" },
       { key: "notes", label: "הערות", type: "longtext", width: "minmax(200px,2fr)" },
       { key: "created_at", label: "נוצר ב", type: "text", readOnly: true, width: "140px" },
+      { key: "updated_at", label: "עודכן ב", type: "text", readOnly: true, width: "140px" },
+      { key: "updated_by", label: "עודכן ע״י", type: "text", readOnly: true, width: "140px" },
     ],
   },
   {

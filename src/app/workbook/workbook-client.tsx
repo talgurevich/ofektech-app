@@ -134,11 +134,18 @@ export function WorkbookClient({
             creator: currentUserName,
           }
         : {};
+    const nowStamp = new Date().toLocaleString("he-IL", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
     if (activeSheet.columns.some((c) => c.key === "created_at")) {
-      initialData.created_at = new Date().toLocaleString("he-IL", {
-        dateStyle: "short",
-        timeStyle: "short",
-      });
+      initialData.created_at = nowStamp;
+    }
+    if (activeSheet.columns.some((c) => c.key === "updated_at")) {
+      initialData.updated_at = nowStamp;
+    }
+    if (activeSheet.columns.some((c) => c.key === "updated_by")) {
+      initialData.updated_by = currentUserName;
     }
     const { data, error } = await supabase
       .from("workbook_entries")
@@ -196,11 +203,23 @@ export function WorkbookClient({
 
   async function updateCell(id: string, key: string, value: unknown) {
     const before = entries.find((e) => e.id === id);
+    const nextData: Record<string, unknown> = {
+      ...(before?.data || {}),
+      [key]: value,
+    };
+    if (activeSheet.columns.some((c) => c.key === "updated_at")) {
+      nextData.updated_at = new Date().toLocaleString("he-IL", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    }
+    if (activeSheet.columns.some((c) => c.key === "updated_by")) {
+      nextData.updated_by = currentUserName;
+    }
     setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, data: { ...e.data, [key]: value } } : e))
+      prev.map((e) => (e.id === id ? { ...e, data: nextData } : e))
     );
     setSavingIds((s) => new Set(s).add(id));
-    const nextData = { ...(before?.data || {}), [key]: value };
     await supabase
       .from("workbook_entries")
       .update({ data: nextData, updated_at: new Date().toISOString() })
