@@ -133,6 +133,8 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
       { key: "description", label: "מה החברה עושה", type: "longtext", width: "minmax(200px,2fr)" },
       { key: "pricing", label: "מודל עסקי", type: "text" },
       { key: "website", label: "אתר החברה", type: "url" },
+      { key: "contact", label: "איש קשר", type: "text" },
+      { key: "email", label: "אימייל", type: "email" },
       { key: "notes", label: "הערות", type: "longtext", width: "minmax(200px,2fr)" },
       { key: "created_at", label: "נוצר ב", type: "text", readOnly: true, width: "140px" },
     ],
