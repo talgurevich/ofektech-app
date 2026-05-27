@@ -112,10 +112,24 @@ export const WORKBOOK_SHEETS: WorkbookSheet[] = [
     description: "מחקר מתחרים בשוק",
     columns: [
       { key: "name", label: "שם חברה", type: "text" },
+      {
+        key: "competitor_type",
+        label: "סוג מתחרה",
+        type: "select",
+        options: [
+          "פתרון ידני",
+          "מתחרה עקיף",
+          "מתחרה ישיר",
+          "לא לעשות כלום",
+          "ספק חיצוני",
+          "כלים נפוצים",
+        ],
+      },
       { key: "description", label: "מה החברה עושה", type: "longtext", width: "minmax(200px,2fr)" },
       { key: "pricing", label: "תימחור שירות", type: "text" },
       { key: "metrics", label: "ביצועים", type: "text" },
       { key: "website", label: "אתר החברה", type: "url" },
+      { key: "notes", label: "הערות", type: "longtext", width: "minmax(200px,2fr)" },
     ],
   },
   {
