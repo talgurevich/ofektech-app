@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ofektech-portal.co.il";
 
+// Admins who keep full admin access but have opted out of notification emails.
+const ADMIN_EMAIL_DENYLIST = new Set(["sharon@nortech-platform.com"]);
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,7 +32,9 @@ export async function POST(request: Request) {
     .from("profiles")
     .select("email")
     .eq("role", "admin");
-  const adminEmails = admins?.map(a => a.email) || [];
+  const adminEmails = (admins?.map(a => a.email) || []).filter(
+    (e): e is string => !!e && !ADMIN_EMAIL_DENYLIST.has(e.toLowerCase())
+  );
 
   // Get venture members and assigned mentor
   let ventureMembers: string[] = [];
