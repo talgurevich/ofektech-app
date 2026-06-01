@@ -239,6 +239,17 @@ export interface WorkbookTaskFile {
   created_at: string;
 }
 
+export type TaskReviewStatus = "needs_correction" | "corrected";
+
+export interface TaskComment {
+  id: string;
+  entry_id: string;
+  author_id: string | null;
+  content: string;
+  created_at: string;
+  author?: Pick<Profile, "id" | "full_name" | "avatar_url" | "role"> | null;
+}
+
 export type AdminNoteSeverity = "info" | "watch" | "blocker";
 
 export interface AdminVentureNote {

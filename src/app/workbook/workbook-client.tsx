@@ -5,14 +5,17 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry, GuideChapter, UserRole } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen, ChevronDown, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskFilesModal } from "@/components/task-files-modal";
+import { TaskReviewPanel } from "@/components/task-review-panel";
+import { getReviewStatus, REVIEW_STATUS_ROW_TINT } from "@/lib/task-review";
 
 interface Props {
   ventureId: string;
   ventureName: string;
   initialSheetKey?: string;
+  initialOpenEntryId?: string | null;
   members?: { id: string; name: string }[];
   currentUserName?: string;
   userRole?: UserRole;
@@ -42,6 +45,7 @@ export function WorkbookClient({
   ventureId,
   ventureName,
   initialSheetKey,
+  initialOpenEntryId = null,
   members = [],
   currentUserName = "",
   userRole,
@@ -61,6 +65,8 @@ export function WorkbookClient({
   const [lastSeen, setLastSeen] = useState<number>(0);
   const [guideChapters, setGuideChapters] = useState<GuideChapter[]>([]);
   const [pushEntry, setPushEntry] = useState<WorkbookEntry | null>(null);
+  const [reviewEntry, setReviewEntry] = useState<WorkbookEntry | null>(null);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
   const activeSheet = useMemo<WorkbookSheet>(
     () => WORKBOOK_SHEETS.find((s) => s.key === activeSheetKey)!,
@@ -99,6 +105,42 @@ export function WorkbookClient({
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+
+  // Fetch comment counts for the tasks sheet so we can show a badge on each row.
+  const loadCommentCounts = useCallback(async () => {
+    if (activeSheetKey !== "tasks" || entries.length === 0) {
+      setCommentCounts({});
+      return;
+    }
+    const ids = entries.map((e) => e.id);
+    const { data } = await supabase
+      .from("task_comments")
+      .select("entry_id")
+      .in("entry_id", ids);
+    const counts: Record<string, number> = {};
+    for (const row of (data || []) as { entry_id: string }[]) {
+      counts[row.entry_id] = (counts[row.entry_id] || 0) + 1;
+    }
+    setCommentCounts(counts);
+  }, [supabase, activeSheetKey, entries]);
+
+  useEffect(() => {
+    loadCommentCounts();
+  }, [loadCommentCounts]);
+
+  // Honor the ?openTask=<id> deep-link from the admin review queue exactly once
+  // per mount, after entries for the tasks sheet have arrived.
+  const deepLinkConsumed = useRef(false);
+  useEffect(() => {
+    if (deepLinkConsumed.current) return;
+    if (!initialOpenEntryId || activeSheetKey !== "tasks") return;
+    if (loading) return;
+    const target = entries.find((e) => e.id === initialOpenEntryId);
+    if (target) {
+      setReviewEntry(target);
+      deepLinkConsumed.current = true;
+    }
+  }, [initialOpenEntryId, activeSheetKey, loading, entries]);
 
   // Snapshot the user's "last seen" timestamp for this sheet at mount,
   // then promote it to "now" after a short read delay so the dot stays
@@ -216,6 +258,20 @@ export function WorkbookClient({
     if (activeSheet.columns.some((c) => c.key === "updated_by")) {
       nextData.updated_by = currentUserName;
     }
+
+    // Auto-flip the review status to "corrected" when a non-admin edits a task
+    // that the admin flagged for correction. Admins editing the row don't
+    // change the status — they use the explicit toggle in the review panel.
+    let flippedToCorrected = false;
+    if (
+      activeSheetKey === "tasks" &&
+      userRole !== "admin" &&
+      before?.data?.review_status === "needs_correction" &&
+      key !== "review_status"
+    ) {
+      nextData.review_status = "corrected";
+      flippedToCorrected = true;
+    }
     setEntries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, data: nextData } : e))
     );
@@ -252,6 +308,21 @@ export function WorkbookClient({
           type: "workbook_task_created",
           ventureId,
           description: String(value).trim(),
+        }),
+      }).catch(() => {});
+    }
+
+    if (flippedToCorrected) {
+      fetch("/api/email-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "task_review_corrected",
+          ventureId,
+          description:
+            typeof nextData.task === "string"
+              ? (nextData.task as string).slice(0, 200)
+              : "",
         }),
       }).catch(() => {});
     }
@@ -406,6 +477,12 @@ export function WorkbookClient({
                   : 0;
                 const isUnseen = lastSeen > 0 && createdAt > lastSeen;
                 const isAdminBroadcast = !!entry.bulk_task_id;
+                const reviewStatus =
+                  activeSheetKey === "tasks" ? getReviewStatus(entry) : null;
+                const commentCount =
+                  activeSheetKey === "tasks"
+                    ? commentCounts[entry.id] || 0
+                    : 0;
                 return (
                 <tr
                   key={entry.id}
@@ -413,7 +490,8 @@ export function WorkbookClient({
                   className={cn(
                     "border-b border-gray-100 hover:bg-gray-50/50",
                     isAdminBroadcast && "bg-green-50/60 hover:bg-green-50/80",
-                    isUnseen && !isAdminBroadcast && "bg-red-50/30"
+                    isUnseen && !isAdminBroadcast && "bg-red-50/30",
+                    reviewStatus && REVIEW_STATUS_ROW_TINT[reviewStatus]
                   )}
                 >
                   {activeSheet.columns.map((col, idx) => (
@@ -469,6 +547,33 @@ export function WorkbookClient({
                       {savingIds.has(entry.id) && (
                         <Loader2 className="size-3 animate-spin text-gray-400" />
                       )}
+                      {activeSheetKey === "tasks" && (
+                        <button
+                          onClick={() => setReviewEntry(entry)}
+                          className={cn(
+                            "relative rounded p-1.5 transition-colors",
+                            reviewStatus === "needs_correction"
+                              ? "text-amber-600 hover:bg-amber-50"
+                              : reviewStatus === "corrected"
+                              ? "text-sky-600 hover:bg-sky-50"
+                              : "text-gray-400 hover:bg-gray-100 hover:text-[#1a2744]"
+                          )}
+                          title="ביקורת ותגובות"
+                        >
+                          {reviewStatus === "needs_correction" ? (
+                            <AlertTriangle className="size-4" />
+                          ) : reviewStatus === "corrected" ? (
+                            <CheckCircle2 className="size-4" />
+                          ) : (
+                            <MessageSquare className="size-4" />
+                          )}
+                          {commentCount > 0 && (
+                            <span className="absolute -top-1 -left-1 min-w-[14px] h-[14px] px-1 rounded-full bg-[#1a2744] text-white text-[9px] leading-[14px] text-center font-medium">
+                              {commentCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => deleteRow(entry.id)}
                         className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -511,6 +616,38 @@ export function WorkbookClient({
               )
             );
             setPushEntry(null);
+          }}
+        />
+      )}
+
+      {reviewEntry && (
+        <TaskReviewPanel
+          entry={reviewEntry}
+          ventureId={ventureId}
+          ventureName={ventureName}
+          open={!!reviewEntry}
+          onClose={() => {
+            setReviewEntry(null);
+            loadCommentCounts();
+          }}
+          userRole={userRole}
+          onStatusChange={(next) => {
+            setEntries((prev) =>
+              prev.map((e) => {
+                if (e.id !== reviewEntry.id) return e;
+                const nextData: Record<string, unknown> = { ...e.data };
+                if (next) nextData.review_status = next;
+                else delete nextData.review_status;
+                return { ...e, data: nextData };
+              })
+            );
+            setReviewEntry((cur) => {
+              if (!cur) return cur;
+              const nextData: Record<string, unknown> = { ...cur.data };
+              if (next) nextData.review_status = next;
+              else delete nextData.review_status;
+              return { ...cur, data: nextData };
+            });
           }}
         />
       )}

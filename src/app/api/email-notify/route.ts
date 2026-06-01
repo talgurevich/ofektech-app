@@ -183,6 +183,44 @@ export async function POST(request: Request) {
       }
       break;
     }
+
+    case "task_review_requested": {
+      // Admin flagged a task as needs_correction → notify venture members + mentor
+      const recipients = filterSelf([
+        ...ventureMembers,
+        ...(mentorEmail ? [mentorEmail] : []),
+      ]);
+      if (recipients.length > 0) {
+        const ctaUrl = ventureId
+          ? `${BASE_URL}/workbook?venture=${ventureId}&sheet=tasks`
+          : `${BASE_URL}/workbook?sheet=tasks`;
+        await sendNotificationEmail({
+          to: recipients,
+          subject: `בקשת תיקון למשימה — ${ventureName}`,
+          heading: "האדמין ביקש תיקון למשימה",
+          body: `${actorName} סימן/ה משימה בטבלת העבודה של ${ventureName} כדורשת תיקון${description ? `: "${description}"` : ""}. כנסו לטבלה כדי לראות את ההערות ולתקן.`,
+          ctaText: "מעבר לטבלת המשימות",
+          ctaUrl,
+        });
+      }
+      break;
+    }
+
+    case "task_review_corrected": {
+      // Venture member edited a flagged task → notify admins for re-review
+      const recipients = filterSelf(adminEmails);
+      if (recipients.length > 0) {
+        await sendNotificationEmail({
+          to: recipients,
+          subject: `משימה תוקנה — ${ventureName}`,
+          heading: "משימה תוקנה — ממתין לאישור",
+          body: `${actorName} עדכן/ה משימה שסומנה לתיקון במיזם ${ventureName}${description ? `: "${description}"` : ""}. המשימה ממתינה לאישור חוזר.`,
+          ctaText: "מעבר לרשימת הביקורות",
+          ctaUrl: `${BASE_URL}/admin/tasks-review`,
+        });
+      }
+      break;
+    }
   }
 
   return NextResponse.json({ success: true });

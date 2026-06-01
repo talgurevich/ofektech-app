@@ -6,9 +6,9 @@ import { WORKBOOK_SHEETS } from "@/lib/workbook";
 export default async function WorkbookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sheet?: string; venture?: string }>;
+  searchParams: Promise<{ sheet?: string; venture?: string; openTask?: string }>;
 }) {
-  const { sheet, venture: ventureParam } = await searchParams;
+  const { sheet, venture: ventureParam, openTask } = await searchParams;
   const initialSheet = WORKBOOK_SHEETS.some((s) => s.key === sheet)
     ? sheet
     : WORKBOOK_SHEETS[0].key;
@@ -79,11 +79,16 @@ export default async function WorkbookPage({
   const currentUserName =
     (profile.full_name && profile.full_name.trim()) || user.email || "";
 
+  // Deep-link from the admin review queue: ?openTask=<entryId> forces the
+  // tasks sheet and pops the review panel open on the matching row.
+  const effectiveInitialSheet = openTask ? "tasks" : initialSheet;
+
   return (
     <WorkbookClient
       ventureId={resolvedVentureId}
       ventureName={venture?.name || ""}
-      initialSheetKey={initialSheet!}
+      initialSheetKey={effectiveInitialSheet!}
+      initialOpenEntryId={openTask || null}
       members={members}
       currentUserName={currentUserName}
       userRole={profile.role}

@@ -89,6 +89,7 @@ const adminLinks = [
   { href: "/admin/ventures", label: "מיזמים", icon: Briefcase },
   { href: "/admin/assignments", label: "שיבוצים", icon: UserCheck },
   { href: "/admin/tasks", label: "משימות למיזמים", icon: ListTodo },
+  { href: "/admin/tasks-review", label: "ביקורות משימות", icon: ClipboardCheck },
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
