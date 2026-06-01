@@ -17,14 +17,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  // Get user name for the actor field
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", user.id)
-    .single();
-
-  const actor = profile?.full_name || profile?.email || user.email || "unknown";
+  // Lecture feedback is anonymous — do not attach an actor.
+  let actor: string | undefined;
+  if (type !== "lecture_feedback") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .single();
+    actor = profile?.full_name || profile?.email || user.email || "unknown";
+  }
 
   await trackEvent({ type, actor, description });
 

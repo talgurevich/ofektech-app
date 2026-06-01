@@ -128,13 +128,13 @@ export async function POST(request: Request) {
     }
 
     case "candidate_feedback": {
-      // Candidate submitted lecture feedback → notify admin
+      // Candidate submitted lecture feedback → notify admin (anonymous)
       if (adminEmails.length > 0) {
         await sendNotificationEmail({
           to: filterSelf(adminEmails),
-          subject: `משוב הרצאה — ${actorName}`,
+          subject: "משוב הרצאה חדש",
           heading: "משוב הרצאה חדש",
-          body: `${actorName} הגיש/ה משוב על הרצאה.`,
+          body: "התקבל משוב חדש על הרצאה.",
           ctaText: "צפייה במשובים",
           ctaUrl: `${BASE_URL}/admin/feedback`,
         });

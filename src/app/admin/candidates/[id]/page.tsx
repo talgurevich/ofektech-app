@@ -19,7 +19,6 @@ import {
   Circle,
   CalendarDays,
   Users,
-  Mic2,
   ClipboardCheck,
   BarChart3,
   Briefcase,
@@ -139,13 +138,6 @@ export default async function AdminCandidateDetailPage({
   const filledChapters = entries.filter(
     (e) => e.content && e.content.trim() !== ""
   ).length;
-
-  // Get lecture feedback by this candidate
-  const { data: lectureFeedback } = await supabase
-    .from("lecture_feedback")
-    .select("*, lecture:lectures(title, scheduled_date, lecture_number)")
-    .eq("candidate_id", candidateId)
-    .order("submitted_at", { ascending: false });
 
   // Get session feedback for sessions with this candidate's venture
   let sessionFeedback: Array<{
@@ -310,7 +302,7 @@ export default async function AdminCandidateDetailPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="rounded-lg bg-gray-50 p-3 text-center">
               <p className="text-2xl font-bold text-[#1a2744]">
                 {openTasks.length}
@@ -328,12 +320,6 @@ export default async function AdminCandidateDetailPage({
                 {filledChapters}/{chapters?.length || 0}
               </p>
               <p className="text-xs text-gray-500">פרקי מדריך</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3 text-center">
-              <p className="text-2xl font-bold text-[#1a2744]">
-                {lectureFeedback?.length || 0}
-              </p>
-              <p className="text-xs text-gray-500">משובים שהוגשו</p>
             </div>
           </div>
         </CardContent>
@@ -524,56 +510,7 @@ export default async function AdminCandidateDetailPage({
         </CardContent>
       </Card>
 
-      {/* Section 5: Lecture Feedback */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
-            <Mic2 className="size-5" />
-            משובי הרצאות
-          </CardTitle>
-          <CardDescription>
-            {lectureFeedback?.length || 0} משובים
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {(lectureFeedback || []).map((fb) => {
-            const lecture = fb.lecture as {
-              title: string;
-              scheduled_date: string;
-              lecture_number: number | null;
-            } | null;
-
-            return (
-              <div key={fb.id} className="rounded-lg p-3 bg-gray-50/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Mic2 className="size-4 text-gray-400" />
-                  <span className="text-sm font-medium text-[#1a2744]">
-                    {lecture?.title || "---"}
-                  </span>
-                  {lecture?.scheduled_date && (
-                    <span className="text-xs text-gray-500">
-                      {formatDate(lecture.scheduled_date)}
-                    </span>
-                  )}
-                </div>
-                {fb.content && (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-                    {fb.content}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-
-          {(!lectureFeedback || lectureFeedback.length === 0) && (
-            <p className="text-sm text-gray-400 text-center py-4">
-              אין משובי הרצאות
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Section 6: Session Feedback */}
+      {/* Section 5: Session Feedback */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[#1a2744]">

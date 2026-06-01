@@ -30,9 +30,7 @@ export default async function AdminFeedbackPage() {
 
   const { data: lectureFeedback } = await supabase
     .from("lecture_feedback")
-    .select(
-      "*, lecture:lectures(title, scheduled_date), candidate:profiles!lecture_feedback_candidate_id_fkey(full_name, email)"
-    )
+    .select("*, lecture:lectures(title, scheduled_date)")
     .order("submitted_at", { ascending: false });
 
   const { data: sessionFeedback } = await supabase
@@ -148,27 +146,21 @@ export default async function AdminFeedbackPage() {
           <div className="space-y-3">
             {lectureFeedback.map((fb) => {
               const lecture = fb.lecture as { title: string; scheduled_date: string } | null;
-              const candidate = fb.candidate as { full_name: string; email: string } | null;
               return (
                 <Card key={fb.id} className="border-0 shadow-sm">
                   <CardContent className="pt-0 space-y-2">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-full bg-[#22c55e]/10">
-                          <Mic2 className="size-3.5 text-[#22c55e]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#1a2744]">
-                            {lecture?.title || "הרצאה"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {lecture?.scheduled_date ? formatDate(lecture.scheduled_date) : ""}
-                          </p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-[#22c55e]/10">
+                        <Mic2 className="size-3.5 text-[#22c55e]" />
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {candidate?.full_name || candidate?.email || "—"}
-                      </Badge>
+                      <div>
+                        <p className="text-sm font-medium text-[#1a2744]">
+                          {lecture?.title || "הרצאה"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {lecture?.scheduled_date ? formatDate(lecture.scheduled_date) : ""}
+                        </p>
+                      </div>
                     </div>
                     <div className="bg-gray-50 rounded-lg px-3 py-2">
                       <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">

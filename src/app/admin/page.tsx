@@ -265,6 +265,8 @@ export default async function AdminDashboard() {
               {openNotes.map((note) => {
                 const meta = NOTE_SEVERITY_META[note.severity];
                 const Icon = meta.icon;
+                const members = membersByVenture.get(note.venture_id) || [];
+                const membersLabel = members.join(", ");
                 return (
                   <Link
                     key={note.id}
@@ -286,6 +288,12 @@ export default async function AdminDashboard() {
                           <span className="font-medium text-[#1a2744]">
                             {note.venture?.name || "מיזם"}
                           </span>
+                          {membersLabel && (
+                            <>
+                              {" · "}
+                              <span className="text-[#1a2744]">{membersLabel}</span>
+                            </>
+                          )}
                           {" · "}
                           {note.author?.full_name || "אדמין"}
                           {" · "}
