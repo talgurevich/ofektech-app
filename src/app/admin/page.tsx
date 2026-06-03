@@ -23,6 +23,7 @@ import {
   Activity,
   Headphones,
   FileText,
+  Send,
   StickyNote,
   Info,
   AlertTriangle,
@@ -34,6 +35,7 @@ import type {
   VentureActivity,
   AdminVentureNote,
   AdminNoteSeverity,
+  AdminBulkTask,
 } from "@/lib/types";
 
 const NOTE_SEVERITY_RANK: Record<AdminNoteSeverity, number> = {
@@ -145,6 +147,26 @@ export default async function AdminDashboard() {
     };
   });
 
+  // Latest admin-broadcast task + per-venture completion status
+  const { data: latestBulkRow } = await supabase
+    .from("admin_bulk_tasks")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const latestBulk = latestBulkRow as AdminBulkTask | null;
+
+  let latestBulkDoneByVenture = new Map<string, boolean>();
+  if (latestBulk?.id) {
+    const { data: bulkRows } = await supabase
+      .from("workbook_entries")
+      .select("venture_id, data")
+      .eq("bulk_task_id", latestBulk.id);
+    for (const r of (bulkRows || []) as { venture_id: string; data: Record<string, unknown> | null }[]) {
+      latestBulkDoneByVenture.set(r.venture_id, r.data?.done === true);
+    }
+  }
+
   // Mentor meeting summaries in the last 14 days
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
@@ -175,6 +197,16 @@ export default async function AdminDashboard() {
   );
   const notSummarizedVentures = (ventures || []).filter(
     (v) => !summarizedByVenture.has(v.id)
+  );
+
+  const latestBulkAssignedVentures = (ventures || []).filter((v) =>
+    latestBulkDoneByVenture.has(v.id)
+  );
+  const latestBulkDoneVentures = latestBulkAssignedVentures.filter(
+    (v) => latestBulkDoneByVenture.get(v.id) === true
+  );
+  const latestBulkPendingVentures = latestBulkAssignedVentures.filter(
+    (v) => latestBulkDoneByVenture.get(v.id) !== true
   );
 
   // Member names per venture (for display alongside venture name)
@@ -312,6 +344,107 @@ export default async function AdminDashboard() {
 
         {/* Left column */}
         <div className="space-y-6">
+
+          {/* Latest admin-broadcast task — per-venture completion */}
+          {latestBulk && latestBulkAssignedVentures.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between w-full gap-3">
+                  <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
+                    <Send className="size-5" />
+                    המשימה האחרונה — סטטוס ביצוע
+                  </CardTitle>
+                  <Badge variant="secondary" className="text-sm shrink-0">
+                    {latestBulkDoneVentures.length} / {latestBulkAssignedVentures.length}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-[#1a2744] line-clamp-2 whitespace-pre-wrap">
+                  {latestBulk.task_text}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500">
+                  {latestBulk.category && <span>קטגוריה: {latestBulk.category}</span>}
+                  {latestBulk.due_date && <span>יעד: {formatDate(latestBulk.due_date)}</span>}
+                  <span>נשלח: {formatDate(latestBulk.created_at)}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#22c55e] transition-all"
+                    style={{
+                      width: `${
+                        latestBulkAssignedVentures.length
+                          ? (latestBulkDoneVentures.length / latestBulkAssignedVentures.length) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+
+                {latestBulkPendingVentures.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                      טרם השלימו ({latestBulkPendingVentures.length})
+                    </p>
+                    <div className="space-y-1">
+                      {latestBulkPendingVentures.map((v) => {
+                        const members = membersByVenture.get(v.id) || [];
+                        return (
+                          <Link
+                            key={v.id}
+                            href={`/workbook?venture=${v.id}&sheet=tasks`}
+                            className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-red-50/50 hover:bg-red-50 transition-colors"
+                          >
+                            <XCircle className="size-3.5 text-red-400 shrink-0" />
+                            <span className="text-xs text-[#1a2744] truncate">
+                              {v.name}
+                              {members.length > 0 && (
+                                <span className="text-gray-400 font-normal">
+                                  {" · "}
+                                  {members.join(", ")}
+                                </span>
+                              )}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {latestBulkDoneVentures.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                      השלימו ({latestBulkDoneVentures.length})
+                    </p>
+                    <div className="space-y-1">
+                      {latestBulkDoneVentures.map((v) => {
+                        const members = membersByVenture.get(v.id) || [];
+                        return (
+                          <Link
+                            key={v.id}
+                            href={`/workbook?venture=${v.id}&sheet=tasks`}
+                            className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-[#22c55e]/5 hover:bg-[#22c55e]/10 transition-colors"
+                          >
+                            <CheckCircle2 className="size-3.5 text-[#22c55e] shrink-0" />
+                            <span className="text-xs text-[#1a2744] truncate">
+                              {v.name}
+                              {members.length > 0 && (
+                                <span className="text-gray-400 font-normal">
+                                  {" · "}
+                                  {members.join(", ")}
+                                </span>
+                              )}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Guide progress per venture */}
           <Card className="border-0 shadow-sm">
