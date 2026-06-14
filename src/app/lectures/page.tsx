@@ -234,6 +234,11 @@ export default async function LecturesPage() {
                           </a>
                         )}
                       </div>
+                      {lecture.description && (
+                        <p className="text-xs text-gray-600 mt-2 whitespace-pre-line">
+                          {lecture.description}
+                        </p>
+                      )}
                       <details className="mt-2 group">
                         <summary className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1a2744] cursor-pointer list-none">
                           <Paperclip className="size-3" />
