@@ -138,6 +138,11 @@ export async function generatePitchDeck(input: DeckInput): Promise<Buffer> {
   const heb = (extra: PptxGenJS.TextPropsOptions = {}): PptxGenJS.TextPropsOptions => ({
     fontFace: HEBREW_FONT,
     rtlMode: true,
+    // Explicit Hebrew language on every run so PowerPoint applies the
+    // Hebrew bidi algorithm even when text contains embedded Latin words
+    // (product names, acronyms). Without this, "CME שואפת" gets treated as
+    // LTR with the Hebrew reversed.
+    lang: "he-IL",
     align: "right",
     color: BRAND_NAVY.toUpperCase(),
     ...extra,
@@ -256,8 +261,10 @@ export async function generatePitchDeck(input: DeckInput): Promise<Buffer> {
 
   for (const ch of chapters) {
     const slide = pptx.addSlide();
-    const headline = `${ch.chapter_number}. ${ch.title}`;
-    addSlideHeader(slide, headline);
+    // No numeric prefix: mixing a LTR "1." with an RTL Hebrew title makes
+    // PowerPoint's bidi split the runs the wrong way. Chapter titles alone
+    // are self-explanatory on a pitch deck.
+    addSlideHeader(slide, ch.title);
 
     if (ch.ventureContent.length === 0) {
       slide.addText(PLACEHOLDER_HEB, {
