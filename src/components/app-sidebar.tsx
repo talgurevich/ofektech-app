@@ -21,6 +21,7 @@ import {
   Table2,
   Sparkles,
   Library,
+  Star,
 } from "lucide-react";
 import {
   Sidebar,
@@ -93,6 +94,7 @@ const adminLinks = [
   { href: "/admin/lectures", label: "הרצאות", icon: Mic2 },
   { href: "/admin/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
+  { href: "/admin/pre-demo-feedback", label: "משוב טרום־הדגמה", icon: Star },
   { href: "/admin/checkins", label: "שאלוני פתיחה", icon: ClipboardCheck },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];

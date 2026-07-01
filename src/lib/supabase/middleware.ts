@@ -11,7 +11,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/privacy" ||
     request.nextUrl.pathname === "/api/check-email" ||
-    request.nextUrl.pathname === "/api/login-event"
+    request.nextUrl.pathname === "/api/login-event" ||
+    request.nextUrl.pathname.startsWith("/pre-demo") ||
+    request.nextUrl.pathname === "/api/pre-demo-feedback"
   ) {
     return NextResponse.next({ request });
   }

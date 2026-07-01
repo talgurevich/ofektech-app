@@ -36,6 +36,7 @@ import { VentureKpiCard } from "@/components/venture-kpi-card";
 import { DashboardActions } from "@/components/dashboard-actions";
 import { MentorDashboardActions } from "@/components/mentor-dashboard-actions";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
+import { VentureNamePrompt } from "@/components/venture-name-prompt";
 import { TaskCategoryPie } from "@/components/task-category-pie";
 import type { VentureActivity } from "@/lib/types";
 
@@ -287,14 +288,16 @@ async function CandidateDashboard({
 
   // Get venture info + members
   let ventureName: string | null = null;
+  let ventureNameConfirmed = true;
   let ventureMembers: { id: string; full_name: string }[] = [];
   if (ventureId) {
     const { data: venture } = await supabase
       .from("ventures")
-      .select("name")
+      .select("name, name_confirmed")
       .eq("id", ventureId)
       .single();
     ventureName = venture?.name || null;
+    ventureNameConfirmed = venture?.name_confirmed ?? true;
 
     const { data: members } = await supabase
       .from("profiles")
@@ -349,6 +352,9 @@ async function CandidateDashboard({
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-8">
+      {ventureId && !ventureNameConfirmed ? (
+        <VentureNamePrompt currentName={ventureName ?? ""} />
+      ) : null}
       <AnimatedContainer>
         {/* Greeting */}
         <AnimatedItem>
