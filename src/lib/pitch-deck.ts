@@ -213,14 +213,6 @@ export async function generatePitchDeck(input: DeckInput): Promise<Buffer> {
       valign: "top",
     });
 
-    slide.addText("אקסלרטור אופקטק", {
-      ...heb({ fontSize: 16, color: BRAND_GREEN.toUpperCase(), bold: true, align: "center" }),
-      x: 0.5,
-      y: 5.6,
-      w: SLIDE_W - 1.0,
-      h: 0.4,
-    });
-
     // Partner logo strip along the bottom
     const stripY = 6.1;
     const stripH = 0.9;
