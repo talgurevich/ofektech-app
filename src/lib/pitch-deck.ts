@@ -177,46 +177,48 @@ export async function generatePitchDeck(input: DeckInput): Promise<Buffer> {
     const slide = pptx.addSlide();
     addOfekLogo(slide);
 
-    // Venture logo placeholder box (top-right, natural RTL hero spot)
+    // Venture logo placeholder box (centered above the venture name)
+    const logoBoxW = 2.3;
+    const logoBoxH = 2.3;
     slide.addShape("rect", {
-      x: SLIDE_W - 3.0,
-      y: 1.6,
-      w: 2.3,
-      h: 2.3,
+      x: (SLIDE_W - logoBoxW) / 2,
+      y: 1.2,
+      w: logoBoxW,
+      h: logoBoxH,
       fill: { color: "F3F4F6" },
       line: { color: "D1D5DB", width: 1, dashType: "dash" },
     });
     slide.addText("לוגו המיזם", {
       ...heb({ fontSize: 14, color: "9CA3AF", align: "center" }),
-      x: SLIDE_W - 3.0,
-      y: 2.55,
-      w: 2.3,
+      x: (SLIDE_W - logoBoxW) / 2,
+      y: 2.15,
+      w: logoBoxW,
       h: 0.4,
     });
 
     slide.addText(input.venture.name || "שם המיזם", {
-      ...heb({ fontSize: 54, bold: true }),
+      ...heb({ fontSize: 54, bold: true, align: "center" }),
       x: 0.5,
-      y: 1.9,
-      w: SLIDE_W - 4.0,
+      y: 3.7,
+      w: SLIDE_W - 1.0,
       h: 1.2,
     });
 
     slide.addText(input.venture.description || "תיאור המיזם", {
-      ...heb({ fontSize: 22, color: MUTED_GREY.toUpperCase() }),
+      ...heb({ fontSize: 22, color: MUTED_GREY.toUpperCase(), align: "center" }),
       x: 0.5,
-      y: 3.1,
-      w: SLIDE_W - 4.0,
-      h: 1.5,
+      y: 4.9,
+      w: SLIDE_W - 1.0,
+      h: 0.8,
       valign: "top",
     });
 
     slide.addText("אקסלרטור אופקטק", {
-      ...heb({ fontSize: 16, color: BRAND_GREEN.toUpperCase(), bold: true }),
+      ...heb({ fontSize: 16, color: BRAND_GREEN.toUpperCase(), bold: true, align: "center" }),
       x: 0.5,
-      y: 4.6,
-      w: SLIDE_W - 4.0,
-      h: 0.5,
+      y: 5.6,
+      w: SLIDE_W - 1.0,
+      h: 0.4,
     });
 
     // Partner logo strip along the bottom
