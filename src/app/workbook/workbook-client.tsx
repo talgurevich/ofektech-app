@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WORKBOOK_SHEETS, type WorkbookColumn, type WorkbookSheet } from "@/lib/workbook";
 import type { WorkbookEntry, GuideChapter, UserRole, TaskReviewStatus } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
-import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen, ChevronDown, MessageSquare, AlertTriangle, CheckCircle2, Presentation } from "lucide-react";
+import { Plus, Trash2, Loader2, ExternalLink, Maximize2, X, Check, Paperclip, BookOpen, ChevronDown, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskFilesModal } from "@/components/task-files-modal";
 import { TaskReviewPanel } from "@/components/task-review-panel";
@@ -39,48 +39,6 @@ function readLastSeen(ventureId: string, sheetKey: string): number {
 function writeLastSeen(ventureId: string, sheetKey: string, ts: number) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(lastSeenKey(ventureId, sheetKey), String(ts));
-}
-
-function GenerateDeckButton({ ventureId }: { ventureId: string }) {
-  const [busy, setBusy] = useState(false);
-  const download = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/ventures/${ventureId}/pitch-deck`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "pitch-deck.pptx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      alert("שגיאה ביצירת המצגת. נסו שוב.");
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <button
-      onClick={download}
-      disabled={busy}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-lg border border-[#1a2744] bg-[#1a2744] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#22c55e] hover:border-[#22c55e]",
-        busy && "opacity-60 cursor-not-allowed"
-      )}
-    >
-      {busy ? (
-        <Loader2 className="size-4 animate-spin" />
-      ) : (
-        <Presentation className="size-4" />
-      )}
-      <span>הפקת מצגת משקיעים</span>
-    </button>
-  );
 }
 
 export function WorkbookClient({
@@ -438,14 +396,11 @@ export function WorkbookClient({
 
   return (
     <div className="mx-auto max-w-[1400px] p-4 md:p-6">
-      <div className="mb-4 md:mb-6 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744]">טבלת עבודה</h1>
-          {ventureName && (
-            <p className="text-sm text-gray-500 mt-1">{ventureName}</p>
-          )}
-        </div>
-        <GenerateDeckButton ventureId={ventureId} />
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744]">טבלת עבודה</h1>
+        {ventureName && (
+          <p className="text-sm text-gray-500 mt-1">{ventureName}</p>
+        )}
       </div>
 
       {/* Sheet tabs */}

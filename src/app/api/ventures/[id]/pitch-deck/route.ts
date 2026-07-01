@@ -59,24 +59,24 @@ export async function GET(
     return NextResponse.json({ error: "venture not found" }, { status: 404 });
   }
 
-  const { data: memberRows } = await supabase
-    .from("profiles")
-    .select("full_name, email, venture_role, bio, linkedin_url")
-    .eq("venture_id", ventureId)
-    .order("full_name");
-
-  const { data: entryRows } = await supabase
-    .from("workbook_entries")
-    .select("sheet_key, data")
-    .eq("venture_id", ventureId);
+  const [{ data: chapters }, { data: entries }] = await Promise.all([
+    supabase
+      .from("guide_chapters")
+      .select("id, chapter_number, title, content")
+      .order("chapter_number", { ascending: true }),
+    supabase
+      .from("venture_chapter_entries")
+      .select("chapter_id, content")
+      .eq("venture_id", ventureId),
+  ]);
 
   const buffer = await generatePitchDeck({
     venture: {
       name: venture.name,
       description: venture.description,
     },
-    members: memberRows || [],
-    entries: entryRows || [],
+    chapters: chapters || [],
+    entries: entries || [],
   });
 
   return new NextResponse(new Uint8Array(buffer), {

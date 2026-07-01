@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Check, ChevronDown, Save, AlertCircle } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Save, AlertCircle, Presentation, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { GuideChapter, VentureChapterEntry } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
@@ -25,6 +25,45 @@ function LoadingState() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#22c55e] border-t-transparent" />
       </div>
     </main>
+  );
+}
+
+function GenerateDeckButton({ ventureId }: { ventureId: string }) {
+  const [busy, setBusy] = useState(false);
+  const download = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/ventures/${ventureId}/pitch-deck`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pitch-deck.pptx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("שגיאה ביצירת המצגת. נסו שוב.");
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={download}
+      disabled={busy}
+      className={`inline-flex items-center gap-2 rounded-lg border border-[#1a2744] bg-[#1a2744] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#22c55e] hover:border-[#22c55e] ${busy ? "opacity-60 cursor-not-allowed" : ""}`}
+    >
+      {busy ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Presentation className="size-4" />
+      )}
+      <span>הפקת מצגת משקיעים</span>
+    </button>
   );
 }
 
@@ -337,7 +376,8 @@ function GuidePageInner() {
         className="space-y-6"
       >
         {/* Header */}
-        <div>
+        <div className="flex items-start justify-between gap-3">
+          <div>
           <h1 className="text-2xl font-bold text-[#1a2744] flex items-center gap-2">
             <BookOpen className="size-6" />
             חוברת מיזם
@@ -361,6 +401,8 @@ function GuidePageInner() {
               </Badge>
             </>
           )}
+          </div>
+          {ventureId && <GenerateDeckButton ventureId={ventureId} />}
         </div>
 
         {/* Progress bar */}
