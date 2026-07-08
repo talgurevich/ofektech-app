@@ -62,6 +62,7 @@ const candidateLinks = [
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
   { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/directory", label: "אנשי המחזור", icon: Users },
+  { href: "/pre-demo-feedback", label: "משוב פרה-דמו", icon: Star },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
@@ -71,6 +72,7 @@ const mentorLinks = [
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/directory", label: "אנשי המחזור", icon: Users },
+  { href: "/pre-demo-feedback", label: "משוב פרה-דמו", icon: Star },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
