@@ -13,7 +13,7 @@ const TOPICS = [
   {
     key: "problem_clarity",
     title: "בהירות הבעיה",
-    description: "עד כמה הבנת את הבעיה שהוונצ'ר פותר?",
+    description: "עד כמה הבנת את הבעיה שהמיזם פותר?",
   },
   {
     key: "solution_conviction",
@@ -35,6 +35,7 @@ const TOPICS = [
 const ROLE_OPTIONS = [
   { value: "", label: "— בחר תפקיד (אופציונלי) —" },
   { value: "mentor", label: "מנטור" },
+  { value: "professional_mentor", label: "מנטור מקצועי" },
   { value: "investor", label: "משקיע" },
   { value: "peer", label: "יזם עמית" },
   { value: "staff", label: "צוות OfekTech" },
@@ -145,7 +146,7 @@ export function PreDemoFeedbackForm({
             </p>
           </div>
           <Button type="button" onClick={resetForAnother}>
-            שליחת משוב לוונצ'ר נוסף
+            שליחת משוב למיזם נוסף
           </Button>
         </CardContent>
       </Card>
@@ -158,7 +159,7 @@ export function PreDemoFeedbackForm({
         <CardContent className="pt-6 space-y-5">
           <div className="space-y-2">
             <Label htmlFor="venture">
-              וונצ'ר <span className="text-red-500">*</span>
+              מיזם <span className="text-red-500">*</span>
             </Label>
             <select
               id="venture"
@@ -167,7 +168,7 @@ export function PreDemoFeedbackForm({
               className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]/30"
               required
             >
-              <option value="">— בחר וונצ'ר —</option>
+              <option value="">— בחר מיזם —</option>
               {ventures.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}

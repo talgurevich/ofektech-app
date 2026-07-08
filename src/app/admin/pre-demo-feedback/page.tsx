@@ -52,6 +52,7 @@ const TOPICS: {
 
 const ROLE_LABELS: Record<string, string> = {
   mentor: "מנטור",
+  professional_mentor: "מנטור מקצועי",
   investor: "משקיע",
   peer: "יזם עמית",
   staff: "צוות OfekTech",
@@ -132,7 +133,7 @@ export default async function AdminPreDemoFeedbackPage() {
       </div>
 
       {ventureList.length === 0 ? (
-        <p className="text-gray-500 text-sm">אין וונצ'רים.</p>
+        <p className="text-gray-500 text-sm">אין מיזמים.</p>
       ) : (
         <div className="space-y-6">
           {ventureList.map((v) => {

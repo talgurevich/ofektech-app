@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const ventureId = body.venture_id?.trim();
   const reviewerName = body.reviewer_name?.trim();
 
-  if (!ventureId) return bad("חסר וונצ'ר");
+  if (!ventureId) return bad("חסר מיזם");
   if (!reviewerName) return bad("חסר שם");
 
   const ratings = body.ratings ?? {};

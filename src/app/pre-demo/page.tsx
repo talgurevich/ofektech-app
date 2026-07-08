@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PreDemoFeedbackForm } from "./form";
 
 export const metadata = {
-  title: "משוב יום חזרה גנרלית — OfekTech",
-  description: "מלאו משוב מובנה לוונצ'ר שאתם צופים בו",
+  title: "משוב פרה-דמו — OfekTech",
+  description: "מלאו משוב מובנה למיזם שאתם צופים בו",
 };
 
 export type VentureWithMembers = {
@@ -43,10 +43,10 @@ export default async function PreDemoFeedbackPage() {
       <div className="max-w-2xl mx-auto">
         <header className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-[#1a2744] mb-2">
-            משוב יום חזרה גנרלית
+            משוב פרה-דמו
           </h1>
           <p className="text-sm text-gray-600">
-            בחרו את הוונצ'ר שצפיתם בו והשאירו משוב מובנה. המשוב יעזור לצוות
+            בחרו את המיזם שצפיתם בו והשאירו משוב מובנה. המשוב יעזור לצוות
             להתכונן טוב יותר ליום ההדגמה.
           </p>
         </header>
