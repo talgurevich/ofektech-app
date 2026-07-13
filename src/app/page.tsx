@@ -37,6 +37,7 @@ import { DashboardActions } from "@/components/dashboard-actions";
 import { MentorDashboardActions } from "@/components/mentor-dashboard-actions";
 import { VentureActivityFeed } from "@/components/venture-activity-feed";
 import { VentureNamePrompt } from "@/components/venture-name-prompt";
+import { VentureNameEditable } from "@/components/venture-name-editable";
 import { TaskCategoryPie } from "@/components/task-category-pie";
 import type { VentureActivity } from "@/lib/types";
 
@@ -382,9 +383,7 @@ async function CandidateDashboard({
                     <p className="text-[11px] font-medium text-gray-500 tracking-wide">
                       מיזם
                     </p>
-                    <p className="text-xl font-bold text-[#1a2744] leading-tight">
-                      {ventureName}
-                    </p>
+                    <VentureNameEditable currentName={ventureName} />
                     {ventureMembers.length > 0 && (
                       <p className="text-xs text-gray-500 mt-1">
                         שותפים: {ventureMembers.map((m) => m.full_name).join(", ")}
