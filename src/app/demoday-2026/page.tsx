@@ -49,50 +49,53 @@ const SCHEDULE: Array<{ time: string; title: string; body?: React.ReactNode }> =
   },
 ];
 
-const SPONSORS = [
-  { src: "/partners/seedbiz.png", alt: "Seedbiz" },
-  { src: "/partners/pwc.png", alt: "PwC" },
-  { src: "/partners/sfa.png", alt: "SFA" },
+const SPONSORS: Array<{ src: string; alt: string; scale?: string }> = [
+  { src: "/partners/seedbiz-new.png", alt: "Seedbiz" },
+  { src: "/partners/pwc-new.png", alt: "PwC", scale: "scale-[1.75]" },
+  { src: "/partners/sfa-new.png", alt: "SFA" },
 ];
 
 const PARTNERS = [
-  { src: "/partners/seedbiz.png", alt: "Seedbiz" },
-  { src: "/partners/sfa.png", alt: "SFA" },
-  { src: "/partners/pwc.png", alt: "PwC" },
-  { src: "/partners/nortech.png", alt: "Nortech Platform" },
-  { src: "/partners/israel-innovation-authority.png", alt: "רשות החדשנות" },
-  { src: "/partners/hype.jpg", alt: "HYPE Sports Innovation" },
+  { src: "/partners/seedbiz-new.png", alt: "Seedbiz" },
+  { src: "/partners/sfa-new.png", alt: "SFA" },
+  { src: "/partners/pwc-new.png", alt: "PwC" },
+  { src: "/partners/nortech-new.png", alt: "Nortech Platform" },
+  { src: "/partners/israel-innovation-authority-new.webp", alt: "רשות החדשנות" },
+  { src: "/partners/hype-new.jpg", alt: "HYPE Sports Innovation" },
 ];
 
 export default function DemoDay2026Page() {
   return (
     <main className="min-h-screen bg-[#f4f6f9] text-gray-900">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0d1730] via-[#111f3e] to-[#1a2744] text-white">
-        <div className="pointer-events-none absolute inset-0 opacity-30">
-          <div className="absolute -top-24 -left-32 h-96 w-96 rounded-full bg-[#22c55e] blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[#38bdf8] blur-3xl" />
-        </div>
+      <section className="relative overflow-hidden bg-[#0d1730] text-white">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url(/demoday-hero.jpg)" }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-[#0d1730]/60 to-[#0d1730]"
+          aria-hidden
+        />
 
         <div className="relative mx-auto max-w-5xl px-6 pt-10 pb-16 md:pt-14 md:pb-20">
-          {/* Logo lockup */}
-          <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-full bg-[#22c55e]/20 ring-1 ring-[#22c55e]/40">
-              <Lightbulb className="size-5 text-[#22c55e]" />
-            </div>
-            <div>
-              <p className="text-lg font-bold tracking-wide">
-                <span className="text-white">OFEK</span>
-                <span className="text-[#22c55e]">TECH</span>
-              </p>
-              <p className="text-[10px] text-[#22c55e]/80 tracking-[0.3em]">
-                יזמות · חדשנות · טכנולוגיה
-              </p>
+          {/* Logo — top-left */}
+          <div className="flex justify-start" dir="ltr">
+            <div className="inline-flex items-center rounded-xl bg-white/95 px-3 py-2 shadow-md ring-1 ring-white/40">
+              <Image
+                src="/partners/ofektech-logo.png"
+                alt="OfekTech"
+                width={200}
+                height={62}
+                priority
+                className="h-10 w-auto md:h-12"
+              />
             </div>
           </div>
 
           {/* Date + title */}
-          <div className="mt-10 md:mt-14">
+          <div className="mt-10 md:mt-14 text-left" dir="ltr">
             <p className="text-5xl md:text-7xl font-extrabold tracking-tight">
               9<span className="text-[#22c55e]">.</span>9
               <span className="text-[#22c55e]">.</span>2026
@@ -123,12 +126,13 @@ export default function DemoDay2026Page() {
       </section>
 
       {/* Intro + CTA chips */}
-      <section className="mx-auto max-w-4xl px-6 py-12 md:py-16">
-        <h2 className="text-center text-2xl md:text-3xl font-bold text-[#1a2744]">
+      <section className="bg-gradient-to-b from-[#16a34a] via-[#15803d] to-[#14532d] text-white">
+        <div className="mx-auto max-w-4xl px-6 py-12 md:py-16">
+        <h2 className="text-center text-2xl md:text-3xl font-bold text-white">
           בוגרי המחזור השני של תוכנית{" "}
-          <span className="text-[#22c55e]">OFEKTECH</span>
+          <span className="text-[#bbf7d0]">OFEKTECH</span>
         </h2>
-        <p className="mt-6 text-[16px] leading-8 text-gray-700 text-center">
+        <p className="mt-6 text-[16px] leading-8 text-white/90 text-center">
           OfekTech היא התוכנית הטכנולוגית של &quot;מסע אל האופק&quot;, הבלעדית
           לבוגרות ובוגרי התוכנית — צעירים וצעירות לאחר שירות צבאי או לאומי.
           <br />
@@ -136,7 +140,7 @@ export default function DemoDay2026Page() {
           אחר צעד על הרעיון שלו, מהרגע הראשון ועד שהוא הופך למוצר מוחשי, עם
           ליווי מקצועי בכל החזיתות.
         </p>
-        <p className="mt-6 text-center text-[17px] font-semibold text-[#1a2744]">
+        <p className="mt-6 text-center text-[17px] font-semibold text-white">
           בואו לקחת חלק ברגע השיא ולראות את הדרך שהיזמים עברו מהרעיון ועד לבמה.
         </p>
 
@@ -155,10 +159,11 @@ export default function DemoDay2026Page() {
             </a>
           ))}
         </div>
+        </div>
       </section>
 
       {/* Schedule */}
-      <section className="mx-auto max-w-3xl px-6 pb-14">
+      <section className="mx-auto max-w-3xl px-6 pt-16 md:pt-20 pb-14">
         <h3 className="mb-6 text-2xl font-bold text-[#1a2744]">בתוכנית</h3>
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           {SCHEDULE.map((row, i) => (
@@ -196,13 +201,13 @@ export default function DemoDay2026Page() {
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {SPONSORS.map((s) => (
-              <div key={s.alt} className="relative h-10 w-24">
+              <div key={s.alt} className="relative h-20 w-44">
                 <Image
                   src={s.src}
                   alt={s.alt}
                   fill
-                  className="object-contain"
-                  sizes="120px"
+                  className={`object-contain ${s.scale ?? ""}`}
+                  sizes="180px"
                 />
               </div>
             ))}
@@ -246,12 +251,14 @@ export default function DemoDay2026Page() {
 
       {/* Registration CTA */}
       <section className="mx-auto max-w-3xl px-6 pb-16 text-center">
-        <Link
-          href="#"
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSdykf-sQK3Y8vD88ReMhCG9g0E94LCNkW5a5tbU2u2Wqu0u0g/viewform"
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1a2744] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#22c55e]"
         >
           להרשמה מראש לחץ כאן
-        </Link>
+        </a>
       </section>
 
       {/* Partners strip */}
@@ -262,7 +269,7 @@ export default function DemoDay2026Page() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
             {PARTNERS.map((p) => (
-              <div key={p.alt} className="relative h-10 w-24 grayscale opacity-80 hover:opacity-100 hover:grayscale-0 transition">
+              <div key={p.alt} className="relative h-12 w-28">
                 <Image
                   src={p.src}
                   alt={p.alt}
