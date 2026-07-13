@@ -23,7 +23,7 @@ export function VentureNamePrompt({
   const router = useRouter();
   // Only render open if we're actually being asked to prompt.
   const [open, setOpen] = useState(true);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(currentName ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -62,11 +62,12 @@ export function VentureNamePrompt({
           <DialogHeader>
             <div className="flex items-center gap-2 text-[#1a2744]">
               <Sparkles className="size-5" />
-              <DialogTitle>נותנים למיזם שם</DialogTitle>
+              <DialogTitle>אשרו את שם המיזם</DialogTitle>
             </div>
             <DialogDescription>
-              המיזם שלך עדיין ללא שם קבוע{currentName ? ` ("${currentName}")` : ""}.
-              בחרו שם שיוצג בפורטל, ולמשוב יום ההדגמה. ניתן לשנות בהמשך.
+              {currentName
+                ? `השם הנוכחי של המיזם הוא "${currentName}". אשרו אותו או הזינו שם חדש שיוצג בפורטל ובמשוב יום ההדגמה. ניתן לשנות בהמשך.`
+                : "בחרו שם למיזם שיוצג בפורטל ובמשוב יום ההדגמה. ניתן לשנות בהמשך."}
             </DialogDescription>
           </DialogHeader>
 

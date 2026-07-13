@@ -474,7 +474,7 @@ export default async function AdminDashboard() {
                   return (
                     <Link
                       key={v.id}
-                      href={`/workbook?venture=${v.id}`}
+                      href={`/guide?venture=${v.id}`}
                       className="block rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1 gap-2">
