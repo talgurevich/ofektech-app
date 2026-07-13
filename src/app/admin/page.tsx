@@ -92,12 +92,23 @@ export default async function AdminDashboard() {
 
   const ventureGuideProgress = await Promise.all(
     (ventures || []).map(async (v) => {
-      const { count } = await supabase
-        .from("venture_chapter_entries")
-        .select("*", { count: "exact", head: true })
-        .eq("venture_id", v.id)
-        .neq("content", "");
-      return { id: v.id, name: v.name, filled: count || 0 };
+      const [{ count }, { data: members }] = await Promise.all([
+        supabase
+          .from("venture_chapter_entries")
+          .select("*", { count: "exact", head: true })
+          .eq("venture_id", v.id)
+          .neq("content", ""),
+        supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("venture_id", v.id)
+          .order("full_name"),
+      ]);
+      const memberNames = (members || [])
+        .map((m) => m.full_name || m.email)
+        .filter(Boolean)
+        .join(", ");
+      return { id: v.id, name: v.name, filled: count || 0, memberNames };
     })
   );
 
@@ -466,9 +477,14 @@ export default async function AdminDashboard() {
                       href={`/workbook?venture=${v.id}`}
                       className="block rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#1a2744]">{v.name}</span>
-                        <span className="text-xs text-gray-500">{v.filled}/{guideTotal}</span>
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <span className="text-sm font-medium text-[#1a2744] truncate">
+                          {v.name}
+                          {v.memberNames && (
+                            <span className="text-gray-500 font-normal"> — {v.memberNames}</span>
+                          )}
+                        </span>
+                        <span className="text-xs text-gray-500 shrink-0">{v.filled}/{guideTotal}</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
                         <div
