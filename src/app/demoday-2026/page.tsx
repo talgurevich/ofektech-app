@@ -128,7 +128,7 @@ export default function DemoDay2026Page() {
           בוגרי המחזור השני של תוכנית{" "}
           <span className="text-[#22c55e]">OFEKTECH</span>
         </h2>
-        <p className="mt-6 text-[16px] leading-8 text-gray-700 text-center md:text-right">
+        <p className="mt-6 text-[16px] leading-8 text-gray-700 text-center">
           OfekTech היא התוכנית הטכנולוגית של &quot;מסע אל האופק&quot;, הבלעדית
           לבוגרות ובוגרי התוכנית — צעירים וצעירות לאחר שירות צבאי או לאומי.
           <br />
@@ -142,9 +142,9 @@ export default function DemoDay2026Page() {
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: "הכירו את היזמים", href: "#" },
-            { label: "הכירו את המנטורים", href: "#" },
-            { label: "עוד על התוכנית", href: "#" },
+            { label: "הכירו את היזמים", href: "https://www.ofektech.org/%D7%94%D7%99%D7%96%D7%9E%D7%99%D7%9D" },
+            { label: "הכירו את המנטורים", href: "https://www.ofektech.org/#mentors" },
+            { label: "עוד על התוכנית", href: "https://www.ofektech.org" },
           ].map((chip) => (
             <a
               key={chip.label}
