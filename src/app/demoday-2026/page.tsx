@@ -108,16 +108,16 @@ export default function DemoDay2026Page() {
 
           {/* Event bar */}
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl bg-white/5 px-5 py-4 ring-1 ring-white/10 backdrop-blur">
-            <div className="flex items-center gap-2 text-[15px] font-semibold">
-              <Calendar className="size-4 text-[#22c55e]" />
+            <div className="flex items-center gap-2 text-[20px] font-semibold">
+              <Calendar className="size-5 text-[#22c55e]" />
               <span>רביעי</span>
             </div>
-            <div className="flex items-center gap-2 text-[15px] font-semibold">
-              <Clock className="size-4 text-[#22c55e]" />
+            <div className="flex items-center gap-2 text-[20px] font-semibold">
+              <Clock className="size-5 text-[#22c55e]" />
               <span>17:00</span>
             </div>
-            <div className="flex items-center gap-2 text-[15px]">
-              <MapPin className="size-4 text-[#22c55e]" />
+            <div className="flex items-center gap-2 text-[20px]">
+              <MapPin className="size-5 text-[#22c55e]" />
               <span className="font-semibold">PwC</span>
               <span className="text-white/80">· דרך מנחם בגין 146, תל אביב-יפו</span>
             </div>
@@ -228,7 +228,7 @@ export default function DemoDay2026Page() {
           />
           {/* 1st */}
           <div className="relative">
-            <Trophy className="absolute -top-8 left-1/2 -translate-x-1/2 size-10 text-amber-500" />
+            <Trophy className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 size-10 text-amber-500" />
             <PrizeCard
               place={1}
               amount="100,000"
