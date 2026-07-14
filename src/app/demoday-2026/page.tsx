@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, Clock, Trophy, Lightbulb } from "lucide-react";
+import HeroParallax from "./HeroParallax";
 
 export const metadata = {
   title: "Demo Day 2026 — OfekTech",
@@ -69,11 +70,7 @@ export default function DemoDay2026Page() {
     <main className="min-h-screen bg-[#f4f6f9] text-gray-900">
       {/* Hero */}
       <section className="relative overflow-hidden bg-[#0d1730] text-white">
-        <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url(/demoday-hero.jpg)" }}
-          aria-hidden
-        />
+        <HeroParallax />
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-[#0d1730]/60 to-[#0d1730]"
           aria-hidden
