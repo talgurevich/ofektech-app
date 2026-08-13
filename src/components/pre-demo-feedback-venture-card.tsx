@@ -1,61 +1,37 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, MessageSquare } from "lucide-react";
+import { Star } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import {
+  PRE_DEMO_AXES,
+  PRE_DEMO_ROLE_LABELS,
+  PRE_DEMO_TOPIC_KEYS,
+  ratingColumn,
+  type PreDemoTopicKey,
+} from "@/lib/pre-demo-topics";
+
+export { PRE_DEMO_ROLE_LABELS };
 
 export type PreDemoFeedbackRow = {
   id: string;
   venture_id: string;
   reviewer_name: string;
   reviewer_role: string | null;
-  problem_clarity_rating: number;
-  problem_clarity_comment: string | null;
-  solution_conviction_rating: number;
-  solution_conviction_comment: string | null;
-  market_opportunity_rating: number;
-  market_opportunity_comment: string | null;
-  presentation_quality_rating: number;
-  presentation_quality_comment: string | null;
-  biggest_strength: string | null;
-  top_improvement: string | null;
   created_at: string;
-};
+} & Partial<Record<string, number | string | null>>;
 
-const TOPICS: {
-  ratingKey: keyof PreDemoFeedbackRow;
-  commentKey: keyof PreDemoFeedbackRow;
-  label: string;
-}[] = [
-  {
-    ratingKey: "problem_clarity_rating",
-    commentKey: "problem_clarity_comment",
-    label: "בהירות הבעיה",
-  },
-  {
-    ratingKey: "solution_conviction_rating",
-    commentKey: "solution_conviction_comment",
-    label: "עוצמת הפתרון",
-  },
-  {
-    ratingKey: "market_opportunity_rating",
-    commentKey: "market_opportunity_comment",
-    label: "שוק/הזדמנות",
-  },
-  {
-    ratingKey: "presentation_quality_rating",
-    commentKey: "presentation_quality_comment",
-    label: "איכות המצגת",
-  },
-];
+function ratingOf(
+  row: PreDemoFeedbackRow,
+  topicKey: PreDemoTopicKey
+): number | null {
+  const v = row[ratingColumn(topicKey)];
+  return typeof v === "number" ? v : null;
+}
 
-export const PRE_DEMO_ROLE_LABELS: Record<string, string> = {
-  mentor: "מנטור",
-  professional_mentor: "מנטור מקצועי",
-  investor: "משקיע",
-  peer: "יזם עמית",
-  staff: "צוות OfekTech",
-  other: "אחר",
-};
+/** v1 rows predate the three-axis survey and carry none of the new ratings. */
+function isLegacy(row: PreDemoFeedbackRow) {
+  return PRE_DEMO_TOPIC_KEYS.every((k) => ratingOf(row, k) == null);
+}
 
 function avg(nums: number[]): number | null {
   if (nums.length === 0) return null;
@@ -70,8 +46,8 @@ function Stars({ value }: { value: number }) {
           key={n}
           className={
             n <= value
-              ? "size-4 fill-yellow-400 text-yellow-400"
-              : "size-4 fill-transparent text-gray-300"
+              ? "size-3.5 fill-yellow-400 text-yellow-400"
+              : "size-3.5 fill-transparent text-gray-300"
           }
         />
       ))}
@@ -87,9 +63,24 @@ export function PreDemoFeedbackVentureCard({
   ventureName: string;
   items: PreDemoFeedbackRow[];
 }) {
-  const averages = TOPICS.map((t) => ({
-    label: t.label,
-    value: avg(items.map((r) => r[t.ratingKey] as number).filter(Boolean)),
+  const axisAverages = PRE_DEMO_AXES.map((axis) => ({
+    key: axis.key,
+    title: axis.title,
+    value: avg(
+      items.flatMap((r) =>
+        axis.topics
+          .map((t) => ratingOf(r, t.key))
+          .filter((v): v is number => v != null)
+      )
+    ),
+    topics: axis.topics.map((t) => ({
+      label: t.label,
+      value: avg(
+        items
+          .map((r) => ratingOf(r, t.key))
+          .filter((v): v is number => v != null)
+      ),
+    })),
   }));
 
   return (
@@ -100,14 +91,35 @@ export function PreDemoFeedbackVentureCard({
           <Badge variant="secondary">{items.length} משובים</Badge>
         </div>
         {items.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-            {averages.map((a) => (
-              <div key={a.label} className="rounded-md bg-gray-50 px-3 py-2">
-                <div className="text-[11px] text-gray-500">{a.label}</div>
-                <div className="text-sm font-semibold text-[#1a2744]">
-                  {a.value == null ? "—" : a.value.toFixed(1)}
-                  <span className="text-xs font-normal text-gray-400"> / 5</span>
+          <div className="grid sm:grid-cols-3 gap-3 mt-3">
+            {axisAverages.map((axis) => (
+              <div
+                key={axis.key}
+                className="rounded-md bg-gray-50 px-3 py-2 space-y-1.5"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-semibold text-[#1a2744]">
+                    {axis.title}
+                  </span>
+                  <span className="text-sm font-semibold text-[#1a2744]">
+                    {axis.value == null ? "—" : axis.value.toFixed(1)}
+                    <span className="text-xs font-normal text-gray-400">
+                      {" "}
+                      / 5
+                    </span>
+                  </span>
                 </div>
+                {axis.topics.map((t) => (
+                  <div
+                    key={t.label}
+                    className="flex items-baseline justify-between gap-2 text-[11px] text-gray-500"
+                  >
+                    <span className="truncate">{t.label}</span>
+                    <span className="tabular-nums text-gray-700">
+                      {t.value == null ? "—" : t.value.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -138,48 +150,37 @@ export function PreDemoFeedbackVentureCard({
                 </span>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                {TOPICS.map((t) => {
-                  const rating = r[t.ratingKey] as number;
-                  const comment = r[t.commentKey] as string | null;
-                  return (
-                    <div key={t.label} className="rounded-md bg-gray-50 p-3">
-                      <div className="text-xs text-gray-600 mb-1">{t.label}</div>
-                      <Stars value={rating} />
-                      {comment ? (
-                        <p className="text-xs text-gray-700 mt-2 whitespace-pre-wrap">
-                          {comment}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {(r.biggest_strength || r.top_improvement) && (
-                <div className="grid sm:grid-cols-2 gap-3 pt-1">
-                  {r.biggest_strength ? (
-                    <div className="rounded-md border border-green-100 bg-green-50/50 p-3">
-                      <div className="flex items-center gap-1 text-xs font-medium text-green-800 mb-1">
-                        <MessageSquare className="size-3" />
-                        חוזק גדול
+              {isLegacy(r) ? (
+                <p className="text-xs text-gray-400">
+                  משוב בפורמט הישן — ללא דירוגי הצירים.
+                </p>
+              ) : (
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {PRE_DEMO_AXES.map((axis) => (
+                    <div
+                      key={axis.key}
+                      className="rounded-md bg-gray-50 p-3 space-y-2"
+                    >
+                      <div className="text-xs font-semibold text-[#1a2744]">
+                        {axis.title}
                       </div>
-                      <p className="text-xs text-gray-700 whitespace-pre-wrap">
-                        {r.biggest_strength}
-                      </p>
+                      {axis.topics.map((t) => {
+                        const rating = ratingOf(r, t.key);
+                        return (
+                          <div key={t.key}>
+                            <div className="text-[11px] text-gray-600 mb-0.5">
+                              {t.label}
+                            </div>
+                            {rating == null ? (
+                              <span className="text-xs text-gray-400">—</span>
+                            ) : (
+                              <Stars value={rating} />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : null}
-                  {r.top_improvement ? (
-                    <div className="rounded-md border border-amber-100 bg-amber-50/50 p-3">
-                      <div className="flex items-center gap-1 text-xs font-medium text-amber-800 mb-1">
-                        <MessageSquare className="size-3" />
-                        לשפר לפני יום ההדגמה
-                      </div>
-                      <p className="text-xs text-gray-700 whitespace-pre-wrap">
-                        {r.top_improvement}
-                      </p>
-                    </div>
-                  ) : null}
+                  ))}
                 </div>
               )}
             </div>

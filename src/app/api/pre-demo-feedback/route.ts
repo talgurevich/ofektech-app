@@ -1,22 +1,13 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  PRE_DEMO_ROLE_OPTIONS,
+  PRE_DEMO_TOPIC_KEYS,
+  ratingColumn,
+  type PreDemoTopicKey,
+} from "@/lib/pre-demo-topics";
 
-const TOPIC_KEYS = [
-  "problem_clarity",
-  "solution_conviction",
-  "market_opportunity",
-  "presentation_quality",
-] as const;
-
-type TopicKey = (typeof TOPIC_KEYS)[number];
-
-const ALLOWED_ROLES = new Set([
-  "mentor",
-  "investor",
-  "peer",
-  "staff",
-  "other",
-]);
+const ALLOWED_ROLES = new Set(PRE_DEMO_ROLE_OPTIONS.map((r) => r.value));
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -34,10 +25,7 @@ export async function POST(request: Request) {
     venture_id?: string;
     reviewer_name?: string;
     reviewer_role?: string | null;
-    ratings?: Partial<Record<TopicKey, number>>;
-    comments?: Partial<Record<TopicKey, string>>;
-    biggest_strength?: string | null;
-    top_improvement?: string | null;
+    ratings?: Partial<Record<PreDemoTopicKey, number>>;
   };
 
   const ventureId = body.venture_id?.trim();
@@ -47,11 +35,13 @@ export async function POST(request: Request) {
   if (!reviewerName) return bad("חסר שם");
 
   const ratings = body.ratings ?? {};
-  for (const k of TOPIC_KEYS) {
+  const ratingColumns: Record<string, number> = {};
+  for (const k of PRE_DEMO_TOPIC_KEYS) {
     const v = ratings[k];
     if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > 5) {
       return bad(`דירוג לא תקין: ${k}`);
     }
+    ratingColumns[ratingColumn(k)] = v;
   }
 
   const reviewerRole =
@@ -71,21 +61,11 @@ export async function POST(request: Request) {
     submitterId = null;
   }
 
-  const comments = body.comments ?? {};
   const insertRow = {
     venture_id: ventureId,
     reviewer_name: reviewerName.slice(0, 200),
     reviewer_role: reviewerRole,
-    problem_clarity_rating: ratings.problem_clarity,
-    problem_clarity_comment: comments.problem_clarity?.trim() || null,
-    solution_conviction_rating: ratings.solution_conviction,
-    solution_conviction_comment: comments.solution_conviction?.trim() || null,
-    market_opportunity_rating: ratings.market_opportunity,
-    market_opportunity_comment: comments.market_opportunity?.trim() || null,
-    presentation_quality_rating: ratings.presentation_quality,
-    presentation_quality_comment: comments.presentation_quality?.trim() || null,
-    biggest_strength: body.biggest_strength?.trim() || null,
-    top_improvement: body.top_improvement?.trim() || null,
+    ...ratingColumns,
     submitter_user_id: submitterId,
   };
 

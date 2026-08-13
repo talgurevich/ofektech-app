@@ -7,43 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import {
+  PRE_DEMO_AXES,
+  PRE_DEMO_ROLE_OPTIONS,
+  PRE_DEMO_TOPIC_KEYS,
+  type PreDemoTopicKey,
+} from "@/lib/pre-demo-topics";
 import type { VentureWithMembers } from "./page";
 
-const TOPICS = [
-  {
-    key: "problem_clarity",
-    title: "בהירות הבעיה",
-    description: "עד כמה הבנת את הבעיה שהמיזם פותר?",
-  },
-  {
-    key: "solution_conviction",
-    title: "עוצמת הפתרון",
-    description: "עד כמה הפתרון המוצע משכנע ומעורר עניין?",
-  },
-  {
-    key: "market_opportunity",
-    title: "הזדמנות והשוק",
-    description: "עד כמה ההזדמנות/שוק היעד מרגישים אמיתיים ומשמעותיים?",
-  },
-  {
-    key: "presentation_quality",
-    title: "איכות המצגת וההצגה",
-    description: "המצגת + אופן ההצגה, כהכנה ליום ההדגמה.",
-  },
-] as const;
+type Ratings = Record<PreDemoTopicKey, number>;
 
-const ROLE_OPTIONS = [
-  { value: "", label: "— בחר תפקיד (אופציונלי) —" },
-  { value: "mentor", label: "מנטור" },
-  { value: "professional_mentor", label: "מנטור מקצועי" },
-  { value: "investor", label: "משקיע" },
-  { value: "peer", label: "יזם עמית" },
-  { value: "staff", label: "צוות OfekTech" },
-  { value: "other", label: "אחר" },
-];
-
-type Ratings = Record<(typeof TOPICS)[number]["key"], number>;
-type Comments = Record<(typeof TOPICS)[number]["key"], string>;
+const EMPTY_RATINGS = Object.fromEntries(
+  PRE_DEMO_TOPIC_KEYS.map((k) => [k, 0])
+) as Ratings;
 
 export function PreDemoFeedbackForm({
   ventures,
@@ -53,20 +29,7 @@ export function PreDemoFeedbackForm({
   const [ventureId, setVentureId] = useState("");
   const [reviewerName, setReviewerName] = useState("");
   const [reviewerRole, setReviewerRole] = useState("");
-  const [ratings, setRatings] = useState<Ratings>({
-    problem_clarity: 0,
-    solution_conviction: 0,
-    market_opportunity: 0,
-    presentation_quality: 0,
-  });
-  const [comments, setComments] = useState<Comments>({
-    problem_clarity: "",
-    solution_conviction: "",
-    market_opportunity: "",
-    presentation_quality: "",
-  });
-  const [biggestStrength, setBiggestStrength] = useState("");
-  const [topImprovement, setTopImprovement] = useState("");
+  const [ratings, setRatings] = useState<Ratings>(EMPTY_RATINGS);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -75,7 +38,7 @@ export function PreDemoFeedbackForm({
   const canSubmit = useMemo(() => {
     if (!ventureId) return false;
     if (!reviewerName.trim()) return false;
-    if (Object.values(ratings).some((r) => r < 1)) return false;
+    if (PRE_DEMO_TOPIC_KEYS.some((k) => ratings[k] < 1)) return false;
     return true;
   }, [ventureId, reviewerName, ratings]);
 
@@ -93,9 +56,6 @@ export function PreDemoFeedbackForm({
           reviewer_name: reviewerName.trim(),
           reviewer_role: reviewerRole || null,
           ratings,
-          comments,
-          biggest_strength: biggestStrength.trim() || null,
-          top_improvement: topImprovement.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -113,20 +73,7 @@ export function PreDemoFeedbackForm({
   function resetForAnother() {
     setSubmitted(false);
     setVentureId("");
-    setRatings({
-      problem_clarity: 0,
-      solution_conviction: 0,
-      market_opportunity: 0,
-      presentation_quality: 0,
-    });
-    setComments({
-      problem_clarity: "",
-      solution_conviction: "",
-      market_opportunity: "",
-      presentation_quality: "",
-    });
-    setBiggestStrength("");
-    setTopImprovement("");
+    setRatings(EMPTY_RATINGS);
     // keep reviewerName + role so back-to-back submissions are faster
   }
 
@@ -199,7 +146,8 @@ export function PreDemoFeedbackForm({
                 onChange={(e) => setReviewerRole(e.target.value)}
                 className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]/30"
               >
-                {ROLE_OPTIONS.map((r) => (
+                <option value="">— בחר תפקיד (אופציונלי) —</option>
+                {PRE_DEMO_ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
@@ -210,67 +158,40 @@ export function PreDemoFeedbackForm({
         </CardContent>
       </Card>
 
-      {TOPICS.map((topic) => (
-        <Card key={topic.key}>
-          <CardContent className="pt-6 space-y-3">
-            <div>
-              <h3 className="font-semibold text-[#1a2744]">
-                {topic.title} <span className="text-red-500">*</span>
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">{topic.description}</p>
+      {PRE_DEMO_AXES.map((axis) => (
+        <Card key={axis.key}>
+          <CardContent className="pt-6 space-y-5">
+            <h2 className="text-lg font-bold text-[#1a2744]">{axis.title}</h2>
+
+            <div className="space-y-5">
+              {axis.topics.map((topic) => (
+                <div
+                  key={topic.key}
+                  className="space-y-2 border-t border-gray-100 pt-4 first:border-0 first:pt-0"
+                >
+                  <div>
+                    <h3 className="text-sm font-medium text-[#1a2744]">
+                      {topic.label} <span className="text-red-500">*</span>
+                    </h3>
+                    {topic.hint ? (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {topic.hint}
+                      </p>
+                    ) : null}
+                  </div>
+                  <StarRow
+                    label={topic.label}
+                    value={ratings[topic.key]}
+                    onChange={(v) =>
+                      setRatings((prev) => ({ ...prev, [topic.key]: v }))
+                    }
+                  />
+                </div>
+              ))}
             </div>
-            <StarRow
-              value={ratings[topic.key]}
-              onChange={(v) =>
-                setRatings((prev) => ({ ...prev, [topic.key]: v }))
-              }
-            />
-            <textarea
-              value={comments[topic.key]}
-              onChange={(e) =>
-                setComments((prev) => ({
-                  ...prev,
-                  [topic.key]: e.target.value,
-                }))
-              }
-              placeholder="הערות (אופציונלי)"
-              rows={2}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]/30 resize-y"
-            />
           </CardContent>
         </Card>
       ))}
-
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="biggest_strength">החוזק הגדול ביותר</Label>
-            <p className="text-xs text-gray-500">
-              מה הכי בלט לטובה? מה כדאי לחדד/להעצים ליום ההדגמה?
-            </p>
-            <textarea
-              id="biggest_strength"
-              value={biggestStrength}
-              onChange={(e) => setBiggestStrength(e.target.value)}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]/30"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="top_improvement">
-              הדבר החשוב ביותר לשפר לפני יום ההדגמה
-            </Label>
-            <textarea
-              id="top_improvement"
-              value={topImprovement}
-              onChange={(e) => setTopImprovement(e.target.value)}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]/30"
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {error ? (
         <p className="text-sm text-red-600 text-center">{error}</p>
@@ -297,9 +218,11 @@ export function PreDemoFeedbackForm({
 }
 
 function StarRow({
+  label,
   value,
   onChange,
 }: {
+  label: string;
   value: number;
   onChange: (v: number) => void;
 }) {
@@ -309,7 +232,7 @@ function StarRow({
       className="flex items-center gap-1"
       onMouseLeave={() => setHover(0)}
       role="radiogroup"
-      aria-label="דירוג"
+      aria-label={label}
     >
       {[1, 2, 3, 4, 5].map((n) => {
         const active = (hover || value) >= n;
