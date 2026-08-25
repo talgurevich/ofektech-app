@@ -8,7 +8,7 @@
 const NUMERIC_NAME = /^\d+$/;
 
 // Named rows that aren't part of the judging.
-const EXCLUDED_VENTURE_NAMES = new Set(["מתנדב-נת"]);
+const EXCLUDED_VENTURE_NAMES = new Set(["מתנדב-נת", "Polynate"]);
 
 export function isJudgeableVenture(name: string) {
   const trimmed = name.trim();
