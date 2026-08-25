@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DemoDayJudgeForm } from "./form";
+import { isJudgeableVenture } from "@/lib/demo-day-ventures";
 
 export const metadata = {
   title: "שיפוט Demo Day — OfekTech",
@@ -46,11 +47,13 @@ export default async function DemoDayJudgesPage() {
       membersByVenture.set(m.venture_id, arr);
     }
 
-    ventures = (ventureRows ?? []).map((v) => ({
-      id: v.id,
-      name: v.name,
-      members: membersByVenture.get(v.id) ?? [],
-    }));
+    ventures = (ventureRows ?? [])
+      .filter((v) => isJudgeableVenture(v.name))
+      .map((v) => ({
+        id: v.id,
+        name: v.name,
+        members: membersByVenture.get(v.id) ?? [],
+      }));
   }
 
   return (
