@@ -1,9 +1,18 @@
-// The active cohort contains placeholder venture rows named with bare numbers
-// ("10", "11", "2", "6"). They are real rows other parts of the portal rely on,
-// so they are filtered out of the Demo Day judging views rather than deleted:
-// judges shouldn't see them in the dropdown, and they shouldn't sit in the
-// leaderboard and completeness grid as permanently unscored.
+// Not every venture row in the active cohort is pitching at Demo Day. These are
+// real rows other parts of the portal reference, so they are filtered out of the
+// judging views rather than deleted: judges shouldn't see them in the dropdown,
+// and they shouldn't sit in the leaderboard and completeness grid as permanently
+// unscored.
+
+// Placeholder rows named with bare numbers ("10", "11", "2", "6").
+const NUMERIC_NAME = /^\d+$/;
+
+// Named rows that aren't part of the judging.
+const EXCLUDED_VENTURE_NAMES = new Set(["מתנדב-נת"]);
 
 export function isJudgeableVenture(name: string) {
-  return !/^\d+$/.test(name.trim());
+  const trimmed = name.trim();
+  if (NUMERIC_NAME.test(trimmed)) return false;
+  if (EXCLUDED_VENTURE_NAMES.has(trimmed)) return false;
+  return true;
 }
