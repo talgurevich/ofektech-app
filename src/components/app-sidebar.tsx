@@ -22,6 +22,7 @@ import {
   Sparkles,
   Library,
   Star,
+  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +52,8 @@ interface AppSidebarProps {
   role: UserRole;
   fullName?: string;
   avatarUrl?: string | null;
+  /** Demo Day judging results are owner-only; see lib/demo-day-access.ts. */
+  showDemoDayResults?: boolean;
   children: React.ReactNode;
 }
 
@@ -101,7 +104,13 @@ const adminLinks = [
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
-function getLinks(role: UserRole) {
+const demoDayResultsLink = {
+  href: "/admin/demo-day-judges",
+  label: "תוצאות שיפוט Demo Day",
+  icon: Trophy,
+};
+
+function getLinks(role: UserRole, showDemoDayResults = false) {
   switch (role) {
     case "candidate":
       return candidateLinks;
@@ -110,7 +119,15 @@ function getLinks(role: UserRole) {
     case "visitor":
       return visitorLinks;
     case "admin":
-      return adminLinks;
+      // Only the owner sees the link. The page itself redirects other admins, so
+      // this is presentation, not the access control.
+      return showDemoDayResults
+        ? [
+            ...adminLinks.slice(0, -1),
+            demoDayResultsLink,
+            adminLinks[adminLinks.length - 1],
+          ]
+        : adminLinks;
   }
 }
 
@@ -127,9 +144,15 @@ function getRoleLabel(role: UserRole) {
   }
 }
 
-export function AppSidebarLayout({ role, fullName, avatarUrl, children }: AppSidebarProps) {
+export function AppSidebarLayout({
+  role,
+  fullName,
+  avatarUrl,
+  showDemoDayResults,
+  children,
+}: AppSidebarProps) {
   const pathname = usePathname();
-  const links = getLinks(role);
+  const links = getLinks(role, showDemoDayResults);
 
   return (
     <SidebarProvider>

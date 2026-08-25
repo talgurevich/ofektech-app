@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebarLayout } from "@/components/app-sidebar";
+import { canViewDemoDayResults } from "@/lib/demo-day-access";
 
 export async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   try {
@@ -28,6 +29,7 @@ export async function SidebarWrapper({ children }: { children: React.ReactNode }
         role={profile.role as "candidate" | "mentor" | "admin"}
         fullName={profile.full_name}
         avatarUrl={profile.avatar_url}
+        showDemoDayResults={canViewDemoDayResults(user.email)}
       >
         {children}
       </AppSidebarLayout>
