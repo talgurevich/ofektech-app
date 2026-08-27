@@ -1,7 +1,7 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { canViewDemoDayResults } from "@/lib/demo-day-access";
-import { isJudgeableVenture } from "@/lib/demo-day-ventures";
+import { byPitchOrder, isJudgeableVenture } from "@/lib/demo-day-ventures";
 import { DemoDayResults, type ScoreRow, type ResultVenture } from "./results";
 
 // Scores change live during the event.
@@ -59,6 +59,7 @@ export default async function AdminDemoDayJudgesPage() {
 
     ventures = (ventureRows ?? [])
       .filter((v) => isJudgeableVenture(v.name))
+      .sort(byPitchOrder)
       .map((v) => ({
         id: v.id,
         name: v.name,
