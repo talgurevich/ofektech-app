@@ -29,6 +29,7 @@ const VENTURE_ORDER = [
   "TrITop",
   "Bond",
   "PiFox",
+  "Jogabol",
   "PROJECT TEMP",
   "TeachMe",
   "מסע להחלים",
