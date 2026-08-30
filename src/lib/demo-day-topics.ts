@@ -47,7 +47,7 @@ export const DEMO_DAY_AXES: DemoDayAxis[] = [
       },
       {
         key: "strategic_partnerships",
-        label: "מידת שותפויות אסטרטגיות שנבנו סביב המיזם",
+        label: "מידת זיהוי ויצירת מגעים ראשוניים לבניית שותפויות אסטרטגיות",
       },
     ],
   },
