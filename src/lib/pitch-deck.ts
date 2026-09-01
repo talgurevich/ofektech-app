@@ -133,6 +133,7 @@ export async function generatePitchDeck(input: DeckInput): Promise<Buffer> {
     loadImage("partners/sfa.png", "image/png"),
     loadImage("partners/israel-innovation-authority.png", "image/png"),
     loadImage("partners/nortech.png", "image/png"),
+    loadImage("partners/leumitech.png", "image/png"),
   ]);
 
   const heb = (extra: PptxGenJS.TextPropsOptions = {}): PptxGenJS.TextPropsOptions => ({
