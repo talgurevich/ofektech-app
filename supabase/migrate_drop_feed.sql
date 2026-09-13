@@ -3,9 +3,9 @@
 -- the per-user "last seen" column and the post-media storage policies.
 -- Run this in the Supabase SQL Editor.
 --
--- NOTE: the `post-media` storage bucket must be emptied before it can be
--- deleted — do that from Storage in the dashboard (or the delete below
--- will fail while objects remain).
+-- NOTE: Supabase does not allow deleting storage objects/buckets via SQL.
+-- The `post-media` bucket is removed by `scripts/delete-post-media-bucket.ts`
+-- (Storage API, service role key).
 -- =========================================================================
 
 -- Realtime (may already have been removed)
@@ -34,5 +34,3 @@ drop policy if exists "Public read post-media" on storage.objects;
 drop policy if exists "Authenticated insert post-media" on storage.objects;
 drop policy if exists "Owners and admins update post-media" on storage.objects;
 drop policy if exists "Owners and admins delete post-media" on storage.objects;
-delete from storage.objects where bucket_id = 'post-media';
-delete from storage.buckets where id = 'post-media';
