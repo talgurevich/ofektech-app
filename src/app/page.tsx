@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import {
   Card,
@@ -27,6 +28,7 @@ import {
   ListTodo,
   BookOpen,
   Briefcase,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   AnimatedContainer,
@@ -79,6 +81,7 @@ export default async function Dashboard() {
         userId={user.id}
         fullName={profile.full_name}
         ventureId={profile.venture_id}
+        cohortId={profile.cohort_id}
       />
     );
   }
@@ -280,12 +283,34 @@ async function CandidateDashboard({
   userId,
   fullName,
   ventureId,
+  cohortId,
 }: {
   userId: string;
   fullName?: string;
   ventureId?: string | null;
+  cohortId?: string | null;
 }) {
   const supabase = await createClient();
+
+  // Ending (summary) questionnaire: pending for active-cohort members
+  let endingCheckinPending = false;
+  if (cohortId) {
+    const { data: cohort } = await supabase
+      .from("cohorts")
+      .select("is_active")
+      .eq("id", cohortId)
+      .maybeSingle();
+    if (cohort?.is_active) {
+      const { data: endingCheckin } = await supabase
+        .from("checkins")
+        .select("id")
+        .eq("candidate_id", userId)
+        .eq("type", "ending")
+        .limit(1)
+        .maybeSingle();
+      endingCheckinPending = !endingCheckin;
+    }
+  }
 
   // Get venture info + members
   let ventureName: string | null = null;
@@ -357,6 +382,29 @@ async function CandidateDashboard({
         <VentureNamePrompt currentName={ventureName ?? ""} />
       ) : null}
       <AnimatedContainer>
+        {/* Ending questionnaire banner */}
+        {endingCheckinPending && (
+          <AnimatedItem>
+            <Link
+              href="/checkin/ending"
+              className="group flex items-center gap-3 rounded-xl bg-[#22c55e] px-4 py-3 text-white shadow-md transition-colors hover:bg-[#16a34a]"
+            >
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <ClipboardCheck className="size-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">שאלון סיכום התוכנית מחכה לכם</p>
+                <p className="text-xs text-white/85">
+                  4 שאלות קצרות על המוצר, הלקוחות, הפיילוט והצעת הערך — לוקח כדקה
+                </p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-[#16a34a] group-hover:bg-white/90">
+                מלא עכשיו <ArrowLeft className="size-4" />
+              </span>
+            </Link>
+          </AnimatedItem>
+        )}
+
         {/* Greeting */}
         <AnimatedItem>
           <div className="mb-2">
