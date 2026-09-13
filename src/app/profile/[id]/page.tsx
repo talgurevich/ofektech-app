@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { formatRelativeHe } from "@/lib/utils";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import {
   Card,
@@ -19,8 +18,6 @@ import {
   GraduationCap,
   Sparkles,
   ExternalLink,
-  MessageCircle,
-  ImageIcon,
 } from "lucide-react";
 
 function roleLabel(role: string | null | undefined): string {
@@ -89,25 +86,17 @@ export default async function PublicProfilePage({
   const cohortName = pickName(profile.cohort);
   const ventureName = pickName(profile.venture);
 
-  const { data: recentPosts } = await supabase
-    .from("posts")
-    .select("id, body, created_at, kind, image_url")
-    .eq("author_id", id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
   const fullName = profile.full_name?.trim() || profile.email || "משתמש";
 
   return (
     <main className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
       <div>
         <Link
-          href="/feed"
+          href="/directory"
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#1a2744] transition-colors"
         >
           <ArrowRight className="size-4" />
-          חזרה לפיד הקהילה
+          חזרה לאנשי המחזור
         </Link>
       </div>
 
@@ -246,48 +235,6 @@ export default async function PublicProfilePage({
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#1a2744] text-base">
-            <MessageCircle className="size-4" />
-            פוסטים אחרונים בפיד
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!recentPosts || recentPosts.length === 0 ? (
-            <p className="text-sm text-gray-400">אין פוסטים עדיין</p>
-          ) : (
-            <ul className="space-y-3">
-              {recentPosts.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/feed#post-${p.id}`}
-                    className="block rounded-lg border border-gray-100 bg-gray-50/40 px-3 py-2 hover:bg-[#22c55e]/5 hover:border-[#22c55e]/40 transition-colors"
-                  >
-                    <p
-                      className={`text-sm leading-relaxed ${
-                        p.kind === "system"
-                          ? "italic text-gray-600"
-                          : "text-[#1a2744]"
-                      }`}
-                    >
-                      {p.body}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
-                      <span>{formatRelativeHe(p.created_at)}</span>
-                      {p.image_url && (
-                        <span className="inline-flex items-center gap-1">
-                          <ImageIcon className="size-3" /> תמונה
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
     </main>
   );
 }

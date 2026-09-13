@@ -19,7 +19,6 @@ import {
   Briefcase,
   UserCircle,
   Table2,
-  Sparkles,
   Library,
   Star,
   Trophy,
@@ -44,7 +43,6 @@ import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
 import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
 import { EndingCheckinPrompt } from "@/components/ending-checkin-prompt";
-import { FeedUnseenBadge } from "@/components/feed-unseen-badge";
 import { APP_VERSION } from "@/lib/version";
 
 type UserRole = "candidate" | "mentor" | "admin" | "visitor";
@@ -60,7 +58,6 @@ interface AppSidebarProps {
 
 const candidateLinks = [
   { href: "/", label: "הפורטל שלי", icon: LayoutDashboard },
-  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/guide", label: "חוברת מיזם", icon: BookOpen },
   { href: "/workbook", label: "טבלת עבודה", icon: Table2 },
@@ -72,7 +69,6 @@ const candidateLinks = [
 
 const mentorLinks = [
   { href: "/", label: "החניכים שלי", icon: Users },
-  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/lectures", label: "סילבוס", icon: Mic2 },
   { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/directory", label: "אנשי המחזור", icon: Users },
@@ -82,14 +78,12 @@ const mentorLinks = [
 
 const visitorLinks = [
   { href: "/", label: "הרצאות", icon: Mic2 },
-  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/bibliography", label: "ביבליוגרפיה", icon: Library },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
 const adminLinks = [
   { href: "/admin", label: "סקירה", icon: BarChart3 },
-  { href: "/feed", label: "פיד הקהילה", icon: Sparkles },
   { href: "/admin/cohorts", label: "מחזורים", icon: GraduationCap },
   { href: "/admin/users", label: "משתמשים", icon: Users },
   { href: "/admin/candidates", label: "חניכים", icon: GraduationCap },
@@ -229,7 +223,6 @@ export function AppSidebarLayout({
                       >
                         <link.icon className="size-4" />
                         <span>{link.label}</span>
-                        {link.href === "/feed" && <FeedUnseenBadge />}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
