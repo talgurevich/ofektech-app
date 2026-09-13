@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
 import { ProfileCompletionPrompt } from "@/components/profile-completion-prompt";
+import { EndingCheckinPrompt } from "@/components/ending-checkin-prompt";
 import { FeedUnseenBadge } from "@/components/feed-unseen-badge";
 import { APP_VERSION } from "@/lib/version";
 
@@ -101,6 +102,7 @@ const adminLinks = [
   { href: "/admin/feedback", label: "משובים", icon: MessageSquare },
   { href: "/admin/pre-demo-feedback", label: "משוב טרום־הדגמה", icon: Star },
   { href: "/admin/checkins", label: "שאלוני פתיחה", icon: ClipboardCheck },
+  { href: "/admin/ending-checkins", label: "שאלוני סיכום", icon: ClipboardCheck },
   { href: "/profile", label: "הפרופיל שלי", icon: UserCircle },
 ];
 
@@ -273,6 +275,7 @@ export function AppSidebarLayout({
         <div className="flex-1">{children}</div>
         <Footer />
         <ProfileCompletionPrompt />
+        <EndingCheckinPrompt />
       </SidebarInset>
     </SidebarProvider>
   );

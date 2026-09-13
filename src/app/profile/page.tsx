@@ -24,10 +24,12 @@ import {
   Users,
   MessageSquare,
   CalendarDays,
+  ClipboardCheck,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
+import { isEndingCheckinPending } from "@/components/ending-checkin-prompt";
 
 interface ProfileData {
   phone: string;
@@ -78,6 +80,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [openingCheckinDone, setOpeningCheckinDone] = useState(true);
+  const [endingCheckinPending, setEndingCheckinPending] = useState(false);
   const [ventureId, setVentureId] = useState<string | null>(null);
   const [submittedFeedback, setSubmittedFeedback] = useState<SubmittedFeedbackItem[]>([]);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +129,7 @@ export default function ProfilePage() {
           .limit(1)
           .maybeSingle();
         setOpeningCheckinDone(!!checkin);
+        setEndingCheckinPending(await isEndingCheckinPending(supabase));
       }
 
       // Submissions: meeting summaries (candidates) + session feedback (mentors)
@@ -342,6 +346,28 @@ export default function ProfilePage() {
             <Link
               href="/checkin/opening"
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1a2744] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2744]/90 transition-colors"
+            >
+              מלא עכשיו <ArrowLeft className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {role === "candidate" && endingCheckinPending && (
+        <Card className="border-0 shadow-sm bg-gradient-to-l from-[#22c55e]/5 to-[#22c55e]/15 ring-1 ring-[#22c55e]/20">
+          <CardContent className="flex flex-col items-start gap-3 pt-0">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-[#22c55e]/20">
+                <ClipboardCheck className="size-5 text-[#16a34a]" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#1a2744]">שאלון סיכום</p>
+                <p className="text-sm text-gray-500">איפה המיזם עומד היום — מוצר, לקוחות, פיילוט והצעת הערך</p>
+              </div>
+            </div>
+            <Link
+              href="/checkin/ending"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#16a34a] transition-colors"
             >
               מלא עכשיו <ArrowLeft className="size-4" />
             </Link>

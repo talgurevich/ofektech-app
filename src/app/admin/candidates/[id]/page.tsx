@@ -27,6 +27,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { TaskCategoryPie } from "@/components/task-category-pie";
+import { clarityLabel, pilotLabel, prototypeLabel } from "@/lib/ending-checkin";
 
 export default async function AdminCandidateDetailPage({
   params,
@@ -77,6 +78,16 @@ export default async function AdminCandidateDetailPage({
     .select("*")
     .eq("candidate_id", candidateId)
     .eq("type", "opening")
+    .limit(1)
+    .maybeSingle();
+
+  // Get ending (summary) check-in
+  const { data: endingCheckin } = await supabase
+    .from("checkins")
+    .select("*")
+    .eq("candidate_id", candidateId)
+    .eq("type", "ending")
+    .order("submitted_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -345,6 +356,42 @@ export default async function AdminCandidateDetailPage({
                 { label: "מצב רוח", value: openingCheckin.mood ? `${openingCheckin.mood}/5` : null },
                 { label: "חששות", value: openingCheckin.concerns },
                 { label: "הערות צוות", value: openingCheckin.team_notes },
+              ].map((field) => (
+                <div key={field.label}>
+                  <p className="text-xs font-medium text-gray-500 mb-0.5">
+                    {field.label}
+                  </p>
+                  <p className="text-sm text-[#1a2744] whitespace-pre-wrap">
+                    {field.value || "---"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-4">
+              לא מילא/ה
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 2b: Ending (summary) check-in */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+            <ClipboardCheck className="size-5" />
+            שאלון סיכום
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {endingCheckin ? (
+            <div className="space-y-3">
+              {[
+                { label: "מוצר / אב-טיפוס להצגה", value: prototypeLabel(endingCheckin.has_prototype) },
+                { label: "שיחות עם לקוחות / משתמשים", value: endingCheckin.customers_spoken != null ? String(endingCheckin.customers_spoken) : null },
+                { label: "פיילוט בשטח", value: pilotLabel(endingCheckin.pilot_status) },
+                { label: "בהירות הצעת הערך והבידול", value: endingCheckin.value_prop_clarity != null ? `${endingCheckin.value_prop_clarity}/5 · ${clarityLabel(endingCheckin.value_prop_clarity)}` : null },
+                { label: "הערות לצוות", value: endingCheckin.team_notes },
               ].map((field) => (
                 <div key={field.label}>
                   <p className="text-xs font-medium text-gray-500 mb-0.5">
