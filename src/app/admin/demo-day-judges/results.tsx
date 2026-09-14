@@ -10,8 +10,8 @@ import {
   DEMO_DAY_TOPICS,
   DEMO_DAY_TOPIC_KEYS,
   ratingColumn,
-  type DemoDayTopicKey,
 } from "@/lib/demo-day-topics";
+import { mean, stdev, overallOf, type ScoreRow } from "@/lib/demo-day-scoring";
 
 export type ResultVenture = {
   id: string;
@@ -19,35 +19,13 @@ export type ResultVenture = {
   members: string[];
 };
 
-export type ScoreRow = {
-  id: string;
-  venture_id: string;
-  judge_name: string;
-  judge_name_key: string;
-  created_at: string;
-  updated_at: string;
-} & Record<`${DemoDayTopicKey}_rating`, number>;
+export type { ScoreRow };
 
 type Mode = "raw" | "normalized";
 
 // Two ventures within this many points (on the 1–5 scale) are close enough that
 // judge-to-judge calibration, not the ventures, may be deciding the order.
 const CLOSE_CALL_THRESHOLD = 0.15;
-
-function mean(values: number[]) {
-  if (values.length === 0) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
-
-function stdev(values: number[]) {
-  if (values.length < 2) return 0;
-  const m = mean(values);
-  return Math.sqrt(mean(values.map((v) => (v - m) ** 2)));
-}
-
-function overallOf(row: ScoreRow) {
-  return mean(DEMO_DAY_TOPIC_KEYS.map((k) => row[ratingColumn(k)]));
-}
 
 export function DemoDayResults({
   ventures,

@@ -80,8 +80,8 @@ export default async function AdminDemoDayJudgesPage() {
         </h1>
         <p className="text-sm text-gray-600 mt-1">
           {cohort ? `מחזור ${cohort.name} · ` : ""}
-          {rows.length} כרטיסי ניקוד · התוצאות גלויות לך בלבד ואינן מוצגות
-          למיזמים או למנטורים.
+          {rows.length} כרטיסי ניקוד · כל מיזם רואה בפורטל את הציון הממוצע,
+          הדירוג ופירוט הקריטריונים שלו בלבד — ללא שמות שופטים. השיפוט סגור.
         </p>
       </div>
 

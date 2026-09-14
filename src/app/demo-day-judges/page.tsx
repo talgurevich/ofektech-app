@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { DemoDayJudgeForm } from "./form";
 import { byPitchOrder, isJudgeableVenture } from "@/lib/demo-day-ventures";
+import { DEMO_DAY_JUDGING_CLOSED } from "@/lib/demo-day-judging";
 
 export const metadata = {
   title: "שיפוט Demo Day — OfekTech",
@@ -14,6 +15,21 @@ export type JudgeVenture = {
 };
 
 export default async function DemoDayJudgesPage() {
+  if (DEMO_DAY_JUDGING_CLOSED) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f9] py-10 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-[#1a2744] mb-2">
+            שיפוט Demo Day
+          </h1>
+          <p className="text-sm text-gray-600">
+            השיפוט הסתיים. תודה רבה לכל השופטים!
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const supabase = await createClient();
 
   // Judges only score the current cohort's ventures.

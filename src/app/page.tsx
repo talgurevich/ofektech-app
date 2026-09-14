@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -41,6 +41,14 @@ import { VentureActivityFeed } from "@/components/venture-activity-feed";
 import { VentureNamePrompt } from "@/components/venture-name-prompt";
 import { VentureNameEditable } from "@/components/venture-name-editable";
 import { TaskCategoryPie } from "@/components/task-category-pie";
+import { DemoDayScoreCard } from "@/components/demo-day-score-card";
+import { isJudgeableVenture } from "@/lib/demo-day-ventures";
+import {
+  rankVentures,
+  summarizeVenture,
+  type ScoreRow,
+  type VentureSummary,
+} from "@/lib/demo-day-scoring";
 import type { VentureActivity } from "@/lib/types";
 
 export default async function Dashboard() {
@@ -334,6 +342,37 @@ async function CandidateDashboard({
     ventureMembers = members || [];
   }
 
+  // Demo Day judges' score. demo_day_scores has RLS on and no policies, so it
+  // is read with the service role and reduced here to this venture's averages;
+  // per-judge rows never leave the server. Rank is over the same set the admin
+  // leaderboard ranks: judgeable ventures of the venture's cohort, raw average.
+  let demoDaySummary: VentureSummary | null = null;
+  let demoDayRank: { rank: number; of: number } | null = null;
+  if (ventureId && cohortId) {
+    const admin = createAdminClient();
+    const { data: cohortVentures } = await admin
+      .from("ventures")
+      .select("id, name")
+      .eq("cohort_id", cohortId);
+    const judgeableIds = new Set(
+      (cohortVentures ?? [])
+        .filter((v) => isJudgeableVenture(v.name))
+        .map((v) => v.id)
+    );
+    if (judgeableIds.size > 0) {
+      const { data: scoreRows } = await admin
+        .from("demo_day_scores")
+        .select("*")
+        .in("venture_id", [...judgeableIds]);
+      const rows = (scoreRows ?? []) as ScoreRow[];
+      const own = rows.filter((r) => r.venture_id === ventureId);
+      if (own.length > 0) {
+        demoDaySummary = summarizeVenture(ventureId, own);
+        demoDayRank = rankVentures(rows).get(ventureId) ?? null;
+      }
+    }
+  }
+
   // Get this venture's tasks for the category pie
   let candidateTaskRows: { data: Record<string, unknown> }[] = [];
   if (ventureId) {
@@ -511,6 +550,13 @@ async function CandidateDashboard({
             </Card>
           )}
         </AnimatedItem>
+
+        {/* Demo Day judges' score */}
+        {demoDaySummary && (
+          <AnimatedItem>
+            <DemoDayScoreCard summary={demoDaySummary} rank={demoDayRank} />
+          </AnimatedItem>
+        )}
 
         {/* Quick-action buttons */}
         <AnimatedItem>

@@ -6,6 +6,7 @@ import {
   ratingColumn,
   type DemoDayTopicKey,
 } from "@/lib/demo-day-topics";
+import { DEMO_DAY_JUDGING_CLOSED } from "@/lib/demo-day-judging";
 
 // Public endpoint: the judges' link has no login, so everything is validated here
 // and written with the service-role client (demo_day_scores has RLS on and no
@@ -16,6 +17,10 @@ function bad(msg: string, status = 400) {
 }
 
 export async function POST(request: Request) {
+  if (DEMO_DAY_JUDGING_CLOSED) {
+    return bad("השיפוט הסתיים ולא ניתן לשלוח או לעדכן ציונים", 410);
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();

@@ -7,8 +7,8 @@
 // Placeholder rows named with bare numbers ("10", "11", "2", "6").
 const NUMERIC_NAME = /^\d+$/;
 
-// Named rows that aren't part of the judging.
-const EXCLUDED_VENTURE_NAMES = new Set(["מתנדב-נת", "Polynate"]);
+// Named rows that aren't part of the judging (TestOfekTech is a test account).
+const EXCLUDED_VENTURE_NAMES = new Set(["מתנדב-נת", "Polynate", "TestOfekTech"]);
 
 export function isJudgeableVenture(name: string) {
   const trimmed = name.trim();
